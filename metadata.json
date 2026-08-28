@@ -1,0 +1,6 @@
+{
+  "name": "ChoreQuest: Family Chore Tracker",
+  "description": "A kid-friendly, offline-capable chore and reward tracker for local home networks and Raspberry Pi, featuring parent admin controls, task categories, incomplete reason tracking, gamified star rewards, and mobile-friendly interfaces.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -327,7 +327,11 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     sound.playTap();
-    onUpdateDatabase({ ...database, settings: settingsForm });
+    const updatedSettings = {
+      ...settingsForm,
+      isDefaultPin: settingsForm.parentPin === '1234' ? (database.settings.isDefaultPin ?? false) : false,
+    };
+    onUpdateDatabase({ ...database, settings: updatedSettings });
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 2500);
   };

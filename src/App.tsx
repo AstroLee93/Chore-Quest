@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, RewardItem, RewardRedemption } from './types';
 import { loadDatabase, saveDatabase, getTodayDateString } from './utils/storage';
+import { fetchServerDatabase, pushServerDatabase, subscribeToDatabaseSync } from './utils/api';
 import { sound } from './utils/sound';
 import { Navbar } from './components/Navbar';
 import { KidSelector } from './components/KidSelector';
@@ -17,17 +18,49 @@ export default function App() {
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
   const [isRewardStoreOpen, setIsRewardStoreOpen] = useState<boolean>(false);
   const [isPiGuideOpen, setIsPiGuideOpen] = useState<boolean>(false);
+  const [isSyncConnected, setIsSyncConnected] = useState<boolean>(true);
 
   // Synchronize sound engine with database setting
   useEffect(() => {
     sound.setEnabled(database.settings.soundEnabled);
   }, [database.settings.soundEnabled]);
 
-  // Persist database updates
-  const handleUpdateDatabase = (updated: FamilyDatabase) => {
+  // Initial load from server + real-time multi-session sync subscription
+  useEffect(() => {
+    // 1. Initial fetch from server
+    fetchServerDatabase().then((serverData) => {
+      if (serverData) {
+        setDatabase(serverData);
+      }
+    });
+
+    // 2. Real-time subscription (SSE + BroadcastChannel + window focus)
+    const unsubscribe = subscribeToDatabaseSync(
+      (freshData) => {
+        setDatabase(freshData);
+      },
+      (connected) => {
+        setIsSyncConnected(connected);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Gracefully handle if active kid was deleted by a parent in another session
+  useEffect(() => {
+    if (activeKidId && !database.kids.some((k) => k.id === activeKidId)) {
+      setActiveKidId(null);
+    }
+  }, [database.kids, activeKidId]);
+
+  // Persist database updates locally and to server (broadcasts to all open sessions)
+  const handleUpdateDatabase = useCallback((updated: FamilyDatabase) => {
     setDatabase(updated);
-    saveDatabase(updated);
-  };
+    pushServerDatabase(updated);
+  }, []);
 
   const activeKid = database.kids.find((k) => k.id === activeKidId) || null;
   const todayStr = getTodayDateString();
@@ -244,11 +277,15 @@ export default function App() {
       <footer className="bg-white p-4 px-6 sm:px-8 border-t-2 border-yellow-200/80 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-xs gap-3">
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
           <span className="flex items-center gap-1.5 text-slate-700">
-            <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
-            <span>Raspberry Pi 5 Active</span>
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                isSyncConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+              }`}
+            ></span>
+            <span>{isSyncConnected ? 'Live Multi-Device Sync Active' : 'Offline Mode (Local Cache)'}</span>
           </span>
           <span className="opacity-40">•</span>
-          <span>Offline Sync Ready</span>
+          <span>Shared Family Hub</span>
           <span className="opacity-40">•</span>
           <button
             onClick={() => setIsPiGuideOpen(true)}
@@ -272,6 +309,7 @@ export default function App() {
       <ParentPinModal
         isOpen={isPinModalOpen}
         correctPin={database.settings.parentPin}
+        isDefaultPin={database.settings.isDefaultPin ?? (database.settings.parentPin === '1234')}
         onSuccess={() => {
           setIsPinModalOpen(false);
           setIsParentMode(true);

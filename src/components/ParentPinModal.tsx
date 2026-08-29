@@ -5,6 +5,7 @@ import { sound } from '../utils/sound';
 interface ParentPinModalProps {
   isOpen: boolean;
   correctPin: string;
+  isDefaultPin?: boolean;
   onSuccess: () => void;
   onClose: () => void;
 }
@@ -12,6 +13,7 @@ interface ParentPinModalProps {
 export const ParentPinModal: React.FC<ParentPinModalProps> = ({
   isOpen,
   correctPin,
+  isDefaultPin = true,
   onSuccess,
   onClose,
 }) => {
@@ -28,6 +30,8 @@ export const ParentPinModal: React.FC<ParentPinModalProps> = ({
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const showDefaultHint = isDefaultPin && correctPin === '1234';
 
   const handleKeyPress = (num: string) => {
     sound.playTap();
@@ -122,9 +126,11 @@ export const ParentPinModal: React.FC<ParentPinModalProps> = ({
         )}
 
         {/* Default Pin Hint */}
-        <div className="text-center text-xs text-slate-600 font-bold mb-4 bg-yellow-100/90 py-1.5 rounded-xl border border-yellow-300">
-          Default PIN is <strong className="text-indigo-900 font-mono font-black">1234</strong> (customizable in settings)
-        </div>
+        {showDefaultHint && (
+          <div className="text-center text-xs text-slate-600 font-bold mb-4 bg-yellow-100/90 py-1.5 rounded-xl border border-yellow-300">
+            Default PIN is <strong className="text-indigo-900 font-mono font-black">1234</strong> (customizable in settings)
+          </div>
+        )}
 
         {/* Numeric Keypad */}
         <div className="grid grid-cols-3 gap-2.5">

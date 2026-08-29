@@ -22,6 +22,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
   version: 1,
   settings: {
     parentPin: '1234',
+    isDefaultPin: true,
     familyName: 'Our Family',
     soundEnabled: true,
     streakBonusStars: 5,

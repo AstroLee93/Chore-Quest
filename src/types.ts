@@ -81,6 +81,7 @@ export interface RewardRedemption {
 
 export interface AppSettings {
   parentPin: string;
+  isDefaultPin?: boolean; // true if default 1234 PIN is still in use, false once changed
   familyName: string;
   soundEnabled: boolean;
   streakBonusStars: number;

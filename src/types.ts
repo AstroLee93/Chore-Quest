@@ -39,6 +39,10 @@ export interface ChoreItem {
   requiresParentVerification?: boolean;
   isActive: boolean;
   order: number;
+  subtasks?: string[]; // Step-by-step checklist
+  timerMinutes?: number; // Optional focus countdown timer in minutes
+  isBounty?: boolean; // Bonus bounty chore open to all kids
+  bountyBonusStars?: number; // Additional bonus stars
 }
 
 export type TaskStatus = 'pending' | 'completed' | 'skipped';
@@ -54,6 +58,7 @@ export interface ChoreLog {
   skippedReasonCategory?: 'sick' | 'supplies' | 'time' | 'already_done' | 'need_help' | 'other';
   verifiedByParent?: boolean;
   starsAwarded: number;
+  completedSubtasks?: string[]; // subtasks completed for this chore on this date
 }
 
 export interface RewardItem {
@@ -79,6 +84,60 @@ export interface RewardRedemption {
   notes?: string;
 }
 
+export interface FamilyGoal {
+  title: string;
+  reward: string;
+  icon: string;
+  targetChoreCount: number;
+  weekStartDate: string; // YYYY-MM-DD
+  isActive: boolean;
+}
+
+export type CalendarEventCategory =
+  | 'practice'
+  | 'school_project'
+  | 'field_trip'
+  | 'appointment'
+  | 'milestone'
+  | 'birthday'
+  | 'family'
+  | 'other';
+
+export type WeatherCondition =
+  | 'sunny'
+  | 'partly_cloudy'
+  | 'cloudy'
+  | 'rainy'
+  | 'stormy'
+  | 'snowy'
+  | 'windy';
+
+export interface DayWeather {
+  condition: WeatherCondition;
+  tempHigh: number;
+  tempLow: number;
+  note?: string;
+  source?: 'auto' | 'custom';
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  date: string; // YYYY-MM-DD
+  time?: string; // e.g. "15:30" or "3:30 PM"
+  endTime?: string;
+  category: CalendarEventCategory;
+  assignedKidIds: string[]; // array of kid IDs or ['all']
+  location?: string;
+  color?: string; // hex color or tailwind accent
+  icon?: string; // emoji icon
+  weatherNote?: string;
+  weatherIcon?: WeatherCondition;
+  isImportant?: boolean;
+  remindMinutesBefore?: number;
+}
+
 export interface AppSettings {
   parentPin: string;
   isDefaultPin?: boolean; // true if default 1234 PIN is still in use, false once changed
@@ -86,6 +145,7 @@ export interface AppSettings {
   soundEnabled: boolean;
   streakBonusStars: number;
   requireParentApprovalForRewards: boolean;
+  tempUnit?: 'F' | 'C';
 }
 
 export interface FamilyDatabase {
@@ -97,5 +157,9 @@ export interface FamilyDatabase {
   logs: ChoreLog[];
   rewards: RewardItem[];
   redemptions: RewardRedemption[];
+  events?: CalendarEvent[];
+  weatherForecasts?: Record<string, DayWeather>; // Keyed by YYYY-MM-DD
+  familyGoal?: FamilyGoal;
   lastBackupDate?: string;
 }
+

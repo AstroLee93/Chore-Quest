@@ -1,4 +1,5 @@
-import { FamilyDatabase, KidProfile, ChoreCategory, ChoreItem, ChoreLog, RewardItem, RewardRedemption, AppSettings } from '../types';
+import { FamilyDatabase, KidProfile, ChoreCategory, ChoreItem, ChoreLog, RewardItem, RewardRedemption, AppSettings, CalendarEvent, DayWeather } from '../types';
+import { getInitialSeedEvents } from './calendar';
 
 const STORAGE_KEY = 'chorequest_family_db_v1';
 
@@ -124,6 +125,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'morning',
       isActive: true,
       order: 1,
+      subtasks: ['Pull fitted and top sheets flat', 'Fluff and arrange pillows', 'Straighten quilt/comforter'],
+      timerMinutes: 3,
     },
     {
       id: 'chore-2',
@@ -137,6 +140,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'morning',
       isActive: true,
       order: 2,
+      subtasks: ['Brush top & bottom teeth (2 mins)', 'Spit and rinse toothbrush', 'Wash face & dry with clean towel'],
+      timerMinutes: 2,
     },
     {
       id: 'chore-3',
@@ -150,6 +155,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'morning',
       isActive: true,
       order: 3,
+      subtasks: ['Put on daytime clothes & socks', 'Place pajamas into hamper'],
+      timerMinutes: 5,
     },
     // Bedroom
     {
@@ -164,6 +171,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'afternoon',
       isActive: true,
       order: 1,
+      subtasks: ['Put building blocks & toys in bins', 'Stack books on shelf', 'No items left on the carpet'],
+      timerMinutes: 10,
     },
     {
       id: 'chore-5',
@@ -177,6 +186,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'afternoon',
       isActive: true,
       order: 2,
+      subtasks: ['Fold t-shirts & pants neatly', 'Hang coats/hoodies', 'Put socks & underwear in organizer'],
+      timerMinutes: 10,
     },
     // School
     {
@@ -191,6 +202,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'afternoon',
       isActive: true,
       order: 1,
+      subtasks: ['Find quiet reading spot', 'Read for 20 focused minutes', 'Write bookmark page or reading log'],
+      timerMinutes: 20,
     },
     {
       id: 'chore-7',
@@ -204,6 +217,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'evening',
       isActive: true,
       order: 2,
+      subtasks: ['Check homework folder & library books', 'Pack clean water bottle & snacks', 'Zip bag and place by door'],
+      timerMinutes: 5,
     },
     // House & Kitchen
     {
@@ -218,6 +233,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'evening',
       isActive: true,
       order: 1,
+      subtasks: ['Scrape scraps into organic bin', 'Rinse plate and silverware with water', 'Wipe dining place with damp rag'],
+      timerMinutes: 3,
     },
     {
       id: 'chore-9',
@@ -232,6 +249,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'afternoon',
       isActive: true,
       order: 2,
+      subtasks: ['Tie bathroom & bedroom small trash bags', 'Take out to big outdoor bin', 'Put fresh liner bags in cans'],
+      timerMinutes: 5,
     },
     // Pet care
     {
@@ -246,6 +265,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'morning',
       isActive: true,
       order: 1,
+      subtasks: ['Rinse water bowl & fill with fresh water', 'Scoop exact food portion into bowl'],
+      timerMinutes: 3,
     },
     // Evening
     {
@@ -260,6 +281,43 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       timeOfDay: 'evening',
       isActive: true,
       order: 1,
+      subtasks: ['Brush teeth with timer (2 mins)', 'Floss teeth gently', 'Slip into bedtime pajamas'],
+      timerMinutes: 4,
+    },
+    // Bounty Extra Credit Chores
+    {
+      id: 'chore-bounty-1',
+      categoryId: 'cat-household',
+      title: '🌟 Bonus Bounty: Wash Car Windows & Vacuum Mats',
+      description: 'First come first served extra-credit mission! Wash interior windshield and shake out floor mats.',
+      icon: '🚗',
+      stars: 15,
+      bountyBonusStars: 5,
+      assignedKidIds: ['all'],
+      frequency: 'as_needed',
+      timeOfDay: 'anytime',
+      isActive: true,
+      isBounty: true,
+      order: 99,
+      subtasks: ['Shake out dirt from front & back mats', 'Wipe dashboard with microfiber towel', 'Wipe car windows with glass cleaner'],
+      timerMinutes: 20,
+    },
+    {
+      id: 'chore-bounty-2',
+      categoryId: 'cat-bedroom',
+      title: '🌟 Bonus Bounty: Organize the Family Board Game Closet',
+      description: 'Sort all puzzle pieces and board games into neat, labeled stacks!',
+      icon: '🎲',
+      stars: 12,
+      bountyBonusStars: 4,
+      assignedKidIds: ['all'],
+      frequency: 'as_needed',
+      timeOfDay: 'anytime',
+      isActive: true,
+      isBounty: true,
+      order: 100,
+      subtasks: ['Match missing cards and dice to game boxes', 'Stack heavy boxes at the bottom', 'Recycle any ripped loose flyers'],
+      timerMinutes: 15,
     }
   ],
   logs: [
@@ -379,7 +437,17 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       status: 'approved',
       notes: 'Redeemed for Saturday afternoon Nintendo Switch session',
     }
-  ]
+  ],
+  events: getInitialSeedEvents(),
+  weatherForecasts: {},
+  familyGoal: {
+    title: 'Friday Family Pizza & Movie Night',
+    reward: 'Giant Pepperoni Pizza + Choose Any Movie! 🍕🎬',
+    icon: '🍕',
+    targetChoreCount: 35,
+    weekStartDate: getTodayDateString(),
+    isActive: true,
+  },
 };
 
 // Storage operations
@@ -396,6 +464,15 @@ export const loadDatabase = (): FamilyDatabase => {
     if (!parsed.kids || !parsed.chores || !parsed.categories) {
       saveDatabase(DEFAULT_SEED_DATA);
       return DEFAULT_SEED_DATA;
+    }
+    if (!parsed.events || parsed.events.length === 0) {
+      parsed.events = getInitialSeedEvents();
+    }
+    if (!parsed.weatherForecasts) {
+      parsed.weatherForecasts = {};
+    }
+    if (!parsed.familyGoal) {
+      parsed.familyGoal = DEFAULT_SEED_DATA.familyGoal;
     }
     return parsed;
   } catch (err) {
@@ -435,6 +512,7 @@ export const importDatabaseJSON = (jsonString: string): FamilyDatabase => {
       soundEnabled: parsed.settings?.soundEnabled ?? true,
       streakBonusStars: parsed.settings?.streakBonusStars ?? 5,
       requireParentApprovalForRewards: parsed.settings?.requireParentApprovalForRewards ?? false,
+      tempUnit: parsed.settings?.tempUnit || 'F',
     },
     kids: parsed.kids || [],
     categories: parsed.categories || [],
@@ -442,6 +520,8 @@ export const importDatabaseJSON = (jsonString: string): FamilyDatabase => {
     logs: parsed.logs || [],
     rewards: parsed.rewards || [],
     redemptions: parsed.redemptions || [],
+    events: parsed.events || getInitialSeedEvents(),
+    weatherForecasts: parsed.weatherForecasts || {},
     lastBackupDate: new Date().toISOString(),
   };
 };
@@ -513,3 +593,40 @@ export const getKidLevelInfo = (lifetimeStars: number) => {
     isMaxLevel: true,
   };
 };
+
+// Calculate weekly family goal stats
+export const getFamilyWeeklyGoalProgress = (database: FamilyDatabase) => {
+  const goal = database.familyGoal || DEFAULT_SEED_DATA.familyGoal!;
+  const today = new Date();
+  
+  // Calculate completed chores in the last 7 days or since weekStartDate
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 6);
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+  const startDateStr = goal.weekStartDate && goal.weekStartDate > sevenDaysAgoStr ? goal.weekStartDate : sevenDaysAgoStr;
+
+  const completedLogs = (database.logs || []).filter(
+    (l) => l.status === 'completed' && l.date >= startDateStr
+  );
+
+  const completedCount = completedLogs.length;
+  const target = Math.max(1, goal.targetChoreCount || 30);
+  const percent = Math.min(100, Math.round((completedCount / target) * 100));
+  const isReached = completedCount >= target;
+
+  return {
+    goal,
+    completedCount,
+    target,
+    percent,
+    isReached,
+    remaining: Math.max(0, target - completedCount),
+  };
+};
+
+// Helper to filter active bounty chores
+export const getBountyChores = (database: FamilyDatabase): ChoreItem[] => {
+  return (database.chores || []).filter((c) => c.isActive && c.isBounty);
+};
+

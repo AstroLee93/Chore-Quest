@@ -1,24 +1,36 @@
 import React from 'react';
-import { Sparkles, Flame, Trophy, Plus, Award } from 'lucide-react';
-import { KidProfile } from '../types';
-import { getKidLevelInfo } from '../utils/storage';
+import { Sparkles, Flame, Trophy, Plus, Award, Calendar, CloudSun, Clock, MapPin } from 'lucide-react';
+import { KidProfile, CalendarEvent, FamilyDatabase } from '../types';
+import { getKidLevelInfo, getTodayDateString } from '../utils/storage';
+import { getSeasonalWeatherForDate, EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../utils/calendar';
+import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { sound } from '../utils/sound';
 
 interface KidSelectorProps {
   kids: KidProfile[];
+  events?: CalendarEvent[];
+  database?: FamilyDatabase;
   onSelectKid: (kid: KidProfile) => void;
   onOpenParentPin: () => void;
+  onOpenCalendar?: () => void;
 }
 
 export const KidSelector: React.FC<KidSelectorProps> = ({
   kids,
+  events = [],
+  database,
   onSelectKid,
   onOpenParentPin,
+  onOpenCalendar,
 }) => {
+  const todayStr = getTodayDateString();
+  const todayWeather = getSeasonalWeatherForDate(todayStr);
+  const todayEvents = events.filter((e) => e.date === todayStr);
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
       {/* Hero Welcome */}
-      <div className="text-center mb-8 sm:mb-12">
+      <div className="text-center mb-6 sm:mb-8">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-100 text-pink-700 text-xs sm:text-sm font-black mb-3 border-2 border-pink-300 shadow-2xs">
           <Sparkles className="w-4 h-4 text-pink-500" />
           Ready for Today's Chores!
@@ -30,6 +42,59 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
           Tap your character below to view your daily missions, check off completed tasks, and earn stars for awesome rewards!
         </p>
       </div>
+
+      {/* Shared Family Goal Progress Banner */}
+      {database && (
+        <div className="mb-6">
+          <FamilyGoalBanner database={database} />
+        </div>
+      )}
+
+      {/* Today's Schedule & Practice Highlights Banner */}
+      {todayEvents.length > 0 && onOpenCalendar && (
+        <div className="mb-8 p-4 sm:p-5 rounded-3xl bg-white border-2 border-yellow-300 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-900 text-yellow-300 flex items-center justify-center text-2xl shadow-md shrink-0">
+              📅
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-black text-slate-900 text-base">
+                  Today's Family Schedule ({todayEvents.length} {todayEvents.length === 1 ? 'event' : 'events'})
+                </h3>
+                <span className="px-2 py-0.5 rounded-md bg-yellow-100 border border-yellow-300 text-yellow-900 text-xs font-black flex items-center gap-1">
+                  <span>{WEATHER_CONDITIONS[todayWeather.condition]?.icon || '☀️'}</span>
+                  <span>{todayWeather.tempHigh}°F</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-slate-600 font-bold mt-1 flex-wrap">
+                {todayEvents.slice(0, 2).map((evt) => (
+                  <span key={evt.id} className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-lg border border-yellow-200">
+                    <span>{evt.icon || '⭐'}</span>
+                    <span className="font-extrabold text-slate-900">{evt.title}</span>
+                    {evt.time && <span className="text-indigo-600 font-medium">({evt.time})</span>}
+                  </span>
+                ))}
+                {todayEvents.length > 2 && (
+                  <span className="text-indigo-700 font-extrabold">+{todayEvents.length - 2} more</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end md:self-center">
+            <button
+              onClick={() => {
+                sound.playTap();
+                onOpenCalendar();
+              }}
+              className="px-4 py-2 rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
+            >
+              Open Family Calendar →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Kid Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">

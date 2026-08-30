@@ -10,14 +10,18 @@ import { ParentDashboard } from './components/ParentDashboard';
 import { ParentPinModal } from './components/ParentPinModal';
 import { RewardStoreModal } from './components/RewardStoreModal';
 import { PiGuideModal } from './components/PiGuideModal';
+import { CalendarView } from './components/Calendar/CalendarView';
+import { KioskDashboard } from './components/KioskDashboard';
 
 export default function App() {
   const [database, setDatabase] = useState<FamilyDatabase>(() => loadDatabase());
   const [activeKidId, setActiveKidId] = useState<string | null>(null);
   const [isParentMode, setIsParentMode] = useState<boolean>(false);
+  const [isKioskMode, setIsKioskMode] = useState<boolean>(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
   const [isRewardStoreOpen, setIsRewardStoreOpen] = useState<boolean>(false);
   const [isPiGuideOpen, setIsPiGuideOpen] = useState<boolean>(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const [isSyncConnected, setIsSyncConnected] = useState<boolean>(true);
 
   // Synchronize sound engine with database setting
@@ -227,6 +231,30 @@ export default function App() {
     });
   };
 
+  // If Kiosk Mode is active, render the dedicated Kiosk Command Center View
+  if (isKioskMode) {
+    return (
+      <div className="min-h-screen bg-slate-950 font-sans">
+        <KioskDashboard
+          database={database}
+          onUpdateDatabase={handleUpdateDatabase}
+          onExitKiosk={() => setIsKioskMode(false)}
+          onOpenCalendar={() => setIsCalendarOpen(true)}
+        />
+
+        {/* Calendar Translucent Glass Overlay in Kiosk if triggered */}
+        {isCalendarOpen && (
+          <CalendarView
+            database={database}
+            activeKid={activeKid}
+            onUpdateDatabase={handleUpdateDatabase}
+            onClose={() => setIsCalendarOpen(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-yellow-50 text-slate-800 flex flex-col font-sans selection:bg-yellow-200">
       {/* Top Navigation */}
@@ -234,12 +262,21 @@ export default function App() {
         settings={database.settings}
         activeKid={activeKid}
         isParentMode={isParentMode}
+        events={database.events || []}
+        isCalendarOpen={isCalendarOpen}
         onOpenParentPin={() => setIsPinModalOpen(true)}
-        onExitParentMode={() => setIsParentMode(false)}
-        onSelectKid={(kid) => setActiveKidId(kid ? kid.id : null)}
+        onExitParentMode={() => {
+          setIsParentMode(false);
+          setIsCalendarOpen(false);
+        }}
+        onSelectKid={(kid) => {
+          setActiveKidId(kid ? kid.id : null);
+        }}
         onToggleSound={handleToggleSound}
         onOpenPiGuide={() => setIsPiGuideOpen(true)}
         onOpenRewardStore={() => setIsRewardStoreOpen(true)}
+        onToggleCalendar={() => setIsCalendarOpen((prev) => !prev)}
+        onToggleKiosk={() => setIsKioskMode(true)}
       />
 
       {/* Main Viewport Router */}
@@ -250,6 +287,7 @@ export default function App() {
             onUpdateDatabase={handleUpdateDatabase}
             onExitParentMode={() => setIsParentMode(false)}
             onOpenPiGuide={() => setIsPiGuideOpen(true)}
+            onOpenCalendar={() => setIsCalendarOpen(true)}
           />
         ) : activeKid ? (
           <KidDashboard
@@ -259,19 +297,35 @@ export default function App() {
             logs={database.logs}
             rewards={database.rewards}
             settings={database.settings}
+            events={database.events || []}
+            database={database}
             onToggleCompleteChore={handleToggleCompleteChore}
             onSkipChoreWithReason={handleSkipChoreWithReason}
             onUndoChoreStatus={handleUndoChoreStatus}
             onOpenRewardStore={() => setIsRewardStoreOpen(true)}
+            onOpenCalendar={() => setIsCalendarOpen(true)}
           />
         ) : (
           <KidSelector
             kids={database.kids}
+            events={database.events || []}
+            database={database}
             onSelectKid={(kid) => setActiveKidId(kid.id)}
             onOpenParentPin={() => setIsPinModalOpen(true)}
+            onOpenCalendar={() => setIsCalendarOpen(true)}
           />
         )}
       </main>
+
+      {/* Calendar Translucent Glass Overlay */}
+      {isCalendarOpen && (
+        <CalendarView
+          database={database}
+          activeKid={activeKid}
+          onUpdateDatabase={handleUpdateDatabase}
+          onClose={() => setIsCalendarOpen(false)}
+        />
+      )}
 
       {/* Footer */}
       <footer className="bg-white p-4 px-6 sm:px-8 border-t-2 border-yellow-200/80 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-xs gap-3">

@@ -44,11 +44,14 @@ import {
 import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON } from '../utils/storage';
 import { sound } from '../utils/sound';
 
+import { CalendarView } from './Calendar/CalendarView';
+
 interface ParentDashboardProps {
   database: FamilyDatabase;
   onUpdateDatabase: (updated: FamilyDatabase) => void;
   onExitParentMode: () => void;
   onOpenPiGuide: () => void;
+  onOpenCalendar?: () => void;
 }
 
 export const ParentDashboard: React.FC<ParentDashboardProps> = ({
@@ -56,8 +59,9 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   onUpdateDatabase,
   onExitParentMode,
   onOpenPiGuide,
+  onOpenCalendar,
 }) => {
-  const [activeTab, setActiveTab] = useState<'activity' | 'chores' | 'rewards' | 'kids' | 'settings'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'chores' | 'rewards' | 'kids' | 'settings'>('activity');
   const todayStr = getTodayDateString();
 
   // Filter states for Activity Log
@@ -425,6 +429,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       <div className="flex gap-2 overflow-x-auto pb-1 p-1.5 rounded-2xl bg-yellow-200/70 border-2 border-yellow-300 shadow-2xs">
         {[
           { id: 'activity', label: 'Daily Review & Audit', icon: CheckCircle, badge: database.logs.filter((l) => l.date === todayStr).length },
+          { id: 'calendar', label: 'Yearly Calendar', icon: Calendar, badge: (database.events || []).length },
           { id: 'chores', label: 'Chores & Categories', icon: FileSpreadsheet, badge: database.chores.length },
           { id: 'rewards', label: 'Rewards & Claims', icon: Gift, badge: database.redemptions.filter((r) => r.status === 'pending').length || undefined },
           { id: 'kids', label: 'Kids Profiles', icon: Users, badge: database.kids.length },
@@ -678,6 +683,16 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             )}
           </div>
         </div>
+      )}
+
+      {/* TAB: YEARLY ACTIVITY & WEATHER CALENDAR */}
+      {activeTab === 'calendar' && (
+        <CalendarView
+          database={database}
+          activeKid={null}
+          onUpdateDatabase={onUpdateDatabase}
+          onClose={() => setActiveTab('activity')}
+        />
       )}
 
       {/* TAB 2: CHORES & CATEGORIES MANAGER */}
@@ -1435,6 +1450,95 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   placeholder="e.g. Rinse plates, scrape food, and place utensils in the cutlery basket."
                   className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-indigo-500 resize-none"
                 />
+              </div>
+
+              {/* Subtask Checklists */}
+              <div>
+                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                  Step-by-Step Checklist (One step per line):
+                </label>
+                <textarea
+                  rows={3}
+                  value={editingChore.subtasks ? editingChore.subtasks.join('\n') : ''}
+                  onChange={(e) => {
+                    const lines = e.target.value.split('\n');
+                    setEditingChore({
+                      ...editingChore,
+                      subtasks: lines.filter((l) => l.trim().length > 0),
+                    });
+                  }}
+                  placeholder="1. Pick up stuffed animals&#10;2. Fold clean blankets&#10;3. Put dirty clothes in the laundry hamper"
+                  className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-indigo-500 resize-none"
+                />
+              </div>
+
+              {/* Focus Timer & Bounty Extras */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-3 bg-white rounded-2xl border-2 border-slate-200">
+                  <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                    ⏱️ Focus Timer (Minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={120}
+                    value={editingChore.timerMinutes || ''}
+                    onChange={(e) =>
+                      setEditingChore({
+                        ...editingChore,
+                        timerMinutes: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
+                    placeholder="e.g. 5 or 10 min"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-900 bg-slate-50"
+                  />
+                  <span className="text-[10px] text-slate-400 font-bold block mt-1">
+                    Shows countdown & speed bonus
+                  </span>
+                </div>
+
+                <div className="p-3 bg-white rounded-2xl border-2 border-slate-200 flex flex-col justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!editingChore.isBounty}
+                      onChange={(e) =>
+                        setEditingChore({
+                          ...editingChore,
+                          isBounty: e.target.checked,
+                          bountyBonusStars: e.target.checked ? (editingChore.bountyBonusStars || 5) : 0,
+                        })
+                      }
+                      className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400"
+                    />
+                    <span className="text-xs font-black text-amber-950">
+                      🎯 Extra Credit Bounty
+                    </span>
+                  </label>
+                  {editingChore.isBounty && (
+                    <div className="mt-2">
+                      <label className="text-[10px] font-black uppercase text-amber-800 block mb-0.5">
+                        Bonus Stars (+⭐):
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={editingChore.bountyBonusStars || 5}
+                        onChange={(e) =>
+                          setEditingChore({
+                            ...editingChore,
+                            bountyBonusStars: Number(e.target.value),
+                          })
+                        }
+                        className="w-full px-2 py-1 rounded-lg border border-amber-300 text-xs font-black text-slate-900 bg-amber-50"
+                      />
+                    </div>
+                  )}
+                  <span className="text-[10px] text-slate-400 font-bold block mt-1">
+                    Appears on the Bounty Board
+                  </span>
+                </div>
               </div>
             </div>
 

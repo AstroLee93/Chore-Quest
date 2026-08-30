@@ -1,31 +1,45 @@
 import React, { useState } from 'react';
-import { Shield, Sparkles, Volume2, VolumeX, Wifi, Server, LogOut, ArrowLeft } from 'lucide-react';
-import { KidProfile, AppSettings } from '../types';
+import { Shield, Sparkles, Volume2, VolumeX, Wifi, Server, LogOut, ArrowLeft, Calendar as CalendarIcon, CloudSun } from 'lucide-react';
+import { KidProfile, AppSettings, CalendarEvent } from '../types';
 import { sound } from '../utils/sound';
+import { getSeasonalWeatherForDate } from '../utils/calendar';
+import { getTodayDateString } from '../utils/storage';
 
 interface NavbarProps {
   settings: AppSettings;
   activeKid: KidProfile | null;
   isParentMode: boolean;
+  events?: CalendarEvent[];
+  isCalendarOpen?: boolean;
   onOpenParentPin: () => void;
   onExitParentMode: () => void;
   onSelectKid: (kid: KidProfile | null) => void;
   onToggleSound: () => void;
   onOpenPiGuide: () => void;
   onOpenRewardStore?: () => void;
+  onToggleCalendar: () => void;
+  onToggleKiosk?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   settings,
   activeKid,
   isParentMode,
+  events = [],
+  isCalendarOpen = false,
   onOpenParentPin,
   onExitParentMode,
   onSelectKid,
   onToggleSound,
   onOpenPiGuide,
   onOpenRewardStore,
+  onToggleCalendar,
+  onToggleKiosk,
 }) => {
+  const todayStr = getTodayDateString();
+  const todayWeather = getSeasonalWeatherForDate(todayStr);
+  const todayEventsCount = events.filter((e) => e.date === todayStr).length;
+
   return (
     <header className="sticky top-0 z-30 bg-white border-b-4 border-yellow-200 px-4 sm:px-8 py-3.5 sm:py-4 flex justify-between items-center shadow-xs">
       <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3">
@@ -111,6 +125,45 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2">
+            {/* Calendar Glass Overlay Button */}
+            <button
+              id="btn-nav-calendar"
+              onClick={() => {
+                sound.playTap();
+                onToggleCalendar();
+              }}
+              className={`p-2 sm:px-3.5 sm:py-2 rounded-xl border-2 flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                isCalendarOpen
+                  ? 'bg-indigo-900 text-white border-indigo-950 shadow-md ring-2 ring-indigo-400/50'
+                  : 'bg-yellow-100 hover:bg-yellow-200 text-slate-800 border-yellow-300'
+              }`}
+              title="Family Activity Calendar (Glass View)"
+            >
+              <CalendarIcon className="w-4 h-4 text-indigo-700 stroke-[2.5]" />
+              <span className="hidden sm:inline text-xs font-black">Calendar</span>
+              {todayEventsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-indigo-600 text-yellow-300 text-[10px] font-black">
+                  {todayEventsCount}
+                </span>
+              )}
+            </button>
+
+            {/* Kiosk Mode Button */}
+            {onToggleKiosk && (
+              <button
+                id="btn-nav-kiosk"
+                onClick={() => {
+                  sound.playTap();
+                  onToggleKiosk();
+                }}
+                className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                title="Open Kitchen / Wall Tablet Ambient Kiosk Display"
+              >
+                <span>📺</span>
+                <span className="hidden md:inline">Kiosk</span>
+              </button>
+            )}
+
             {/* Pi Guide Info */}
             <button
               id="btn-pi-guide"
@@ -175,3 +228,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+

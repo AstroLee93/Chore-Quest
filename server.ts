@@ -27,6 +27,12 @@ function initDatabase() {
       const raw = fs.readFileSync(DB_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
       if (parsed && parsed.kids && parsed.chores && parsed.categories && parsed.settings) {
+        if (!parsed.events || parsed.events.length === 0) {
+          parsed.events = DEFAULT_SEED_DATA.events || [];
+        }
+        if (!parsed.weatherForecasts) {
+          parsed.weatherForecasts = {};
+        }
         currentDatabase = parsed;
         console.log('[Server] Loaded persisted database from disk.');
       }

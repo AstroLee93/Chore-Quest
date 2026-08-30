@@ -1,5 +1,5 @@
-import React from 'react';
-import { Check, Clock, AlertTriangle, Undo2, Star, HelpCircle, Sun, Moon, Sparkles, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, Clock, AlertTriangle, Undo2, Star, HelpCircle, Sun, Moon, Sparkles, ChevronRight, Play, CheckSquare, Square, Target, Timer } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { ChoreItem, ChoreLog, ChoreCategory } from '../types';
 import { sound } from '../utils/sound';
@@ -11,6 +11,7 @@ interface ChoreCardProps {
   onToggleComplete: (chore: ChoreItem) => void;
   onOpenSkipModal: (chore: ChoreItem) => void;
   onUndo: (choreId: string) => void;
+  onStartTimer?: (chore: ChoreItem) => void;
 }
 
 export const ChoreCard: React.FC<ChoreCardProps> = ({
@@ -20,9 +21,31 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   onToggleComplete,
   onOpenSkipModal,
   onUndo,
+  onStartTimer,
 }) => {
   const isCompleted = log?.status === 'completed';
   const isSkipped = log?.status === 'skipped';
+
+  // Subtasks local state (synced or tracked per session)
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+
+  const handleToggleSubtask = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    sound.playTap();
+    setCompletedSteps((prev) => {
+      const exists = prev.includes(index);
+      if (exists) {
+        return prev.filter((i) => i !== index);
+      } else {
+        const next = [...prev, index];
+        // If all subtasks completed, play small reward sound
+        if (chore.subtasks && next.length === chore.subtasks.length) {
+          sound.playStarEarned();
+        }
+        return next;
+      }
+    });
+  };
 
   const handleCompleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -63,6 +86,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   const getBorderColorClass = () => {
     if (isCompleted) return 'border-emerald-500';
     if (isSkipped) return 'border-amber-400';
+    if (chore.isBounty) return 'border-amber-400 ring-2 ring-amber-300/60';
     
     // Choose vibrant color based on chore id / category
     const catColor = category?.color?.toLowerCase();
@@ -81,6 +105,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   const getIconBgClass = () => {
     if (isCompleted) return 'bg-emerald-100 text-emerald-800';
     if (isSkipped) return 'bg-amber-100 text-amber-800';
+    if (chore.isBounty) return 'bg-amber-100 text-amber-900';
     const borderClass = getBorderColorClass();
     if (borderClass.includes('blue')) return 'bg-blue-100 text-blue-900';
     if (borderClass.includes('purple')) return 'bg-purple-100 text-purple-900';
@@ -92,6 +117,10 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   const timeBadge = getTimeBadge(chore.timeOfDay);
   const borderClass = getBorderColorClass();
   const iconBg = getIconBgClass();
+
+  const totalSubtasks = chore.subtasks?.length || 0;
+  const subtasksDone = isCompleted ? totalSubtasks : completedSteps.length;
+  const allSubtasksDone = totalSubtasks > 0 && subtasksDone === totalSubtasks;
 
   return (
     <div
@@ -113,6 +142,13 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
           {/* Details */}
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
+              {chore.isBounty && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-400 text-amber-950 border border-amber-500 animate-pulse">
+                  <Target className="w-3 h-3" />
+                  <span>BONUS BOUNTY</span>
+                </span>
+              )}
+
               <span
                 className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${timeBadge.color}`}
               >
@@ -129,8 +165,25 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
               {/* Star reward badge */}
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-pink-100 text-pink-700 border border-pink-300">
                 <Star className="w-3 h-3 fill-pink-500 text-pink-500" />
-                +{chore.stars} Points
+                +{chore.stars + (chore.bountyBonusStars || 0)} Points
               </span>
+
+              {/* Focus timer badge shortcut */}
+              {onStartTimer && !isCompleted && !isSkipped && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    sound.playTap();
+                    onStartTimer(chore);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 transition-colors cursor-pointer"
+                  title="Start Interactive Countdown Timer"
+                >
+                  <Timer className="w-3 h-3 text-indigo-600" />
+                  <span>{chore.timerMinutes ? `${chore.timerMinutes}m Timer` : 'Timer'}</span>
+                </button>
+              )}
             </div>
 
             <h3
@@ -145,6 +198,50 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
               <p className={`text-xs sm:text-sm mt-0.5 font-medium leading-relaxed ${isCompleted ? 'text-slate-400' : 'text-slate-500'}`}>
                 {chore.description}
               </p>
+            )}
+
+            {/* Step-by-Step Checklist (Subtasks) */}
+            {chore.subtasks && chore.subtasks.length > 0 && (
+              <div className="mt-3 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="flex items-center justify-between text-[11px] font-black text-slate-600 mb-2">
+                  <span className="flex items-center gap-1">
+                    <span>📋 Step-by-Step Guide</span>
+                  </span>
+                  <span className={allSubtasksDone ? 'text-emerald-600 font-extrabold' : 'text-slate-500'}>
+                    {subtasksDone} of {totalSubtasks} steps done
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  {chore.subtasks.map((step, idx) => {
+                    const stepDone = isCompleted || completedSteps.includes(idx);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={(e) => handleToggleSubtask(idx, e)}
+                        disabled={isCompleted}
+                        className={`w-full text-left flex items-start gap-2 p-1.5 rounded-xl transition-all text-xs font-medium cursor-pointer ${
+                          stepDone
+                            ? 'bg-emerald-50 text-emerald-800 font-semibold'
+                            : 'hover:bg-white text-slate-700'
+                        }`}
+                      >
+                        <span className="mt-0.5 shrink-0">
+                          {stepDone ? (
+                            <CheckSquare className="w-4 h-4 text-emerald-600" />
+                          ) : (
+                            <Square className="w-4 h-4 text-slate-400" />
+                          )}
+                        </span>
+                        <span className={stepDone ? 'line-through decoration-emerald-600/60' : ''}>
+                          {step}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {/* Skipped Reason preview if applicable */}
@@ -164,7 +261,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
             {isCompleted && log?.completedAt && (
               <div className="mt-1.5 text-xs text-emerald-700 font-bold flex items-center gap-1">
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>Finished today! +{chore.stars} points added</span>
+                <span>Finished today! +{chore.stars + (chore.bountyBonusStars || 0)} points added</span>
               </div>
             )}
           </div>
@@ -215,7 +312,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
               {/* Skip / Can't complete button */}
               <button
                 id={`btn-skip-${chore.id}`}
@@ -223,7 +320,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                   sound.playTap();
                   onOpenSkipModal(chore);
                 }}
-                className="bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200 font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer text-xs sm:text-sm"
+                className="bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200 font-bold px-3.5 py-2.5 rounded-xl transition-all cursor-pointer text-xs sm:text-sm"
               >
                 Can't do it...
               </button>
@@ -244,3 +341,4 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
     </div>
   );
 };
+

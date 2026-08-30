@@ -168,7 +168,7 @@ class SoundEngine {
     osc.stop(now + 0.2);
   }
 
-  // Unlock / parent access sound
+  // Play unlock / parent access sound
   public playUnlock() {
     if (!this.isEnabled) return;
     const ctx = this.getContext();
@@ -190,6 +190,74 @@ class SoundEngine {
 
     osc.start(now);
     osc.stop(now + 0.22);
+  }
+
+  // Play coin sound
+  public playCoin() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(987.77, now); // B5
+    osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.38);
+  }
+
+  // Play pop / tick sound for wheel or subtasks
+  public playPop() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(200, now + 0.03);
+
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.04);
+  }
+
+  // Play fanfare triumph sound
+  public playFanfare() {
+    this.playRewardRedeemed();
+  }
+
+  // Play level up jingle
+  public playLevelUp() {
+    this.playChoreComplete();
+  }
+
+  // Generic success / complete chime
+  public playComplete() {
+    this.playChoreComplete();
+  }
+
+  // Error / fail tone
+  public playFail() {
+    this.playSkipNotice();
   }
 }
 

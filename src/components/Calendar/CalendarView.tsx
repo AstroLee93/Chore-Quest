@@ -80,8 +80,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   // Handle ESC key to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isEventModalOpen && !selectedDateForDetail && !weatherModalDate) {
-        onClose();
+      if (e.key === 'Escape') {
+        if (isEventModalOpen) {
+          setIsEventModalOpen(false);
+          setEditingEvent(null);
+        } else if (weatherModalDate) {
+          setWeatherModalDate(null);
+        } else if (selectedDateForDetail) {
+          setSelectedDateForDetail(null);
+        } else {
+          onClose();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -273,7 +282,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   return (
     <div
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto bg-slate-950/70 backdrop-blur-xl animate-fade-in"
     >
       {/* Frosted Glass Main Modal Card */}

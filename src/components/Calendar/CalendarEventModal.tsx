@@ -42,26 +42,44 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
   const [validationError, setValidationError] = useState<string>('');
 
   useEffect(() => {
-    if (event) {
-      setFormData({
-        title: event.title || '',
-        description: event.description || '',
-        date: event.date || initialDate || new Date().toISOString().split('T')[0],
-        time: event.time || '15:30',
-        endTime: event.endTime || '',
-        category: event.category || 'practice',
-        assignedKidIds: event.assignedKidIds && event.assignedKidIds.length > 0 ? event.assignedKidIds : ['all'],
-        location: event.location || '',
-        color: event.color || EVENT_CATEGORIES[event.category || 'practice']?.color || '#10b981',
-        icon: event.icon || EVENT_CATEGORIES[event.category || 'practice']?.icon || '⭐',
-        weatherNote: event.weatherNote || '',
-        weatherIcon: event.weatherIcon,
-        isImportant: event.isImportant || false,
-        id: event.id,
-      });
+    if (isOpen) {
+      if (event && (event.id || event.title)) {
+        setFormData({
+          title: event.title || '',
+          description: event.description || '',
+          date: event.date || initialDate || new Date().toISOString().split('T')[0],
+          time: event.time || '15:30',
+          endTime: event.endTime || '',
+          category: event.category || 'practice',
+          assignedKidIds: event.assignedKidIds && event.assignedKidIds.length > 0 ? event.assignedKidIds : ['all'],
+          location: event.location || '',
+          color: event.color || EVENT_CATEGORIES[event.category || 'practice']?.color || '#10b981',
+          icon: event.icon || EVENT_CATEGORIES[event.category || 'practice']?.icon || '⭐',
+          weatherNote: event.weatherNote || '',
+          weatherIcon: event.weatherIcon,
+          isImportant: event.isImportant || false,
+          id: event.id,
+        });
+      } else {
+        setFormData({
+          title: '',
+          description: '',
+          date: event?.date || initialDate || new Date().toISOString().split('T')[0],
+          time: '15:30',
+          endTime: '16:30',
+          category: 'practice',
+          assignedKidIds: ['all'],
+          location: '',
+          color: EVENT_CATEGORIES.practice.color,
+          icon: EVENT_CATEGORIES.practice.icon,
+          weatherNote: '',
+          weatherIcon: undefined,
+          isImportant: false,
+        });
+      }
       setValidationError('');
     }
-  }, [event, initialDate]);
+  }, [isOpen, event?.id, event?.date, initialDate]);
 
   if (!isOpen) return null;
 
@@ -131,8 +149,19 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-      <div className="bg-yellow-50 rounded-[2.5rem] p-5 sm:p-7 max-w-xl w-full shadow-2xl border-4 border-yellow-300 max-h-[92vh] overflow-y-auto">
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-70 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-yellow-50 rounded-[2.5rem] p-5 sm:p-7 max-w-xl w-full shadow-2xl border-4 border-yellow-300 max-h-[92vh] overflow-y-auto"
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b-2 border-yellow-200/80 mb-4">
           <div className="flex items-center gap-2.5">

@@ -85,6 +85,7 @@ export interface RewardRedemption {
 }
 
 export interface FamilyGoal {
+  id?: string;
   title: string;
   reward: string;
   icon: string;
@@ -160,6 +161,7 @@ export interface FamilyDatabase {
   events?: CalendarEvent[];
   weatherForecasts?: Record<string, DayWeather>; // Keyed by YYYY-MM-DD
   familyGoal?: FamilyGoal;
+  savedFamilyGoals?: FamilyGoal[];
   lastBackupDate?: string;
 }
 

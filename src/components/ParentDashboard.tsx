@@ -45,6 +45,8 @@ import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJ
 import { sound } from '../utils/sound';
 
 import { CalendarView } from './Calendar/CalendarView';
+import { FamilyGoalBanner } from './FamilyGoalBanner';
+import { FamilyGoalModal } from './FamilyGoalModal';
 
 interface ParentDashboardProps {
   database: FamilyDatabase;
@@ -62,6 +64,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   onOpenCalendar,
 }) => {
   const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'chores' | 'rewards' | 'kids' | 'settings'>('activity');
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const todayStr = getTodayDateString();
 
   // Filter states for Activity Log
@@ -424,6 +427,16 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Shared Family Goal Banner */}
+      <FamilyGoalBanner
+        database={database}
+        isParentMode={true}
+        onEditGoal={() => {
+          sound.playTap();
+          setIsGoalModalOpen(true);
+        }}
+      />
 
       {/* Navigation Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 p-1.5 rounded-2xl bg-yellow-200/70 border-2 border-yellow-300 shadow-2xs">
@@ -1214,6 +1227,40 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             </div>
           </form>
 
+          {/* Weekly Family Teamwork Goal Management Card */}
+          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-6 rounded-3xl border-b-6 border-r-4 border-amber-400 border-t-2 border-l-2 border-t-amber-100 border-l-amber-100 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h4 className="font-black text-amber-950 text-base flex items-center gap-2">
+                🏆 Weekly Family Teamwork Goal & Alternative Options
+              </h4>
+              <p className="text-xs text-amber-900 font-bold mt-1 max-w-xl">
+                Choose or create custom family rewards (e.g. Pizza & Movie Night, Ice Cream Sundae Party, Laser Tag), adjust target chores, or add custom presets for kids and parents to select on the kiosk.
+              </p>
+              <div className="mt-2 flex items-center gap-2 text-xs font-black text-slate-700 flex-wrap">
+                <span className="bg-amber-200 text-amber-950 px-2.5 py-0.5 rounded-full border border-amber-300">
+                  Current: {database.familyGoal?.title || 'Pizza & Movie Night'}
+                </span>
+                <span className="text-pink-600 font-extrabold">
+                  🎁 {database.familyGoal?.reward || 'Family Movie & Pizza Night'}
+                </span>
+                <span className="text-slate-500">
+                  🎯 Target: {database.familyGoal?.targetChores || 30} chores
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              id="btn-manage-family-goal-settings"
+              onClick={() => {
+                sound.playTap();
+                setIsGoalModalOpen(true);
+              }}
+              className="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 shadow-md active:scale-95 cursor-pointer border border-amber-400"
+            >
+              Configure Goal & Presets ⚙️
+            </button>
+          </div>
+
           {/* Backup & Restore Section */}
           <div className="bg-white p-6 sm:p-8 rounded-3xl border-b-6 border-r-4 border-yellow-400 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-2xs space-y-4">
             <div>
@@ -1848,6 +1895,16 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             </div>
           </div>
         </div>
+      )}
+      {/* Family Goal Manager Modal */}
+      {isGoalModalOpen && (
+        <FamilyGoalModal
+          isOpen={isGoalModalOpen}
+          onClose={() => setIsGoalModalOpen(false)}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          isParentMode={true}
+        />
       )}
     </div>
   );

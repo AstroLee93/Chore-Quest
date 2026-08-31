@@ -1,4 +1,4 @@
-import { FamilyDatabase, KidProfile, ChoreCategory, ChoreItem, ChoreLog, RewardItem, RewardRedemption, AppSettings, CalendarEvent, DayWeather } from '../types';
+import { FamilyDatabase, KidProfile, ChoreCategory, ChoreItem, ChoreLog, RewardItem, RewardRedemption, AppSettings, CalendarEvent, DayWeather, FamilyGoal } from '../types';
 import { getInitialSeedEvents } from './calendar';
 
 const STORAGE_KEY = 'chorequest_family_db_v1';
@@ -17,6 +17,89 @@ export const formatDateDisplay = (dateStr: string): string => {
   const d = new Date(year, month - 1, day);
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 };
+
+export const DEFAULT_FAMILY_GOAL_PRESETS: Omit<FamilyGoal, 'weekStartDate'>[] = [
+  {
+    id: 'preset-pizza',
+    title: 'Friday Family Pizza & Movie Night',
+    reward: 'Giant Pepperoni Pizza + Pick Any Movie! 🍕🎬',
+    icon: '🍕',
+    targetChoreCount: 35,
+    isActive: true,
+  },
+  {
+    id: 'preset-sundae',
+    title: 'Mega Ice Cream Sundae Party',
+    reward: 'Build-your-own ice cream bar with unlimited toppings & sprinkles! 🍨✨',
+    icon: '🍨',
+    targetChoreCount: 30,
+    isActive: true,
+  },
+  {
+    id: 'preset-theme-park',
+    title: 'Adventure / Trampoline Park Day Pass',
+    reward: 'Weekend afternoon at the trampoline & ninja park! 🎡🚀',
+    icon: '🎡',
+    targetChoreCount: 45,
+    isActive: true,
+  },
+  {
+    id: 'preset-campout',
+    title: 'Backyard Campout & Firepit S\'mores',
+    reward: 'Tent sleepover, campfire ghost stories & toasted marshmallows! 🏕️🍫',
+    icon: '🏕️',
+    targetChoreCount: 25,
+    isActive: true,
+  },
+  {
+    id: 'preset-game-night',
+    title: 'Epic Board Game & Arcade Tournament',
+    reward: 'Family championship tournament with snack buffet & prize trophy! 🎲👑',
+    icon: '🎲',
+    targetChoreCount: 28,
+    isActive: true,
+  },
+  {
+    id: 'preset-pancake-bar',
+    title: 'Sunday Deluxe Pancake & Waffle Feast',
+    reward: 'Whipped cream, strawberries, blueberries & chocolate chips! 🥞🍓',
+    icon: '🥞',
+    targetChoreCount: 25,
+    isActive: true,
+  },
+  {
+    id: 'preset-bowling',
+    title: 'Cosmic Glow Bowling & Snack Bar Outing',
+    reward: 'Glow-in-the-dark bowling + giant loaded nachos & arcade tokens! 🎳🕹️',
+    icon: '🎳',
+    targetChoreCount: 32,
+    isActive: true,
+  },
+  {
+    id: 'preset-pool-day',
+    title: 'Water Park & Poolside Splash Extravaganza',
+    reward: 'Swimming pool day pass with giant floaties & fruit slushies! 🏊‍♂️🥤',
+    icon: '🏊',
+    targetChoreCount: 35,
+    isActive: true,
+  },
+  {
+    id: 'preset-cinema',
+    title: 'Big Screen Cinema & Jumbo Popcorn Outing',
+    reward: 'Movie theater tickets + giant butter popcorn & sweet treats! 🍿🎬',
+    icon: '🍿',
+    targetChoreCount: 40,
+    isActive: true,
+  },
+  {
+    id: 'preset-escape-room',
+    title: 'Laser Tag & Secret Agent Quest',
+    reward: 'Squad laser tag match + celebratory milkshake toast! 🎯🥤',
+    icon: '🎯',
+    targetChoreCount: 38,
+    isActive: true,
+  },
+];
 
 // Initial default seed database if first time opening app
 export const DEFAULT_SEED_DATA: FamilyDatabase = {
@@ -448,6 +531,35 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     weekStartDate: getTodayDateString(),
     isActive: true,
   },
+  savedFamilyGoals: [
+    {
+      id: 'saved-pizza',
+      title: 'Friday Family Pizza & Movie Night',
+      reward: 'Giant Pepperoni Pizza + Choose Any Movie! 🍕🎬',
+      icon: '🍕',
+      targetChoreCount: 35,
+      weekStartDate: getTodayDateString(),
+      isActive: true,
+    },
+    {
+      id: 'saved-sundae',
+      title: 'Mega Ice Cream Sundae Party',
+      reward: 'Build-your-own ice cream bar with unlimited toppings & sprinkles! 🍨✨',
+      icon: '🍨',
+      targetChoreCount: 30,
+      weekStartDate: getTodayDateString(),
+      isActive: true,
+    },
+    {
+      id: 'saved-campout',
+      title: 'Backyard Campout & Firepit S\'mores',
+      reward: 'Tent sleepover, campfire ghost stories & toasted marshmallows! 🏕️🍫',
+      icon: '🏕️',
+      targetChoreCount: 25,
+      weekStartDate: getTodayDateString(),
+      isActive: true,
+    },
+  ],
 };
 
 // Storage operations
@@ -473,6 +585,9 @@ export const loadDatabase = (): FamilyDatabase => {
     }
     if (!parsed.familyGoal) {
       parsed.familyGoal = DEFAULT_SEED_DATA.familyGoal;
+    }
+    if (!parsed.savedFamilyGoals || parsed.savedFamilyGoals.length === 0) {
+      parsed.savedFamilyGoals = DEFAULT_SEED_DATA.savedFamilyGoals;
     }
     return parsed;
   } catch (err) {

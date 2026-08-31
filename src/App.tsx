@@ -12,6 +12,7 @@ import { RewardStoreModal } from './components/RewardStoreModal';
 import { PiGuideModal } from './components/PiGuideModal';
 import { CalendarView } from './components/Calendar/CalendarView';
 import { KioskDashboard } from './components/KioskDashboard';
+import { FamilyGoalModal } from './components/FamilyGoalModal';
 
 export default function App() {
   const [database, setDatabase] = useState<FamilyDatabase>(() => loadDatabase());
@@ -22,6 +23,7 @@ export default function App() {
   const [isRewardStoreOpen, setIsRewardStoreOpen] = useState<boolean>(false);
   const [isPiGuideOpen, setIsPiGuideOpen] = useState<boolean>(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [isSyncConnected, setIsSyncConnected] = useState<boolean>(true);
 
   // Synchronize sound engine with database setting
@@ -304,6 +306,7 @@ export default function App() {
             onUndoChoreStatus={handleUndoChoreStatus}
             onOpenRewardStore={() => setIsRewardStoreOpen(true)}
             onOpenCalendar={() => setIsCalendarOpen(true)}
+            onOpenGoalManager={() => setIsGoalModalOpen(true)}
           />
         ) : (
           <KidSelector
@@ -313,6 +316,7 @@ export default function App() {
             onSelectKid={(kid) => setActiveKidId(kid.id)}
             onOpenParentPin={() => setIsPinModalOpen(true)}
             onOpenCalendar={() => setIsCalendarOpen(true)}
+            onOpenGoalManager={() => setIsGoalModalOpen(true)}
           />
         )}
       </main>
@@ -324,6 +328,17 @@ export default function App() {
           activeKid={activeKid}
           onUpdateDatabase={handleUpdateDatabase}
           onClose={() => setIsCalendarOpen(false)}
+        />
+      )}
+
+      {/* Family Goal Manager Modal */}
+      {isGoalModalOpen && (
+        <FamilyGoalModal
+          isOpen={isGoalModalOpen}
+          onClose={() => setIsGoalModalOpen(false)}
+          database={database}
+          onUpdateDatabase={handleUpdateDatabase}
+          isParentMode={isParentMode}
         />
       )}
 

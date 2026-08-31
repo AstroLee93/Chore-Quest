@@ -21,7 +21,8 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
 
   if (!goal.isActive) return null;
 
-  const handleCelebrate = () => {
+  const handleCelebrate = (e: React.MouseEvent) => {
+    e.stopPropagation();
     sound.playLevelUp();
     confetti({
       particleCount: 80,
@@ -34,7 +35,10 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
   return (
     <div
       id="family-goal-banner"
+      onClick={onEditGoal ? () => { sound.playTap(); onEditGoal(); } : undefined}
       className={`relative overflow-hidden rounded-3xl border-2 transition-all p-4 sm:p-5 shadow-sm ${
+        onEditGoal ? 'cursor-pointer hover:shadow-md hover:border-amber-400 group' : ''
+      } ${
         isReached
           ? 'bg-gradient-to-r from-amber-100 via-yellow-100 to-emerald-100 border-amber-400 ring-2 ring-amber-400/50'
           : 'bg-white border-amber-200'
@@ -45,7 +49,9 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
         <div className="flex items-center gap-3.5 flex-1 min-w-0">
           <div
             onClick={isReached ? handleCelebrate : undefined}
-            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-2xs ${
+            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-2xs transition-transform ${
+              onEditGoal ? 'group-hover:scale-105' : ''
+            } ${
               isReached
                 ? 'bg-amber-400 text-yellow-950 animate-bounce cursor-pointer'
                 : 'bg-amber-100 text-amber-900'
@@ -55,20 +61,26 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-200 text-amber-950 border border-amber-300">
                 <Trophy className="w-3 h-3 text-amber-700" />
                 <span>Weekly Family Teamwork Goal</span>
               </span>
-              {isReached && (
+              {isReached ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white animate-pulse">
                   <Sparkles className="w-3 h-3" />
                   <span>Goal Achieved!</span>
                 </span>
+              ) : (
+                onEditGoal && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-900 text-yellow-300 group-hover:bg-indigo-800 transition-colors">
+                    <span>Change / View Options ⚙️</span>
+                  </span>
+                )
               )}
             </div>
 
-            <h3 className="text-base sm:text-lg font-black text-slate-900 truncate mt-0.5">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 truncate mt-0.5 group-hover:text-indigo-950 transition-colors">
               {goal.title}
             </h3>
 
@@ -101,16 +113,19 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
             />
           </div>
 
-          {isParentMode && onEditGoal && (
-            <div className="mt-2 text-right">
+          {onEditGoal && (
+            <div className="mt-2 flex items-center justify-end gap-1.5 text-right">
               <button
-                onClick={() => {
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
                   sound.playTap();
                   onEditGoal();
                 }}
-                className="text-[11px] font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-900 hover:text-indigo-700 bg-amber-100/80 hover:bg-amber-200 px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs"
               >
-                Edit Family Goal ⚙️
+                <span>{isParentMode ? 'Admin Goal Settings ⚙️' : 'View / Change Goal 🎯'}</span>
+                <ChevronRight className="w-3 h-3" />
               </button>
             </div>
           )}

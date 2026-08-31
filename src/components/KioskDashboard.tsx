@@ -7,6 +7,7 @@ import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar
 import { sound } from '../utils/sound';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { ChoreTimerModal } from './ChoreTimerModal';
+import { FamilyGoalModal } from './FamilyGoalModal';
 
 interface KioskDashboardProps {
   database: FamilyDatabase;
@@ -24,6 +25,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [activeTimerChore, setActiveTimerChore] = useState<ChoreItem | null>(null);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
 
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
@@ -214,75 +216,131 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
       {/* Shared Family Goal Bar */}
       <div className="my-4">
-        <FamilyGoalBanner database={database} />
+        <FamilyGoalBanner
+          database={database}
+          isParentMode={false}
+          onEditGoal={() => {
+            sound.playTap();
+            setIsGoalModalOpen(true);
+          }}
+        />
       </div>
 
       {/* Main Kiosk Content Area: Live Kids Side-by-Side Grid */}
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 my-2">
-        {database.kids.map((kid) => {
-          const level = getKidLevelInfo(kid.lifetimeStars);
+        {(() => {
+          const maxStars = database.kids.length > 0 ? Math.max(...database.kids.map((k) => k.stars)) : 0;
 
-          // Get today's scheduled chores for this kid
-          const kidChores = (database.chores || []).filter(
-            (c) => c.isActive && isChoreScheduledForDate(c, todayStr) && isChoreAssignedToKid(c, kid.id)
-          );
+          return database.kids.map((kid) => {
+            const level = getKidLevelInfo(kid.lifetimeStars);
+            const isMvp = maxStars > 0 && kid.stars === maxStars;
 
-          const completedCount = kidChores.filter((c) =>
-            (database.logs || []).some(
-              (l) => l.choreId === c.id && l.kidId === kid.id && l.date === todayStr && l.status === 'completed'
-            )
-          ).length;
+            // Get today's scheduled chores for this kid
+            const kidChores = (database.chores || []).filter(
+              (c) => c.isActive && isChoreScheduledForDate(c, todayStr) && isChoreAssignedToKid(c, kid.id)
+            );
 
-          const totalChores = kidChores.length;
-          const percent = totalChores > 0 ? Math.round((completedCount / totalChores) * 100) : 100;
-          const isAllDone = totalChores > 0 && completedCount === totalChores;
+            const completedCount = kidChores.filter((c) =>
+              (database.logs || []).some(
+                (l) => l.choreId === c.id && l.kidId === kid.id && l.date === todayStr && l.status === 'completed'
+              )
+            ).length;
 
-          return (
-            <div
-              key={kid.id}
-              className={`rounded-3xl border-2 p-4 sm:p-5 flex flex-col justify-between transition-all bg-slate-900/90 ${
-                isAllDone
-                  ? 'border-emerald-500 shadow-lg shadow-emerald-500/10'
-                  : 'border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              {/* Kid Header */}
-              <div>
-                <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-800">
-                  <div className="flex items-center gap-3">
-                    <div
-                      style={{ backgroundColor: `${kid.color}25`, borderColor: kid.color }}
-                      className="w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-3xl shrink-0 shadow-inner"
-                    >
-                      {kid.avatar}
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black text-white flex items-center gap-2">
-                        <span>{kid.name}</span>
-                        {isAllDone && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500 text-white font-extrabold animate-bounce">
-                            All Done! 🎉
-                          </span>
+            const totalChores = kidChores.length;
+            const percent = totalChores > 0 ? Math.round((completedCount / totalChores) * 100) : 100;
+            const isAllDone = totalChores > 0 && completedCount === totalChores;
+
+            return (
+              <div
+                key={kid.id}
+                id={`kiosk-kid-card-${kid.id}`}
+                className={`rounded-3xl border-2 p-4 sm:p-5 flex flex-col justify-between transition-all relative overflow-hidden ${
+                  isMvp
+                    ? 'border-amber-400 ring-4 ring-amber-400/30 shadow-2xl shadow-amber-500/20 bg-gradient-to-b from-amber-950/40 via-slate-900/95 to-slate-900/95'
+                    : isAllDone
+                      ? 'border-emerald-500 shadow-lg shadow-emerald-500/10 bg-slate-900/90'
+                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/90'
+                }`}
+              >
+                {/* MVP Top Ribbon */}
+                {isMvp && (
+                  <div className="flex items-center justify-between bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 px-3.5 py-1 -mt-2 -mx-2 mb-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg">
+                    <span className="flex items-center gap-1.5 font-black">
+                      <span className="text-base animate-pulse">👑</span>
+                      <span className="font-extrabold text-sm tracking-widest">MVP</span>
+                      <span className="text-[10px] font-black opacity-80 hidden sm:inline">• MOST POINTS</span>
+                    </span>
+                    <span className="text-[11px] font-black bg-amber-950/20 px-2 py-0.5 rounded-full">
+                      ⭐ {kid.stars} Pts
+                    </span>
+                  </div>
+                )}
+
+                {/* Kid Header */}
+                <div>
+                  <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-3">
+                      {/* Avatar with Crown for MVP */}
+                      <div className="relative">
+                        {isMvp && (
+                          <div
+                            className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 text-2xl filter drop-shadow-[0_3px_6px_rgba(245,158,11,0.9)] animate-bounce select-none pointer-events-none"
+                            title="MVP - Points Leader"
+                          >
+                            👑
+                          </div>
                         )}
-                      </h2>
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mt-0.5">
-                        <span>{level.icon} {level.title}</span>
+                        <div
+                          style={{
+                            backgroundColor: isMvp ? `${kid.color}35` : `${kid.color}25`,
+                            borderColor: isMvp ? '#fbbf24' : kid.color,
+                          }}
+                          className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-3xl shrink-0 shadow-inner transition-transform ${
+                            isMvp ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-900 scale-105' : ''
+                          }`}
+                        >
+                          {kid.avatar}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h2 className="text-xl font-black text-white flex items-center gap-2 flex-wrap">
+                          <span>{kid.name}</span>
+                          {isMvp && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 font-black text-xs shadow-md tracking-wider uppercase border border-amber-300">
+                              👑 MVP
+                            </span>
+                          )}
+                          {isAllDone && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500 text-white font-extrabold animate-bounce">
+                              All Done! 🎉
+                            </span>
+                          )}
+                        </h2>
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mt-0.5">
+                          <span>{level.icon} {level.title}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stars & Streak */}
+                    <div className="text-right">
+                      <div
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black ${
+                          isMvp
+                            ? 'bg-amber-400 text-slate-950 shadow-md ring-1 ring-amber-300'
+                            : 'bg-pink-950/80 border border-pink-700/60 text-pink-300'
+                        }`}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${isMvp ? 'fill-slate-950 text-slate-950' : 'fill-pink-400 text-pink-400'}`} />
+                        <span>{kid.stars} Pts</span>
+                      </div>
+                      <div className="flex items-center justify-end gap-1 text-[11px] font-black text-amber-400 mt-1">
+                        <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>{kid.streakDays} Day Streak</span>
                       </div>
                     </div>
                   </div>
-
-                  {/* Stars & Streak */}
-                  <div className="text-right">
-                    <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-pink-950/80 border border-pink-700/60 text-pink-300 text-xs font-black">
-                      <Star className="w-3.5 h-3.5 fill-pink-400 text-pink-400" />
-                      <span>{kid.stars} Pts</span>
-                    </div>
-                    <div className="flex items-center justify-end gap-1 text-[11px] font-black text-amber-400 mt-1">
-                      <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>{kid.streakDays} Day Streak</span>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Progress bar */}
                 <div className="my-3">
@@ -386,7 +444,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               </div>
             </div>
           );
-        })}
+        });
+      })()}
       </div>
 
       {/* Bottom Ticker: Today's Schedule & Bonus Bounties */}
@@ -452,6 +511,16 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               handleQuickCompleteChore(chore, targetKid);
             }
           }}
+        />
+      )}
+      {/* Family Goal Manager Modal */}
+      {isGoalModalOpen && (
+        <FamilyGoalModal
+          isOpen={isGoalModalOpen}
+          onClose={() => setIsGoalModalOpen(false)}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          isParentMode={false}
         />
       )}
     </div>

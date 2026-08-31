@@ -13,6 +13,7 @@ interface KidSelectorProps {
   onSelectKid: (kid: KidProfile) => void;
   onOpenParentPin: () => void;
   onOpenCalendar?: () => void;
+  onOpenGoalManager?: () => void;
 }
 
 export const KidSelector: React.FC<KidSelectorProps> = ({
@@ -22,6 +23,7 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
   onSelectKid,
   onOpenParentPin,
   onOpenCalendar,
+  onOpenGoalManager,
 }) => {
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
@@ -46,7 +48,10 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
       {/* Shared Family Goal Progress Banner */}
       {database && (
         <div className="mb-6">
-          <FamilyGoalBanner database={database} />
+          <FamilyGoalBanner
+            database={database}
+            onEditGoal={onOpenGoalManager}
+          />
         </div>
       )}
 

@@ -25,6 +25,7 @@ interface KidDashboardProps {
   onUndoChoreStatus: (choreId: string) => void;
   onOpenRewardStore: () => void;
   onOpenCalendar?: () => void;
+  onOpenGoalManager?: () => void;
 }
 
 export const KidDashboard: React.FC<KidDashboardProps> = ({
@@ -41,6 +42,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   onUndoChoreStatus,
   onOpenRewardStore,
   onOpenCalendar,
+  onOpenGoalManager,
 }) => {
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
@@ -110,7 +112,10 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
       <div className="lg:col-span-8 flex flex-col gap-6">
         {/* Family Goal Banner if database is provided */}
         {database && (
-          <FamilyGoalBanner database={database} />
+          <FamilyGoalBanner
+            database={database}
+            onEditGoal={onOpenGoalManager}
+          />
         )}
 
         {/* Kid Greeting & Live Progress Header */}

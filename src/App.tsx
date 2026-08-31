@@ -13,6 +13,7 @@ import { PiGuideModal } from './components/PiGuideModal';
 import { CalendarView } from './components/Calendar/CalendarView';
 import { KioskDashboard } from './components/KioskDashboard';
 import { FamilyGoalModal } from './components/FamilyGoalModal';
+import { WeeklyMenuModal } from './components/WeeklyMenuModal';
 
 export default function App() {
   const [database, setDatabase] = useState<FamilyDatabase>(() => loadDatabase());
@@ -23,6 +24,7 @@ export default function App() {
   const [isRewardStoreOpen, setIsRewardStoreOpen] = useState<boolean>(false);
   const [isPiGuideOpen, setIsPiGuideOpen] = useState<boolean>(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [isSyncConnected, setIsSyncConnected] = useState<boolean>(true);
 
@@ -242,6 +244,7 @@ export default function App() {
           onUpdateDatabase={handleUpdateDatabase}
           onExitKiosk={() => setIsKioskMode(false)}
           onOpenCalendar={() => setIsCalendarOpen(true)}
+          onOpenMenu={() => setIsMenuOpen(true)}
         />
 
         {/* Calendar Translucent Glass Overlay in Kiosk if triggered */}
@@ -251,6 +254,18 @@ export default function App() {
             activeKid={activeKid}
             onUpdateDatabase={handleUpdateDatabase}
             onClose={() => setIsCalendarOpen(false)}
+          />
+        )}
+
+        {/* Weekly Dinner Menu Overlay in Kiosk */}
+        {isMenuOpen && (
+          <WeeklyMenuModal
+            isOpen={isMenuOpen}
+            onClose={() => setIsMenuOpen(false)}
+            database={database}
+            onUpdateDatabase={handleUpdateDatabase}
+            activeKid={activeKid}
+            isParentMode={isParentMode}
           />
         )}
       </div>
@@ -266,10 +281,12 @@ export default function App() {
         isParentMode={isParentMode}
         events={database.events || []}
         isCalendarOpen={isCalendarOpen}
+        isMenuOpen={isMenuOpen}
         onOpenParentPin={() => setIsPinModalOpen(true)}
         onExitParentMode={() => {
           setIsParentMode(false);
           setIsCalendarOpen(false);
+          setIsMenuOpen(false);
         }}
         onSelectKid={(kid) => {
           setActiveKidId(kid ? kid.id : null);
@@ -278,6 +295,7 @@ export default function App() {
         onOpenPiGuide={() => setIsPiGuideOpen(true)}
         onOpenRewardStore={() => setIsRewardStoreOpen(true)}
         onToggleCalendar={() => setIsCalendarOpen((prev) => !prev)}
+        onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
         onToggleKiosk={() => setIsKioskMode(true)}
       />
 
@@ -328,6 +346,18 @@ export default function App() {
           activeKid={activeKid}
           onUpdateDatabase={handleUpdateDatabase}
           onClose={() => setIsCalendarOpen(false)}
+        />
+      )}
+
+      {/* Weekly Dinner Menu Translucent Overlay */}
+      {isMenuOpen && (
+        <WeeklyMenuModal
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          database={database}
+          onUpdateDatabase={handleUpdateDatabase}
+          activeKid={activeKid}
+          isParentMode={isParentMode}
         />
       )}
 

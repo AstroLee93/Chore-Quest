@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar as CalendarIcon, Clock, MapPin, Sparkles, CloudSun, AlertCircle } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Clock, MapPin, Sparkles, CloudSun, AlertCircle, Smile } from 'lucide-react';
 import { CalendarEvent, CalendarEventCategory, KidProfile, WeatherCondition } from '../../types';
 import { EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../../utils/calendar';
 import { sound } from '../../utils/sound';
+import { EmojiPicker } from '../EmojiPicker';
 
 interface CalendarEventModalProps {
   isOpen: boolean;
@@ -344,14 +345,13 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
 
             <div>
               <label className="block text-xs font-black text-slate-700 uppercase tracking-wide mb-1">
-                Custom Emoji:
+                Event Icon (Emoji):
               </label>
-              <input
-                type="text"
-                maxLength={4}
-                value={formData.icon || '⭐'}
-                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                className="w-full px-3 py-2 rounded-2xl border-2 border-slate-200 bg-white text-center text-lg font-black"
+              <EmojiPicker
+                value={formData.icon || '⚽'}
+                onChange={(emoji) => setFormData({ ...formData, icon: emoji })}
+                title="Event Emoji"
+                categoryFilter="all"
               />
             </div>
           </div>

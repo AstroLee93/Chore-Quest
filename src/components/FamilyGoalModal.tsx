@@ -28,6 +28,7 @@ import {
   formatDateDisplay,
 } from '../utils/storage';
 import { sound } from '../utils/sound';
+import { EmojiPicker } from './EmojiPicker';
 
 interface FamilyGoalModalProps {
   isOpen: boolean;
@@ -785,25 +786,12 @@ export const FamilyGoalModal: React.FC<FamilyGoalModalProps> = ({
                   <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
                     Choose an Emoji Icon
                   </label>
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-2xl bg-yellow-100 border-2 border-yellow-300 flex items-center justify-center text-3xl shrink-0 shadow-inner">
-                      {customIcon}
-                    </div>
-                    <div className="flex-1 flex flex-wrap gap-1.5 p-2 rounded-2xl bg-slate-50 border border-slate-200 max-h-28 overflow-y-auto">
-                      {EMOJI_PALETTE.map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => setCustomIcon(emoji)}
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center text-lg transition-transform hover:scale-110 cursor-pointer ${
-                            customIcon === emoji ? 'bg-yellow-300 ring-2 ring-yellow-500' : 'hover:bg-white'
-                          }`}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <EmojiPicker
+                    value={customIcon}
+                    onChange={(emoji) => setCustomIcon(emoji)}
+                    title="Choose Family Goal Icon"
+                    categoryFilter="all"
+                  />
                 </div>
 
                 {/* Target Chore Count */}

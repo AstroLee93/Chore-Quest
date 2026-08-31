@@ -149,6 +149,49 @@ export interface AppSettings {
   tempUnit?: 'F' | 'C';
 }
 
+export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+export interface MealVotingOption {
+  id: string;
+  title: string;
+  icon?: string;
+  description?: string;
+  voterKidIds: string[]; // Kid IDs who voted for this option
+}
+
+export interface MealSuggestion {
+  id: string;
+  dish: string;
+  icon?: string;
+  kidId: string;
+  voterKidIds: string[];
+  createdAt: string;
+}
+
+export interface DailyDinnerPlan {
+  dayOfWeek: DayOfWeekKey;
+  theme?: string; // e.g. "Taco Tuesday 🌮", "Pizza Night 🍕", "Chef's Special"
+  mainDish: string;
+  sideDishes?: string;
+  dessert?: string;
+  preparedBy?: string; // e.g. "Mom & Maya", "Dad", "Leo (Chef in Training)"
+  icon?: string; // Emoji
+  notes?: string; // e.g. "5:30 PM before soccer game"
+  votingEnabled?: boolean;
+  votingQuestion?: string;
+  votingOptions?: MealVotingOption[];
+  suggestions?: MealSuggestion[];
+  lockedByParent?: boolean;
+  winningOptionId?: string;
+}
+
+export interface WeeklyDinnerMenu {
+  title?: string;
+  weekStartDate?: string;
+  days: Record<DayOfWeekKey, DailyDinnerPlan>;
+  lastUpdated?: string;
+}
+
 export interface FamilyDatabase {
   version: number;
   settings: AppSettings;
@@ -162,6 +205,7 @@ export interface FamilyDatabase {
   weatherForecasts?: Record<string, DayWeather>; // Keyed by YYYY-MM-DD
   familyGoal?: FamilyGoal;
   savedFamilyGoals?: FamilyGoal[];
+  weeklyMenu?: WeeklyDinnerMenu;
   lastBackupDate?: string;
 }
 

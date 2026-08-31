@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Sparkles, X, Check } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Search, Sparkles, X, Check, ChevronDown, Smile } from 'lucide-react';
 import { sound } from '../utils/sound';
 
 export interface EmojiOption {
   emoji: string;
   keywords: string[];
-  category: 'chores' | 'characters' | 'rewards' | 'activities' | 'symbols';
+  category: 'chores' | 'characters' | 'rewards' | 'activities' | 'symbols' | 'food';
 }
 
 export const POPULAR_EMOJIS: EmojiOption[] = [
@@ -62,17 +62,26 @@ export const POPULAR_EMOJIS: EmojiOption[] = [
   { emoji: '⏰', keywords: ['alarm', 'wake up', 'morning', 'clock'], category: 'chores' },
   { emoji: '🌿', keywords: ['weeds', 'garden', 'yard', 'outside'], category: 'chores' },
   { emoji: '🐾', keywords: ['pet', 'feed pet', 'walk dog', 'litter box'], category: 'chores' },
-  { emoji: '🍎', keywords: ['apple', 'healthy', 'lunchbox', 'snack', 'fruit'], category: 'chores' },
-  { emoji: '🥪', keywords: ['sandwich', 'lunch', 'prepare food', 'pack lunch'], category: 'chores' },
   { emoji: '🚗', keywords: ['car', 'wash car', 'clean car', 'van'], category: 'chores' },
+
+  // Food & Meals
+  { emoji: '🍕', keywords: ['pizza', 'slice', 'dinner', 'party', 'food'], category: 'food' },
+  { emoji: '🍔', keywords: ['burger', 'fast food', 'treat', 'dinner'], category: 'food' },
+  { emoji: '🌮', keywords: ['taco', 'mexican', 'dinner', 'tuesday'], category: 'food' },
+  { emoji: '🍝', keywords: ['spaghetti', 'pasta', 'italian', 'noodles'], category: 'food' },
+  { emoji: '🍗', keywords: ['chicken', 'drumstick', 'meat', 'dinner'], category: 'food' },
+  { emoji: '🥪', keywords: ['sandwich', 'lunch', 'prepare food', 'pack lunch'], category: 'food' },
+  { emoji: '🍎', keywords: ['apple', 'healthy', 'lunchbox', 'snack', 'fruit'], category: 'food' },
+  { emoji: '🍣', keywords: ['sushi', 'rice', 'fish', 'japanese'], category: 'food' },
+  { emoji: '🥗', keywords: ['salad', 'healthy', 'greens', 'vegetables'], category: 'food' },
+  { emoji: '🍲', keywords: ['soup', 'stew', 'pot', 'warm'], category: 'food' },
+  { emoji: '🥞', keywords: ['pancakes', 'breakfast', 'syrup', 'fluffy'], category: 'food' },
 
   // Rewards & Treats
   { emoji: '🎁', keywords: ['gift', 'present', 'box', 'surprise', 'reward'], category: 'rewards' },
   { emoji: '🍦', keywords: ['ice cream', 'treat', 'cone', 'dessert', 'sundae'], category: 'rewards' },
   { emoji: '🎮', keywords: ['video game', 'switch', 'playstation', 'xbox', 'roblox'], category: 'rewards' },
   { emoji: '🎬', keywords: ['movie', 'cinema', 'film', 'theater', 'show'], category: 'rewards' },
-  { emoji: '🍕', keywords: ['pizza', 'slice', 'dinner', 'party', 'food'], category: 'rewards' },
-  { emoji: '🍔', keywords: ['burger', 'fast food', 'treat', 'dinner'], category: 'rewards' },
   { emoji: '🍟', keywords: ['fries', 'french fries', 'snack', 'food'], category: 'rewards' },
   { emoji: '🍩', keywords: ['donut', 'doughnut', 'sweet', 'bakery'], category: 'rewards' },
   { emoji: '🍪', keywords: ['cookie', 'bake', 'chocolate chip', 'treat'], category: 'rewards' },
@@ -98,7 +107,6 @@ export const POPULAR_EMOJIS: EmojiOption[] = [
   { emoji: '🏈', keywords: ['football', 'sports', 'pass'], category: 'activities' },
   { emoji: '⚾', keywords: ['baseball', 'bat', 'sports'], category: 'activities' },
   { emoji: '🎾', keywords: ['tennis', 'racket', 'sports'], category: 'activities' },
-  { emoji: '🏐', keywords: ['volleyball', 'sports'], category: 'activities' },
   { emoji: '🥋', keywords: ['martial arts', 'karate', 'taekwondo', 'judo'], category: 'activities' },
   { emoji: '🏊', keywords: ['swimming', 'pool', 'swim', 'water'], category: 'activities' },
   { emoji: '🧗', keywords: ['climbing', 'rock climbing', 'ninja'], category: 'activities' },
@@ -123,12 +131,9 @@ export const POPULAR_EMOJIS: EmojiOption[] = [
   { emoji: '✨', keywords: ['sparkles', 'magic', 'clean', 'shine'], category: 'symbols' },
   { emoji: '💥', keywords: ['boom', 'blast', 'energy', 'super'], category: 'symbols' },
   { emoji: '🔥', keywords: ['fire', 'streak', 'flame', 'hot'], category: 'symbols' },
-  { emoji: '💫', keywords: ['dizzy', 'sparkle', 'star'], category: 'symbols' },
   { emoji: '💖', keywords: ['heart', 'love', 'kindness', 'care'], category: 'symbols' },
   { emoji: '💎', keywords: ['diamond', 'gem', 'jewel', 'crystal'], category: 'symbols' },
   { emoji: '🥇', keywords: ['gold medal', 'first place', '1st', 'winner'], category: 'symbols' },
-  { emoji: '🥈', keywords: ['silver medal', 'second place', '2nd'], category: 'symbols' },
-  { emoji: '🥉', keywords: ['bronze medal', 'third place', '3rd'], category: 'symbols' },
   { emoji: '🌈', keywords: ['rainbow', 'colorful', 'sky'], category: 'symbols' },
   { emoji: '☀️', keywords: ['sun', 'sunny', 'morning', 'bright'], category: 'symbols' },
   { emoji: '🌙', keywords: ['moon', 'night', 'bedtime', 'sleep'], category: 'symbols' },
@@ -144,30 +149,49 @@ export interface EmojiPickerProps {
   value: string;
   onChange: (emoji: string) => void;
   title?: string;
-  categoryFilter?: 'chores' | 'characters' | 'rewards' | 'activities' | 'symbols' | 'all';
+  categoryFilter?: 'chores' | 'characters' | 'rewards' | 'activities' | 'symbols' | 'food' | 'all';
   compact?: boolean;
+  inline?: boolean;
 }
 
 export const EmojiPicker: React.FC<EmojiPickerProps> = ({
   value,
   onChange,
-  title = 'Select Icon Emoji',
+  title = 'Choose Icon',
   categoryFilter = 'all',
   compact = false,
+  inline = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'chores' | 'characters' | 'rewards' | 'activities' | 'symbols'>(
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'chores' | 'characters' | 'rewards' | 'activities' | 'symbols' | 'food'>(
     categoryFilter === 'all' ? 'all' : categoryFilter
   );
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [customEmojiInput, setCustomEmojiInput] = useState<string>('');
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close when clicking outside of popover
+  useEffect(() => {
+    if (!isOpen || inline) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, inline]);
+
   const filteredEmojis = useMemo(() => {
     return POPULAR_EMOJIS.filter((item) => {
-      // Category check
       if (activeTab !== 'all' && item.category !== activeTab) {
         return false;
       }
-      // Search query check
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const matchEmoji = item.emoji.includes(q);
@@ -181,90 +205,86 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({
   const handleSelect = (emoji: string) => {
     sound.playTap();
     onChange(emoji);
+    if (!inline) {
+      setIsOpen(false);
+    }
   };
 
-  const handleApplyCustom = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleApplyCustom = () => {
     if (customEmojiInput.trim()) {
       sound.playTap();
       onChange(customEmojiInput.trim());
       setCustomEmojiInput('');
+      if (!inline) {
+        setIsOpen(false);
+      }
     }
   };
 
-  return (
-    <div className="w-full bg-white rounded-2xl border-2 border-yellow-200 p-3 shadow-xs space-y-3">
-      {/* Header with Current Emoji Preview */}
-      <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-100">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-yellow-100 border-2 border-yellow-300 flex items-center justify-center text-2xl shadow-inner shrink-0">
+  const pickerPanel = (
+    <div className="bg-white rounded-2xl border-2 border-yellow-300 p-3.5 shadow-xl space-y-3 w-full max-w-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-yellow-100 border border-yellow-300 flex items-center justify-center text-lg shadow-inner shrink-0">
             {value || '⭐'}
           </div>
           <div>
-            <span className="text-xs font-black text-slate-800 block">
+            <span className="text-xs font-black text-slate-800 block leading-tight">
               {title}
             </span>
             <span className="text-[10px] font-bold text-slate-400">
-              Click any icon or type any custom emoji below
+              Select or type any custom emoji
             </span>
           </div>
         </div>
 
-        {/* Quick Custom Emoji Input */}
-        <form onSubmit={handleApplyCustom} className="flex items-center gap-1">
-          <input
-            type="text"
-            placeholder="Type emoji..."
-            value={customEmojiInput}
-            onChange={(e) => setCustomEmojiInput(e.target.value)}
-            className="w-24 px-2 py-1 text-xs font-black border border-slate-200 rounded-lg text-center bg-slate-50 focus:bg-white focus:outline-indigo-500"
-          />
+        {!inline && (
           <button
-            type="submit"
-            disabled={!customEmojiInput.trim()}
-            className="px-2.5 py-1 text-[11px] font-black bg-indigo-900 text-yellow-300 rounded-lg disabled:opacity-40 hover:bg-indigo-800 cursor-pointer transition-colors"
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
           >
-            Apply
+            <X className="w-4 h-4" />
           </button>
-        </form>
+        )}
       </div>
 
       {/* Category Tabs */}
-      {!compact && (
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-black scrollbar-none">
-          {[
-            { id: 'all', label: '🌟 All' },
-            { id: 'chores', label: '🧹 Chores' },
-            { id: 'rewards', label: '🎁 Rewards' },
-            { id: 'characters', label: '🦁 Animals' },
-            { id: 'activities', label: '⚽ Fun' },
-            { id: 'symbols', label: '⭐ Badges' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                sound.playTap();
-                setActiveTab(tab.id as any);
-              }}
-              className={`px-2.5 py-1 rounded-xl whitespace-nowrap cursor-pointer transition-all ${
-                activeTab === tab.id
-                  ? 'bg-yellow-300 text-slate-950 font-black shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-black scrollbar-none">
+        {[
+          { id: 'all', label: '🌟 All' },
+          { id: 'chores', label: '🧹 Chores' },
+          { id: 'rewards', label: '🎁 Rewards' },
+          { id: 'food', label: '🍕 Food' },
+          { id: 'characters', label: '🦁 Animals' },
+          { id: 'activities', label: '⚽ Fun' },
+          { id: 'symbols', label: '⭐ Badges' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => {
+              sound.playTap();
+              setActiveTab(tab.id as any);
+            }}
+            className={`px-2.5 py-1 rounded-xl whitespace-nowrap cursor-pointer transition-all ${
+              activeTab === tab.id
+                ? 'bg-yellow-300 text-slate-950 font-black shadow-2xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Search Bar */}
+      {/* Search Input */}
       <div className="relative">
         <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
         <input
           type="text"
-          placeholder="Search icons (e.g. bed, dog, clean, game, ice cream)..."
+          placeholder="Search icons (e.g. bed, clean, pet)..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-8 pr-7 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-indigo-500"
@@ -281,7 +301,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({
       </div>
 
       {/* Emojis Grid */}
-      <div className="grid grid-cols-7 sm:grid-cols-10 gap-1.5 max-h-40 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
+      <div className="grid grid-cols-6 sm:grid-cols-7 gap-1.5 max-h-48 overflow-y-auto p-1.5 bg-slate-50 rounded-xl border border-slate-100">
         {filteredEmojis.map((item, idx) => {
           const isSelected = value === item.emoji;
           return (
@@ -293,7 +313,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({
               className={`w-9 h-9 rounded-xl flex items-center justify-center text-xl transition-all cursor-pointer select-none relative ${
                 isSelected
                   ? 'bg-yellow-300 ring-2 ring-indigo-900 scale-110 shadow-sm z-10'
-                  : 'hover:bg-white hover:scale-115 hover:shadow-xs'
+                  : 'hover:bg-white hover:scale-115 hover:shadow-2xs'
               }`}
             >
               <span>{item.emoji}</span>
@@ -307,10 +327,75 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({
         })}
         {filteredEmojis.length === 0 && (
           <div className="col-span-full py-4 text-center text-xs font-bold text-slate-400">
-            No icons found. Use the "Type emoji" box above to apply any custom emoji!
+            No matching icons found. Type custom emoji below!
           </div>
         )}
       </div>
+
+      {/* Quick Custom Emoji Input */}
+      <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
+        <input
+          type="text"
+          placeholder="Or paste/type custom emoji..."
+          value={customEmojiInput}
+          onChange={(e) => setCustomEmojiInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleApplyCustom();
+            }
+          }}
+          className="flex-1 px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-indigo-500"
+        />
+        <button
+          type="button"
+          onClick={handleApplyCustom}
+          disabled={!customEmojiInput.trim()}
+          className="px-3 py-1.5 text-xs font-black bg-indigo-900 text-yellow-300 rounded-xl disabled:opacity-40 hover:bg-indigo-800 cursor-pointer transition-colors shrink-0"
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+  );
+
+  // If inline mode is requested, render directly
+  if (inline) {
+    return pickerPanel;
+  }
+
+  // Default: Clean interactive trigger with floating popover dropdown
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => {
+          sound.playTap();
+          setIsOpen(!isOpen);
+        }}
+        className="w-full h-11 px-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-400 flex items-center justify-between gap-2 text-left cursor-pointer transition-all shadow-2xs group"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-yellow-100 border border-yellow-300 flex items-center justify-center text-lg shadow-inner shrink-0 group-hover:scale-105 transition-transform">
+            {value || '⭐'}
+          </div>
+          <span className="text-xs font-black text-slate-800 truncate">
+            {title}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 text-[11px] font-black text-indigo-900 bg-yellow-300/80 px-2 py-1 rounded-lg shrink-0 group-hover:bg-yellow-300">
+          <span>Change</span>
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+
+      {/* Nested Floating Popover Menu */}
+      {isOpen && (
+        <div className="absolute left-0 sm:right-auto top-full mt-2 z-50 animate-fade-in drop-shadow-2xl">
+          {pickerPanel}
+        </div>
+      )}
     </div>
   );
 };

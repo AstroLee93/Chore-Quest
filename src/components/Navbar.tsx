@@ -11,6 +11,7 @@ interface NavbarProps {
   isParentMode: boolean;
   events?: CalendarEvent[];
   isCalendarOpen?: boolean;
+  isMenuOpen?: boolean;
   onOpenParentPin: () => void;
   onExitParentMode: () => void;
   onSelectKid: (kid: KidProfile | null) => void;
@@ -18,6 +19,7 @@ interface NavbarProps {
   onOpenPiGuide: () => void;
   onOpenRewardStore?: () => void;
   onToggleCalendar: () => void;
+  onToggleMenu?: () => void;
   onToggleKiosk?: () => void;
 }
 
@@ -27,6 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isParentMode,
   events = [],
   isCalendarOpen = false,
+  isMenuOpen = false,
   onOpenParentPin,
   onExitParentMode,
   onSelectKid,
@@ -34,6 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPiGuide,
   onOpenRewardStore,
   onToggleCalendar,
+  onToggleMenu,
   onToggleKiosk,
 }) => {
   const todayStr = getTodayDateString();
@@ -125,6 +129,26 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2">
+            {/* Dinner Menu Button */}
+            {onToggleMenu && (
+              <button
+                id="btn-nav-dinner-menu"
+                onClick={() => {
+                  sound.playTap();
+                  onToggleMenu();
+                }}
+                className={`p-2 sm:px-3.5 sm:py-2 rounded-xl border-2 flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                  isMenuOpen
+                    ? 'bg-amber-950 text-yellow-300 border-amber-950 shadow-md ring-2 ring-amber-400/50'
+                    : 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-amber-300'
+                }`}
+                title="Weekly Dinner Menu & Meal Voting"
+              >
+                <span className="text-base">🍽️</span>
+                <span className="hidden sm:inline text-xs font-black">Dinner</span>
+              </button>
+            )}
+
             {/* Calendar Glass Overlay Button */}
             <button
               id="btn-nav-calendar"

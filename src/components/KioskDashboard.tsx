@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target } from 'lucide-react';
+import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent } from '../types';
 import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getFamilyWeeklyGoalProgress } from '../utils/storage';
 import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar';
+import { getCurrentDayOfWeekKey, DEFAULT_WEEKLY_MENU, DAY_METADATA } from '../utils/menu';
 import { sound } from '../utils/sound';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { ChoreTimerModal } from './ChoreTimerModal';
 import { FamilyGoalModal } from './FamilyGoalModal';
+import { WeeklyMenuModal } from './WeeklyMenuModal';
 
 interface KioskDashboardProps {
   database: FamilyDatabase;
   onUpdateDatabase: (updated: FamilyDatabase) => void;
   onExitKiosk: () => void;
   onOpenCalendar?: () => void;
+  onOpenMenu?: () => void;
 }
 
 export const KioskDashboard: React.FC<KioskDashboardProps> = ({
@@ -21,14 +24,18 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   onUpdateDatabase,
   onExitKiosk,
   onOpenCalendar,
+  onOpenMenu,
 }) => {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [activeTimerChore, setActiveTimerChore] = useState<ChoreItem | null>(null);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
+  const [isMenuModalOpen, setIsMenuModalOpen] = useState<boolean>(false);
 
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
+  const todayDayKey = getCurrentDayOfWeekKey();
+  const todayMenuPlan = (database.weeklyMenu?.days || DEFAULT_WEEKLY_MENU.days)[todayDayKey] || DEFAULT_WEEKLY_MENU.days[todayDayKey];
 
   // Live clock ticker
   useEffect(() => {
@@ -175,6 +182,29 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 self-end md:self-center">
+          {/* Dinner Menu Button */}
+          <button
+            id="btn-kiosk-dinner-menu"
+            onClick={() => {
+              sound.playTap();
+              if (onOpenMenu) {
+                onOpenMenu();
+              } else {
+                setIsMenuModalOpen(true);
+              }
+            }}
+            className="p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-700 font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs"
+            title="Open Weekly Dinner Menu & Kids' Choice Voting"
+          >
+            <span className="text-sm">{todayMenuPlan.icon || '🍽️'}</span>
+            <span className="hidden sm:inline">Dinner Menu</span>
+            {todayMenuPlan.votingEnabled && (
+              <span className="px-1.5 py-0.2 rounded-full bg-pink-600 text-white text-[10px] font-black animate-pulse">
+                Vote
+              </span>
+            )}
+          </button>
+
           {onOpenCalendar && (
             <button
               onClick={() => {
@@ -226,246 +256,470 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         />
       </div>
 
-      {/* Main Kiosk Content Area: Live Kids Side-by-Side Grid */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 my-2">
-        {(() => {
-          const maxStars = database.kids.length > 0 ? Math.max(...database.kids.map((k) => k.stars)) : 0;
+      {/* Main Kiosk Content Area: Live Kids Side-by-Side Grid & MVP Celebration */}
+      {(() => {
+        const maxStars = database.kids.length > 0 ? Math.max(...database.kids.map((k) => k.stars)) : 0;
+        const mvpKid = maxStars > 0 ? database.kids.find((k) => k.stars === maxStars) : null;
+        const mvpLevel = mvpKid ? getKidLevelInfo(mvpKid.lifetimeStars) : null;
 
-          return database.kids.map((kid) => {
-            const level = getKidLevelInfo(kid.lifetimeStars);
-            const isMvp = maxStars > 0 && kid.stars === maxStars;
+        const totalFamilyChoresToday = database.kids.reduce((acc, k) => {
+          return (
+            acc +
+            (database.chores || []).filter(
+              (c) => c.isActive && isChoreScheduledForDate(c, todayStr) && isChoreAssignedToKid(c, k.id)
+            ).length
+          );
+        }, 0);
 
-            // Get today's scheduled chores for this kid
-            const kidChores = (database.chores || []).filter(
-              (c) => c.isActive && isChoreScheduledForDate(c, todayStr) && isChoreAssignedToKid(c, kid.id)
-            );
+        const totalFamilyCompletedToday = database.kids.reduce((acc, k) => {
+          return (
+            acc +
+            (database.logs || []).filter(
+              (l) => l.kidId === k.id && l.date === todayStr && l.status === 'completed'
+            ).length
+          );
+        }, 0);
 
-            const completedCount = kidChores.filter((c) =>
-              (database.logs || []).some(
-                (l) => l.choreId === c.id && l.kidId === kid.id && l.date === todayStr && l.status === 'completed'
-              )
-            ).length;
+        const handleCheerMvp = () => {
+          sound.playStarEarned();
+          confetti({
+            particleCount: 80,
+            spread: 90,
+            origin: { y: 0.5 },
+            colors: ['#fbbf24', '#f59e0b', '#ec4899', '#3b82f6', '#10b981'],
+          });
+        };
 
-            const totalChores = kidChores.length;
-            const percent = totalChores > 0 ? Math.round((completedCount / totalChores) * 100) : 100;
-            const isAllDone = totalChores > 0 && completedCount === totalChores;
-
-            return (
+        return (
+          <div className="flex-1 flex flex-col gap-4 my-2">
+            {/* MVP Excellence Spotlight Showcase Bar */}
+            {mvpKid && (
               <div
-                key={kid.id}
-                id={`kiosk-kid-card-${kid.id}`}
-                className={`rounded-3xl border-2 p-4 sm:p-5 flex flex-col justify-between transition-all relative overflow-hidden ${
-                  isMvp
-                    ? 'border-amber-400 ring-4 ring-amber-400/30 shadow-2xl shadow-amber-500/20 bg-gradient-to-b from-amber-950/40 via-slate-900/95 to-slate-900/95'
-                    : isAllDone
-                      ? 'border-emerald-500 shadow-lg shadow-emerald-500/10 bg-slate-900/90'
-                      : 'border-slate-800 hover:border-slate-700 bg-slate-900/90'
-                }`}
+                id="kiosk-mvp-spotlight-bar"
+                className="relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-amber-950/80 via-yellow-950/70 to-amber-950/80 border-2 border-amber-400/80 shadow-2xl shadow-amber-500/20 flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in"
               >
-                {/* MVP Top Ribbon */}
-                {isMvp && (
-                  <div className="flex items-center justify-between bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 px-3.5 py-1 -mt-2 -mx-2 mb-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg">
-                    <span className="flex items-center gap-1.5 font-black">
-                      <span className="text-base animate-pulse">👑</span>
-                      <span className="font-extrabold text-sm tracking-widest">MVP</span>
-                      <span className="text-[10px] font-black opacity-80 hidden sm:inline">• MOST POINTS</span>
-                    </span>
-                    <span className="text-[11px] font-black bg-amber-950/20 px-2 py-0.5 rounded-full">
-                      ⭐ {kid.stars} Pts
-                    </span>
-                  </div>
-                )}
+                {/* Background Ambient Glow */}
+                <div className="absolute -top-10 -left-10 w-40 h-40 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-yellow-500/20 rounded-full blur-3xl pointer-events-none" />
 
-                {/* Kid Header */}
-                <div>
-                  <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-800">
-                    <div className="flex items-center gap-3">
-                      {/* Avatar with Crown for MVP */}
-                      <div className="relative">
-                        {isMvp && (
-                          <div
-                            className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 text-2xl filter drop-shadow-[0_3px_6px_rgba(245,158,11,0.9)] animate-bounce select-none pointer-events-none"
-                            title="MVP - Points Leader"
-                          >
-                            👑
-                          </div>
-                        )}
-                        <div
-                          style={{
-                            backgroundColor: isMvp ? `${kid.color}35` : `${kid.color}25`,
-                            borderColor: isMvp ? '#fbbf24' : kid.color,
-                          }}
-                          className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-3xl shrink-0 shadow-inner transition-transform ${
-                            isMvp ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-900 scale-105' : ''
-                          }`}
-                        >
-                          {kid.avatar}
-                        </div>
-                      </div>
-
-                      <div>
-                        <h2 className="text-xl font-black text-white flex items-center gap-2 flex-wrap">
-                          <span>{kid.name}</span>
-                          {isMvp && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 font-black text-xs shadow-md tracking-wider uppercase border border-amber-300">
-                              👑 MVP
-                            </span>
-                          )}
-                          {isAllDone && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500 text-white font-extrabold animate-bounce">
-                              All Done! 🎉
-                            </span>
-                          )}
-                        </h2>
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mt-0.5">
-                          <span>{level.icon} {level.title}</span>
-                        </div>
-                      </div>
+                {/* Left: MVP Avatar + Celebration Title */}
+                <div className="flex items-center gap-4 text-center md:text-left z-10">
+                  <div className="relative shrink-0">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xl filter drop-shadow-[0_2px_8px_rgba(251,191,36,0.9)] animate-bounce select-none">
+                      👑
                     </div>
-
-                    {/* Stars & Streak */}
-                    <div className="text-right">
-                      <div
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black ${
-                          isMvp
-                            ? 'bg-amber-400 text-slate-950 shadow-md ring-1 ring-amber-300'
-                            : 'bg-pink-950/80 border border-pink-700/60 text-pink-300'
-                        }`}
-                      >
-                        <Star className={`w-3.5 h-3.5 ${isMvp ? 'fill-slate-950 text-slate-950' : 'fill-pink-400 text-pink-400'}`} />
-                        <span>{kid.stars} Pts</span>
-                      </div>
-                      <div className="flex items-center justify-end gap-1 text-[11px] font-black text-amber-400 mt-1">
-                        <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                        <span>{kid.streakDays} Day Streak</span>
-                      </div>
-                    </div>
-                  </div>
-
-                {/* Progress bar */}
-                <div className="my-3">
-                  <div className="flex items-center justify-between text-xs font-black text-slate-400 mb-1">
-                    <span>Today's Progress</span>
-                    <span className={isAllDone ? 'text-emerald-400' : 'text-slate-300'}>
-                      {completedCount} / {totalChores} ({percent}%)
-                    </span>
-                  </div>
-                  <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isAllDone
-                          ? 'bg-gradient-to-r from-emerald-400 to-teal-300'
-                          : 'bg-gradient-to-r from-amber-400 to-pink-500'
-                      }`}
-                      style={{ width: `${percent}%` }}
-                    />
+                      style={{
+                        backgroundColor: `${mvpKid.color}40`,
+                        borderColor: '#fbbf24',
+                      }}
+                      className="w-16 h-16 rounded-2xl border-2 border-amber-300 ring-4 ring-amber-400/40 flex items-center justify-center text-3xl shadow-lg shadow-amber-500/30"
+                    >
+                      {mvpKid.avatar}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 justify-center md:justify-start flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 font-black text-[11px] uppercase tracking-widest shadow-xs">
+                        👑 Household MVP
+                      </span>
+                      <span className="text-xs font-black text-amber-300">
+                        {mvpLevel?.icon} {mvpLevel?.title}
+                      </span>
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
+                      {mvpKid.name} is Leading with{' '}
+                      <span className="text-amber-300 font-extrabold">{mvpKid.stars} Points</span>!
+                    </h2>
+                    <p className="text-xs font-bold text-amber-200/80">
+                      🔥 {mvpKid.streakDays} Day Streak • Exemplary Dedication & Chore Mastery!
+                    </p>
                   </div>
                 </div>
 
-                {/* Chores Quick-Check list */}
-                <div className="space-y-2 mt-3 max-h-64 overflow-y-auto pr-1">
-                  {kidChores.length === 0 ? (
-                    <div className="text-center py-6 text-slate-500 text-xs font-bold">
-                      No missions scheduled for today! 🏖️
+                {/* Right: Quick Celebration Action Button & Highlights */}
+                <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
+                  <div className="hidden lg:flex items-center gap-2 bg-black/40 border border-amber-500/30 px-3.5 py-2 rounded-2xl">
+                    <div className="text-center px-2">
+                      <div className="text-xs font-black text-amber-400">⭐ {mvpKid.stars}</div>
+                      <div className="text-[10px] text-slate-400 font-bold">Stars Earned</div>
                     </div>
-                  ) : (
-                    kidChores.map((chore) => {
-                      const log = (database.logs || []).find(
-                        (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
-                      );
-                      const isDone = log?.status === 'completed';
+                    <div className="w-px h-6 bg-slate-800" />
+                    <div className="text-center px-2">
+                      <div className="text-xs font-black text-amber-400">🔥 {mvpKid.streakDays}d</div>
+                      <div className="text-[10px] text-slate-400 font-bold">Streak</div>
+                    </div>
+                  </div>
 
-                      return (
-                        <div
-                          key={chore.id}
-                          className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                            isDone
-                              ? 'bg-emerald-950/40 border-emerald-800/60 text-slate-400'
-                              : 'bg-slate-800/80 border-slate-700 text-white hover:border-slate-600'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                            <span className="text-xl shrink-0">{chore.icon || '⭐'}</span>
-                            <div className="min-w-0">
+                  <button
+                    id="btn-cheer-mvp"
+                    onClick={handleCheerMvp}
+                    className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/30 flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
+                    <span>🎉 Cheer MVP!</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Kids Cards Grid (Dynamically Scaled to fill space) */}
+            <div
+              className={`flex-1 grid gap-4 sm:gap-6 ${
+                database.kids.length === 1
+                  ? 'grid-cols-1 max-w-3xl mx-auto w-full'
+                  : database.kids.length === 2
+                    ? 'grid-cols-1 md:grid-cols-2 w-full'
+                    : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full'
+              }`}
+            >
+              {database.kids.map((kid) => {
+                const level = getKidLevelInfo(kid.lifetimeStars);
+                const isMvp = maxStars > 0 && kid.stars === maxStars;
+
+                // Get today's scheduled chores for this kid
+                const kidChores = (database.chores || []).filter(
+                  (c) => c.isActive && isChoreScheduledForDate(c, todayStr) && isChoreAssignedToKid(c, kid.id)
+                );
+
+                const completedCount = kidChores.filter((c) =>
+                  (database.logs || []).some(
+                    (l) => l.choreId === c.id && l.kidId === kid.id && l.date === todayStr && l.status === 'completed'
+                  )
+                ).length;
+
+                const totalChores = kidChores.length;
+                const percent = totalChores > 0 ? Math.round((completedCount / totalChores) * 100) : 100;
+                const isAllDone = totalChores > 0 && completedCount === totalChores;
+
+                return (
+                  <div
+                    key={kid.id}
+                    id={`kiosk-kid-card-${kid.id}`}
+                    className={`rounded-3xl border-2 p-4 sm:p-6 flex flex-col justify-between transition-all relative overflow-hidden min-h-[420px] ${
+                      isMvp
+                        ? 'border-amber-400 ring-4 ring-amber-400/40 shadow-2xl shadow-amber-500/25 bg-gradient-to-b from-amber-950/40 via-slate-900/95 to-slate-900/95'
+                        : isAllDone
+                          ? 'border-emerald-500 shadow-xl shadow-emerald-500/10 bg-slate-900/90'
+                          : 'border-slate-800 hover:border-slate-700 bg-slate-900/90 shadow-md'
+                    }`}
+                  >
+                    {/* MVP Top Banner */}
+                    {isMvp && (
+                      <div className="flex items-center justify-between bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 px-4 py-1.5 -mt-2 -mx-2 mb-4 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg">
+                        <span className="flex items-center gap-1.5 font-black">
+                          <span className="text-base animate-pulse">👑</span>
+                          <span className="font-extrabold text-sm tracking-widest">MVP LEADER</span>
+                          <span className="text-[10px] font-black opacity-80 hidden sm:inline">• MOST POINTS</span>
+                        </span>
+                        <span className="text-xs font-black bg-amber-950/20 px-2.5 py-0.5 rounded-full">
+                          ⭐ {kid.stars} Pts
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Kid Header */}
+                    <div>
+                      <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                        <div className="flex items-center gap-3">
+                          {/* Avatar with Crown for MVP */}
+                          <div className="relative">
+                            {isMvp && (
                               <div
-                                className={`text-xs font-black truncate ${
-                                  isDone ? 'line-through text-slate-400' : 'text-white'
-                                }`}
+                                className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 text-2xl filter drop-shadow-[0_3px_6px_rgba(245,158,11,0.9)] animate-bounce select-none pointer-events-none"
+                                title="MVP - Points Leader"
                               >
-                                {chore.title}
+                                👑
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                                <span>+{chore.stars + (chore.bountyBonusStars || 0)} pts</span>
-                                {chore.timerMinutes && (
-                                  <span className="text-indigo-400 flex items-center gap-0.5">
-                                    <Timer className="w-2.5 h-2.5" />
-                                    <span>{chore.timerMinutes}m</span>
-                                  </span>
-                                )}
-                              </div>
+                            )}
+                            <div
+                              style={{
+                                backgroundColor: isMvp ? `${kid.color}40` : `${kid.color}25`,
+                                borderColor: isMvp ? '#fbbf24' : kid.color,
+                              }}
+                              className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-3xl shrink-0 shadow-inner transition-transform ${
+                                isMvp ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-900 scale-105' : ''
+                              }`}
+                            >
+                              {kid.avatar}
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Focus Timer Button */}
-                            {!isDone && (
-                              <button
-                                onClick={() => {
-                                  sound.playTap();
-                                  setActiveTimerChore(chore);
-                                }}
-                                className="p-2 rounded-xl bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 transition-all cursor-pointer"
-                                title="Start Focus Timer"
-                              >
-                                <Timer className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
-                            {/* Complete Button */}
-                            {isDone ? (
-                              <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-                                <Check className="w-4 h-4 stroke-[3]" />
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleQuickCompleteChore(chore, kid)}
-                                className="w-8 h-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white flex items-center justify-center shadow-md transition-all cursor-pointer"
-                                title="Mark Completed"
-                              >
-                                <Check className="w-4 h-4 stroke-[3]" />
-                              </button>
-                            )}
+                          <div>
+                            <h2 className="text-xl font-black text-white flex items-center gap-2 flex-wrap">
+                              <span>{kid.name}</span>
+                              {isMvp && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 font-black text-xs shadow-md tracking-wider uppercase border border-amber-300">
+                                  👑 MVP
+                                </span>
+                              )}
+                              {isAllDone && (
+                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500 text-white font-extrabold animate-bounce">
+                                  All Done! 🎉
+                                </span>
+                              )}
+                            </h2>
+                            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mt-0.5">
+                              <span>{level.icon} {level.title}</span>
+                            </div>
                           </div>
                         </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        });
-      })()}
-      </div>
 
-      {/* Bottom Ticker: Today's Schedule & Bonus Bounties */}
-      <footer className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-4 border-t border-slate-800 text-xs">
+                        {/* Stars & Streak */}
+                        <div className="text-right">
+                          <div
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black ${
+                              isMvp
+                                ? 'bg-amber-400 text-slate-950 shadow-md ring-1 ring-amber-300'
+                                : 'bg-pink-950/80 border border-pink-700/60 text-pink-300'
+                            }`}
+                          >
+                            <Star className={`w-3.5 h-3.5 ${isMvp ? 'fill-slate-950 text-slate-950' : 'fill-pink-400 text-pink-400'}`} />
+                            <span>{kid.stars} Pts</span>
+                          </div>
+                          <div className="flex items-center justify-end gap-1 text-[11px] font-black text-amber-400 mt-1">
+                            <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                            <span>{kid.streakDays} Day Streak</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="my-3">
+                        <div className="flex items-center justify-between text-xs font-black text-slate-400 mb-1.5">
+                          <span>Today's Missions</span>
+                          <span className={isAllDone ? 'text-emerald-400 font-extrabold' : 'text-slate-300'}>
+                            {completedCount} / {totalChores} ({percent}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-3.5 bg-slate-800 rounded-full overflow-hidden p-0.5">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isAllDone
+                                ? 'bg-gradient-to-r from-emerald-400 to-teal-300'
+                                : 'bg-gradient-to-r from-amber-400 to-pink-500'
+                            }`}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Chores Quick-Check list */}
+                      <div className="space-y-2 mt-3 max-h-72 overflow-y-auto pr-1">
+                        {kidChores.length === 0 ? (
+                          <div className="text-center py-8 text-slate-500 text-xs font-bold">
+                            No missions scheduled for today! 🏖️
+                          </div>
+                        ) : (
+                          kidChores.map((chore) => {
+                            const log = (database.logs || []).find(
+                              (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
+                            );
+                            const isDone = log?.status === 'completed';
+
+                            return (
+                              <div
+                                key={chore.id}
+                                className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                                  isDone
+                                    ? 'bg-emerald-950/40 border-emerald-800/60 text-slate-400'
+                                    : 'bg-slate-800/80 border-slate-700 text-white hover:border-slate-600'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                  <span className="text-2xl shrink-0">{chore.icon || '⭐'}</span>
+                                  <div className="min-w-0">
+                                    <div
+                                      className={`text-xs sm:text-sm font-black truncate ${
+                                        isDone ? 'line-through text-slate-400' : 'text-white'
+                                      }`}
+                                    >
+                                      {chore.title}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
+                                      <span className="text-amber-400 font-extrabold">
+                                        +{chore.stars + (chore.bountyBonusStars || 0)} pts
+                                      </span>
+                                      {chore.timerMinutes && (
+                                        <span className="text-indigo-400 flex items-center gap-0.5">
+                                          <Timer className="w-3 h-3" />
+                                          <span>{chore.timerMinutes}m timer</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {/* Focus Timer Button */}
+                                  {!isDone && (
+                                    <button
+                                      onClick={() => {
+                                        sound.playTap();
+                                        setActiveTimerChore(chore);
+                                      }}
+                                      className="p-2 rounded-xl bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 transition-all cursor-pointer"
+                                      title="Start Focus Timer"
+                                    >
+                                      <Timer className="w-4 h-4" />
+                                    </button>
+                                  )}
+
+                                  {/* Complete Button */}
+                                  {isDone ? (
+                                    <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                                      <Check className="w-4 h-4 stroke-[3]" />
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleQuickCompleteChore(chore, kid)}
+                                      className="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white flex items-center justify-center shadow-md transition-all cursor-pointer"
+                                      title="Mark Completed"
+                                    >
+                                      <Check className="w-4 h-4 stroke-[3]" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Household Summary Card if 1 or 2 kids are present to balance the screen layout */}
+              {database.kids.length <= 2 && (
+                <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/80 p-5 flex flex-col justify-between min-h-[420px]">
+                  <div>
+                    <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-950 border border-indigo-700 text-yellow-300 flex items-center justify-center text-2xl">
+                        🏰
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-white">Daily Household Quest Hub</h3>
+                        <p className="text-xs text-slate-400 font-bold">Family Teamwork & Milestones</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 my-4">
+                      <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-center">
+                        <div className="text-xl font-black text-emerald-400">
+                          {totalFamilyCompletedToday} / {totalFamilyChoresToday}
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                          Chores Done Today
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-center">
+                        <div className="text-xl font-black text-yellow-400">
+                          ⭐ {database.kids.reduce((a, k) => a + k.stars, 0)}
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                          Total Family Stars
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Schedule Quick Peek */}
+                    <div className="mt-2">
+                      <div className="text-xs font-black text-slate-300 mb-2 flex items-center gap-1.5">
+                        <CalendarIcon className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Today's Family Schedule</span>
+                      </div>
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                        {todayEvents.length === 0 ? (
+                          <div className="text-xs text-slate-500 italic py-2">
+                            No special practices or events scheduled for today.
+                          </div>
+                        ) : (
+                          todayEvents.map((e) => (
+                            <div
+                              key={e.id}
+                              className="p-2 rounded-xl bg-slate-800/60 border border-slate-700 flex items-center justify-between text-xs"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>{e.icon || '📌'}</span>
+                                <span className="font-bold text-white truncate">{e.title}</span>
+                              </div>
+                              {e.time && (
+                                <span className="text-[10px] font-mono text-yellow-400 bg-slate-900 px-2 py-0.5 rounded-md">
+                                  {e.time}
+                                </span>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Motivational Quote */}
+                  <div className="pt-3 border-t border-slate-800 text-[11px] text-amber-200/90 font-bold italic text-center">
+                    "Every completed mission brings the whole family closer to the Friday Reward! 🚀"
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Bottom Ticker: Today's Dinner, Today's Schedule & Bonus Bounties */}
+      <footer className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-4 border-t border-slate-800 text-xs">
+        {/* Tonight's Dinner Preview Pill */}
+        <div
+          onClick={() => {
+            sound.playTap();
+            if (onOpenMenu) {
+              onOpenMenu();
+            } else {
+              setIsMenuModalOpen(true);
+            }
+          }}
+          className="p-3 rounded-2xl bg-slate-900 border border-amber-800/60 hover:border-amber-500 flex items-center gap-3 cursor-pointer transition-all hover:bg-slate-850 active:scale-98 shadow-xs"
+        >
+          <div className="p-2 rounded-xl bg-amber-950/90 text-amber-300 font-bold shrink-0 flex items-center gap-1.5 border border-amber-700/50">
+            <span className="text-base">{todayMenuPlan.icon || '🍽️'}</span>
+            <span>Tonight's Dinner</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-extrabold text-white truncate text-xs">
+              {todayMenuPlan.mainDish}
+            </div>
+            <div className="text-[10px] text-amber-400 font-semibold truncate">
+              {todayMenuPlan.votingEnabled ? '🗳️ Kids Vote Open — Tap to Vote!' : `👨‍🍳 ${todayMenuPlan.preparedBy || 'Family'}`}
+            </div>
+          </div>
+        </div>
+
         {/* Today's Schedule */}
-        <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3">
+        <div
+          onClick={() => {
+            if (onOpenCalendar) {
+              sound.playTap();
+              onOpenCalendar();
+            }
+          }}
+          className={`p-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3 ${onOpenCalendar ? 'cursor-pointer hover:border-indigo-500' : ''}`}
+        >
           <div className="p-2 rounded-xl bg-indigo-900 text-yellow-300 font-bold shrink-0">
             📅 Today's Schedule
           </div>
           <div className="flex-1 overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-2">
             {todayEvents.length === 0 ? (
-              <span className="text-slate-500 italic">No practices or appointments scheduled for today.</span>
+              <span className="text-slate-500 italic">No practices or appointments today.</span>
             ) : (
               todayEvents.map((evt) => (
                 <span
                   key={evt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold"
                 >
                   <span>{evt.icon || '📌'}</span>
-                  <span>{evt.title}</span>
+                  <span className="truncate max-w-[120px]">{evt.title}</span>
                   {evt.time && <span className="text-yellow-400 font-mono">({evt.time})</span>}
                 </span>
               ))
@@ -474,22 +728,22 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         </div>
 
         {/* Bonus Bounties */}
-        <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3">
+        <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3">
           <div className="p-2 rounded-xl bg-amber-900/80 text-amber-300 font-bold shrink-0 flex items-center gap-1">
             <Target className="w-3.5 h-3.5 text-amber-400" />
-            <span>Bonus Bounty Board</span>
+            <span>Bonus Bounties</span>
           </div>
           <div className="flex-1 overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-2">
             {bountyChores.length === 0 ? (
-              <span className="text-slate-500 italic">No extra-credit bounties currently active.</span>
+              <span className="text-slate-500 italic">No extra bounties active.</span>
             ) : (
               bountyChores.map((bounty) => (
                 <span
                   key={bounty.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-950/60 border border-amber-800/80 text-amber-200 font-bold"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-950/60 border border-amber-800/80 text-amber-200 font-bold"
                 >
                   <span>{bounty.icon || '⭐'}</span>
-                  <span>{bounty.title}</span>
+                  <span className="truncate max-w-[120px]">{bounty.title}</span>
                   <span className="text-yellow-400 font-black">+{bounty.stars + (bounty.bountyBonusStars || 0)} Pts</span>
                 </span>
               ))
@@ -513,11 +767,23 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           }}
         />
       )}
+
       {/* Family Goal Manager Modal */}
       {isGoalModalOpen && (
         <FamilyGoalModal
           isOpen={isGoalModalOpen}
           onClose={() => setIsGoalModalOpen(false)}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          isParentMode={false}
+        />
+      )}
+
+      {/* Weekly Dinner Menu Modal Overlay */}
+      {isMenuModalOpen && (
+        <WeeklyMenuModal
+          isOpen={isMenuModalOpen}
+          onClose={() => setIsMenuModalOpen(false)}
           database={database}
           onUpdateDatabase={onUpdateDatabase}
           isParentMode={false}

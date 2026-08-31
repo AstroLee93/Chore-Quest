@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Search,
   Lock,
+  UtensilsCrossed,
 } from 'lucide-react';
 import {
   FamilyDatabase,
@@ -43,10 +44,12 @@ import {
 } from '../types';
 import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON } from '../utils/storage';
 import { sound } from '../utils/sound';
+import { EmojiPicker } from './EmojiPicker';
 
 import { CalendarView } from './Calendar/CalendarView';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { FamilyGoalModal } from './FamilyGoalModal';
+import { WeeklyMenuModal } from './WeeklyMenuModal';
 
 interface ParentDashboardProps {
   database: FamilyDatabase;
@@ -63,7 +66,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   onOpenPiGuide,
   onOpenCalendar,
 }) => {
-  const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'chores' | 'rewards' | 'kids' | 'settings'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'menu' | 'chores' | 'rewards' | 'kids' | 'settings'>('activity');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const todayStr = getTodayDateString();
 
@@ -442,6 +445,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       <div className="flex gap-2 overflow-x-auto pb-1 p-1.5 rounded-2xl bg-yellow-200/70 border-2 border-yellow-300 shadow-2xs">
         {[
           { id: 'activity', label: 'Daily Review & Audit', icon: CheckCircle, badge: database.logs.filter((l) => l.date === todayStr).length },
+          { id: 'menu', label: 'Dinner Menu', icon: UtensilsCrossed },
           { id: 'calendar', label: 'Yearly Calendar', icon: Calendar, badge: (database.events || []).length },
           { id: 'chores', label: 'Chores & Categories', icon: FileSpreadsheet, badge: database.chores.length },
           { id: 'rewards', label: 'Rewards & Claims', icon: Gift, badge: database.redemptions.filter((r) => r.status === 'pending').length || undefined },
@@ -705,6 +709,17 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           activeKid={null}
           onUpdateDatabase={onUpdateDatabase}
           onClose={() => setActiveTab('activity')}
+        />
+      )}
+
+      {/* TAB: WEEKLY DINNER MENU & MEAL VOTING PLANNER */}
+      {activeTab === 'menu' && (
+        <WeeklyMenuModal
+          isOpen={true}
+          onClose={() => setActiveTab('activity')}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          isParentMode={true}
         />
       )}
 
@@ -1380,11 +1395,11 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   <label className="block text-xs font-black text-slate-700 uppercase mb-1">
                     Chore Icon (Emoji):
                   </label>
-                  <input
-                    type="text"
+                  <EmojiPicker
                     value={editingChore.icon || '⭐'}
-                    onChange={(e) => setEditingChore({ ...editingChore, icon: e.target.value })}
-                    className="w-full px-3 py-2 rounded-2xl border-2 border-slate-200 bg-white text-center text-lg font-black"
+                    onChange={(emoji) => setEditingChore({ ...editingChore, icon: emoji })}
+                    title="Choose Chore Icon"
+                    categoryFilter="chores"
                   />
                 </div>
               </div>
@@ -1711,11 +1726,11 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   <label className="block text-xs font-black text-slate-700 uppercase mb-1">
                     Reward Icon (Emoji):
                   </label>
-                  <input
-                    type="text"
+                  <EmojiPicker
                     value={editingReward.icon || '🎁'}
-                    onChange={(e) => setEditingReward({ ...editingReward, icon: e.target.value })}
-                    className="w-full px-3 py-2 rounded-2xl border-2 border-slate-200 bg-white text-center text-lg font-black"
+                    onChange={(emoji) => setEditingReward({ ...editingReward, icon: emoji })}
+                    title="Choose Reward Icon"
+                    categoryFilter="rewards"
                   />
                 </div>
               </div>
@@ -1780,20 +1795,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 <label className="block text-xs font-black text-slate-700 uppercase mb-1">
                   Choose Fun Character Avatar:
                 </label>
-                <div className="grid grid-cols-6 gap-2">
-                  {['🦁', '🦄', '🚀', '🦊', '🐼', '🦖', '⚽', '🎨', '🌟', '🧙', '🐶', '🐱'].map((em) => (
-                    <button
-                      key={em}
-                      type="button"
-                      onClick={() => setEditingKid({ ...editingKid, avatar: em })}
-                      className={`text-2xl p-2 rounded-2xl border-2 transition-transform cursor-pointer ${
-                        editingKid.avatar === em ? 'border-indigo-900 bg-yellow-200 scale-110 shadow-sm' : 'border-slate-200 bg-white'
-                      }`}
-                    >
-                      {em}
-                    </button>
-                  ))}
-                </div>
+                <EmojiPicker
+                  value={editingKid.avatar || '🦁'}
+                  onChange={(emoji) => setEditingKid({ ...editingKid, avatar: emoji })}
+                  title="Choose Kid Character"
+                  categoryFilter="characters"
+                />
               </div>
 
               <div>

@@ -1,91 +1,368 @@
-export type AppThemeId = 'soft-calm' | 'warm-sand' | 'sage-meadow' | 'twilight-dark' | 'classic-sunshine';
+export type AppThemeId =
+  | 'coastal-horizon'
+  | 'nordic-forest'
+  | 'midnight-charcoal'
+  | 'soft-sky'
+  | 'warm-sand'
+  | 'classic-sunshine';
 
 export interface AppThemeConfig {
   id: AppThemeId;
   name: string;
+  subtitle: string;
   description: string;
   icon: string;
+  swatches: string[]; // Palette hex colors from uploaded palettes
   colorSwatch: string;
   isDark: boolean;
+
+  // Canvas
   bgGradient: string;
-  cardBg: string;
-  cardBorder: string;
+  pageBackground: string;
+
+  // Animated Hero Banner
+  bannerGradient: string;
+  bannerBorder: string;
+  bannerGlow: string;
+
+  // Header / Navbar
   headerBg: string;
-  accentBadge: string;
+  headerBorder: string;
+  headerLogoBg: string;
+  headerLogoText: string;
+  headerTextColor: string;
+
+  // Family Goal Banner
+  goalBannerBg: string;
+  goalBannerBorder: string;
+  goalBannerIconBg: string;
+  goalBannerProgress: string;
+  goalBadge: string;
+  goalTitleColor: string;
+
+  // Kid Cards
+  kidCardBg: string;
+  kidCardBorder: string;
+  kidCardHover: string;
+  kidCardStatsBg: string;
+  kidCardNameColor: string;
+  kidCardSubtextColor: string;
+  kidCardProgress: string;
+  kidCardAvatarBorder: string;
+
+  // Buttons & Accents
+  primaryBtn: string;
+  secondaryBtn: string;
+  accentPill: string;
+  progressGradient: string;
 }
 
 export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
-  'soft-calm': {
-    id: 'soft-calm',
+  // 🌊 PALETTE 1 (Uploaded Image 1): Ocean Beach Coastal (#579FB6, #77B7D0, #B3E0F4, #FCFDFE, #EED3CE, #E2BAB1)
+  'coastal-horizon': {
+    id: 'coastal-horizon',
+    name: 'Coastal Horizon',
+    subtitle: 'Ocean Blue & Sandy Coral',
+    description: 'Crisp azure sea, aqua mist, and warm coral sand from your palette.',
+    icon: '🌊',
+    swatches: ['#579FB6', '#77B7D0', '#B3E0F4', '#FCFDFE', '#EED3CE', '#E2BAB1'],
+    colorSwatch: '#579FB6',
+    isDark: false,
+    bgGradient: 'bg-gradient-to-br from-[#FCFDFE] via-[#B3E0F4]/35 to-[#EED3CE]/30',
+    pageBackground: '#FCFDFE',
+
+    // Animated Hero Banner
+    bannerGradient: 'bg-gradient-to-r from-[#579FB6] via-[#77B7D0] to-[#E2BAB1]',
+    bannerBorder: 'border-[#77B7D0]',
+    bannerGlow: 'shadow-[0_10px_30px_rgba(87,159,182,0.35)]',
+
+    // Header / Navbar
+    headerBg: 'bg-gradient-to-r from-white/95 via-[#B3E0F4]/30 to-white/95 backdrop-blur-md',
+    headerBorder: 'border-[#77B7D0]/50',
+    headerLogoBg: 'bg-[#579FB6] shadow-[#579FB6]/30',
+    headerLogoText: 'text-white',
+    headerTextColor: 'text-[#143B47]',
+
+    // Family Goal Banner
+    goalBannerBg: 'bg-gradient-to-r from-white/90 via-[#B3E0F4]/35 to-[#EED3CE]/35 backdrop-blur-md',
+    goalBannerBorder: 'border-[#77B7D0]/60',
+    goalBannerIconBg: 'bg-[#B3E0F4]/80 text-[#143B47] border border-[#77B7D0]',
+    goalBannerProgress: 'bg-gradient-to-r from-[#77B7D0] via-[#579FB6] to-[#E2BAB1]',
+    goalBadge: 'bg-[#EED3CE]/90 text-[#422923] border border-[#E2BAB1]',
+    goalTitleColor: 'text-[#143B47]',
+
+    // Kid Cards
+    kidCardBg: 'bg-gradient-to-b from-white/95 to-[#B3E0F4]/20 backdrop-blur-md',
+    kidCardBorder: 'border-[#77B7D0]/50',
+    kidCardHover: 'hover:border-[#579FB6] hover:shadow-[0_16px_36px_rgba(87,159,182,0.25)]',
+    kidCardStatsBg: 'bg-white/80 border border-[#77B7D0]/40',
+    kidCardNameColor: 'text-[#143B47]',
+    kidCardSubtextColor: 'text-[#3D6675]',
+    kidCardProgress: 'bg-gradient-to-r from-[#77B7D0] via-[#579FB6] to-[#E2BAB1]',
+    kidCardAvatarBorder: 'border-[#77B7D0]/80',
+
+    // Buttons
+    primaryBtn: 'bg-[#579FB6] hover:bg-[#46869B] text-white shadow-sm font-bold',
+    secondaryBtn: 'bg-[#EED3CE]/70 hover:bg-[#EED3CE] text-[#3D2621] border border-[#E2BAB1] font-bold',
+    accentPill: 'bg-[#EED3CE]/90 text-[#422923] border border-[#E2BAB1]',
+    progressGradient: 'from-[#77B7D0] via-[#579FB6] to-[#E2BAB1]',
+  },
+
+  // 🌲 PALETTE 2 (Uploaded Image 2): Deep Spruce, Pine & Seafoam (#192E26, #2C524C, #6B9E96, #9FA7A4, #E5EDE9)
+  'nordic-forest': {
+    id: 'nordic-forest',
+    name: 'Nordic Forest',
+    subtitle: 'Deep Spruce & Eucalyptus Mist',
+    description: 'Rich evergreen pine, sage seafoam, and soft morning fog from your palette.',
+    icon: '🌲',
+    swatches: ['#192E26', '#2C524C', '#6B9E96', '#9FA7A4', '#E5EDE9'],
+    colorSwatch: '#6B9E96',
+    isDark: false,
+    bgGradient: 'bg-gradient-to-br from-[#E5EDE9] via-[#EDF3F0] to-[#9FA7A4]/25',
+    pageBackground: '#E5EDE9',
+
+    // Animated Hero Banner
+    bannerGradient: 'bg-gradient-to-r from-[#192E26] via-[#2C524C] to-[#6B9E96]',
+    bannerBorder: 'border-[#6B9E96]',
+    bannerGlow: 'shadow-[0_10px_30px_rgba(44,82,76,0.35)]',
+
+    // Header / Navbar
+    headerBg: 'bg-gradient-to-r from-[#E5EDE9]/95 via-[#6B9E96]/20 to-[#E5EDE9]/95 backdrop-blur-md',
+    headerBorder: 'border-[#6B9E96]/50',
+    headerLogoBg: 'bg-[#2C524C] shadow-[#192E26]/30',
+    headerLogoText: 'text-white',
+    headerTextColor: 'text-[#12231D]',
+
+    // Family Goal Banner
+    goalBannerBg: 'bg-gradient-to-r from-[#FCFDFD]/95 via-[#6B9E96]/25 to-[#E5EDE9]/90 backdrop-blur-md',
+    goalBannerBorder: 'border-[#6B9E96]/60',
+    goalBannerIconBg: 'bg-[#6B9E96]/30 text-[#12231D] border border-[#6B9E96]/60',
+    goalBannerProgress: 'bg-gradient-to-r from-[#6B9E96] via-[#2C524C] to-[#192E26]',
+    goalBadge: 'bg-[#6B9E96]/30 text-[#12231D] border border-[#6B9E96]/60',
+    goalTitleColor: 'text-[#12231D]',
+
+    // Kid Cards
+    kidCardBg: 'bg-gradient-to-b from-[#FCFDFD]/95 to-[#E5EDE9]/90 backdrop-blur-md',
+    kidCardBorder: 'border-[#6B9E96]/50',
+    kidCardHover: 'hover:border-[#2C524C] hover:shadow-[0_16px_36px_rgba(44,82,76,0.25)]',
+    kidCardStatsBg: 'bg-white/80 border border-[#9FA7A4]/50',
+    kidCardNameColor: 'text-[#12231D]',
+    kidCardSubtextColor: 'text-[#35524B]',
+    kidCardProgress: 'bg-gradient-to-r from-[#6B9E96] via-[#2C524C] to-[#192E26]',
+    kidCardAvatarBorder: 'border-[#6B9E96]/80',
+
+    // Buttons
+    primaryBtn: 'bg-[#2C524C] hover:bg-[#192E26] text-white shadow-sm font-bold',
+    secondaryBtn: 'bg-[#E5EDE9] hover:bg-[#9FA7A4]/40 text-[#12231D] border border-[#9FA7A4]/60 font-bold',
+    accentPill: 'bg-[#6B9E96]/30 text-[#12231D] border border-[#6B9E96]/60',
+    progressGradient: 'from-[#6B9E96] via-[#2C524C] to-[#192E26]',
+  },
+
+  // 🌑 PALETTE 3 (Uploaded Image 3): Midnight Charcoal & Espresso (#1E181D, #342A31, #56575C, #6C6C72, #C8C8CA, #23252A)
+  'midnight-charcoal': {
+    id: 'midnight-charcoal',
+    name: 'Midnight Charcoal',
+    subtitle: 'Espresso, Slate & Silver',
+    description: 'Deep espresso-charcoal & graphite glass with crisp bright typography.',
+    icon: '🌑',
+    swatches: ['#1E181D', '#342A31', '#56575C', '#6C6C72', '#C8C8CA', '#23252A'],
+    colorSwatch: '#56575C',
+    isDark: true,
+    bgGradient: 'bg-gradient-to-br from-[#1E181D] via-[#2A2329] to-[#161215]',
+    pageBackground: '#1E181D',
+
+    // Animated Hero Banner
+    bannerGradient: 'bg-gradient-to-r from-[#342A31] via-[#56575C] to-[#23252A]',
+    bannerBorder: 'border-[#6C6C72]',
+    bannerGlow: 'shadow-[0_10px_30px_rgba(0,0,0,0.6)]',
+
+    // Header / Navbar
+    headerBg: 'bg-gradient-to-r from-[#1E181D]/95 via-[#2A2329]/90 to-[#1E181D]/95 backdrop-blur-md',
+    headerBorder: 'border-[#56575C]/60',
+    headerLogoBg: 'bg-[#56575C] shadow-black/50 border border-[#6C6C72]',
+    headerLogoText: 'text-white',
+    headerTextColor: 'text-white',
+
+    // Family Goal Banner
+    goalBannerBg: 'bg-gradient-to-r from-[#2A2329]/95 via-[#342A31]/95 to-[#23252A]/95 backdrop-blur-md',
+    goalBannerBorder: 'border-[#6C6C72]/70',
+    goalBannerIconBg: 'bg-[#342A31] text-white border border-[#56575C]',
+    goalBannerProgress: 'bg-gradient-to-r from-[#56575C] via-[#6C6C72] to-[#C8C8CA]',
+    goalBadge: 'bg-[#342A31] text-[#EDEDEE] border border-[#56575C]',
+    goalTitleColor: 'text-white',
+
+    // Kid Cards
+    kidCardBg: 'bg-gradient-to-b from-[#2A2329]/90 to-[#1E181D]/90 backdrop-blur-md',
+    kidCardBorder: 'border-[#56575C]/70',
+    kidCardHover: 'hover:border-[#C8C8CA] hover:shadow-[0_16px_36px_rgba(0,0,0,0.7)]',
+    kidCardStatsBg: 'bg-[#1E181D]/90 border border-[#56575C]/60',
+    kidCardNameColor: 'text-white',
+    kidCardSubtextColor: 'text-[#C8C8CA]',
+    kidCardProgress: 'bg-gradient-to-r from-[#56575C] via-[#6C6C72] to-[#C8C8CA]',
+    kidCardAvatarBorder: 'border-[#6C6C72]',
+
+    // Buttons
+    primaryBtn: 'bg-[#56575C] hover:bg-[#6C6C72] text-white shadow-sm border border-[#6C6C72] font-bold',
+    secondaryBtn: 'bg-[#342A31] hover:bg-[#443841] text-[#EDEDEE] border border-[#56575C] font-bold',
+    accentPill: 'bg-[#342A31] text-[#EDEDEE] border border-[#56575C]',
+    progressGradient: 'from-[#56575C] via-[#6C6C72] to-[#C8C8CA]',
+  },
+
+  // 🌤️ Soft Sky Calm
+  'soft-sky': {
+    id: 'soft-sky',
     name: 'Soft Sky (Calm)',
-    description: 'Gentle cool blue & slate. Eases eye strain for all-day use.',
+    subtitle: 'Cool Blue & Anti-Glare Slate',
+    description: 'Gentle cool blue and slate tones tailored to minimize glare.',
     icon: '🌤️',
+    swatches: ['#0284c7', '#38bdf8', '#bae6fd', '#f0f9ff', '#64748b'],
     colorSwatch: '#38bdf8',
     isDark: false,
     bgGradient: 'bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/60',
-    cardBg: 'bg-white/80 backdrop-blur-md',
-    cardBorder: 'border-slate-200/80',
-    headerBg: 'bg-white/85 backdrop-blur-md border-slate-200/80',
-    accentBadge: 'bg-sky-100 text-sky-800 border-sky-200',
+    pageBackground: '#f1f5f9',
+
+    // Animated Hero Banner
+    bannerGradient: 'bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600',
+    bannerBorder: 'border-sky-400',
+    bannerGlow: 'shadow-[0_10px_30px_rgba(2,132,199,0.35)]',
+
+    // Header / Navbar
+    headerBg: 'bg-gradient-to-r from-white/95 via-sky-100/40 to-white/95 backdrop-blur-md',
+    headerBorder: 'border-sky-200',
+    headerLogoBg: 'bg-sky-500 shadow-sky-500/30',
+    headerLogoText: 'text-white',
+    headerTextColor: 'text-slate-900',
+
+    // Family Goal Banner
+    goalBannerBg: 'bg-gradient-to-r from-white/90 via-sky-50/80 to-blue-50/80 backdrop-blur-md',
+    goalBannerBorder: 'border-sky-200',
+    goalBannerIconBg: 'bg-sky-100 text-sky-800 border border-sky-200',
+    goalBannerProgress: 'bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600',
+    goalBadge: 'bg-sky-100 text-sky-900 border border-sky-200',
+    goalTitleColor: 'text-slate-900',
+
+    // Kid Cards
+    kidCardBg: 'bg-gradient-to-b from-white/95 to-sky-50/50 backdrop-blur-md',
+    kidCardBorder: 'border-sky-200',
+    kidCardHover: 'hover:border-sky-400 hover:shadow-[0_16px_36px_rgba(2,132,199,0.2)]',
+    kidCardStatsBg: 'bg-sky-50/60 border border-sky-100',
+    kidCardNameColor: 'text-slate-900',
+    kidCardSubtextColor: 'text-slate-500',
+    kidCardProgress: 'bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600',
+    kidCardAvatarBorder: 'border-sky-200',
+
+    // Buttons
+    primaryBtn: 'bg-sky-600 hover:bg-sky-700 text-white shadow-sm font-bold',
+    secondaryBtn: 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-bold',
+    accentPill: 'bg-sky-100 text-sky-900 border border-sky-200',
+    progressGradient: 'from-sky-400 via-blue-500 to-indigo-600',
   },
+
+  // 🌾 Warm Linen
   'warm-sand': {
     id: 'warm-sand',
     name: 'Warm Linen',
-    description: 'Cozy oatmeal and warm sand tones with soft contrast.',
+    subtitle: 'Oatmeal & Terracotta Sand',
+    description: 'Cozy oatmeal and warm terracotta sand tones with soft contrast.',
     icon: '🌾',
+    swatches: ['#92400e', '#d97706', '#fde68a', '#fafaf9', '#78716c'],
     colorSwatch: '#d97706',
     isDark: false,
     bgGradient: 'bg-gradient-to-br from-stone-100 via-amber-50/70 to-orange-50/50',
-    cardBg: 'bg-stone-50/85 backdrop-blur-md',
-    cardBorder: 'border-stone-200',
-    headerBg: 'bg-stone-100/90 backdrop-blur-md border-stone-200',
-    accentBadge: 'bg-amber-100 text-amber-900 border-amber-200',
+    pageBackground: '#f5f5f4',
+
+    // Animated Hero Banner
+    bannerGradient: 'bg-gradient-to-r from-amber-700 via-orange-600 to-amber-600',
+    bannerBorder: 'border-amber-400',
+    bannerGlow: 'shadow-[0_10px_30px_rgba(217,119,6,0.35)]',
+
+    // Header / Navbar
+    headerBg: 'bg-gradient-to-r from-[#f5f5f4]/95 via-amber-100/40 to-[#f5f5f4]/95 backdrop-blur-md',
+    headerBorder: 'border-stone-300',
+    headerLogoBg: 'bg-amber-700 shadow-amber-700/30',
+    headerLogoText: 'text-white',
+    headerTextColor: 'text-stone-900',
+
+    // Family Goal Banner
+    goalBannerBg: 'bg-gradient-to-r from-stone-50/90 via-amber-50 to-orange-50/60 backdrop-blur-md',
+    goalBannerBorder: 'border-amber-200',
+    goalBannerIconBg: 'bg-amber-100 text-amber-900 border border-amber-200',
+    goalBannerProgress: 'bg-gradient-to-r from-amber-400 via-amber-600 to-orange-600',
+    goalBadge: 'bg-amber-100 text-amber-900 border border-amber-200',
+    goalTitleColor: 'text-stone-900',
+
+    // Kid Cards
+    kidCardBg: 'bg-gradient-to-b from-stone-50/95 to-amber-50/40 backdrop-blur-md',
+    kidCardBorder: 'border-stone-300',
+    kidCardHover: 'hover:border-amber-500 hover:shadow-[0_16px_36px_rgba(217,119,6,0.2)]',
+    kidCardStatsBg: 'bg-stone-100/70 border border-stone-200',
+    kidCardNameColor: 'text-stone-900',
+    kidCardSubtextColor: 'text-stone-500',
+    kidCardProgress: 'bg-gradient-to-r from-amber-400 via-amber-600 to-orange-600',
+    kidCardAvatarBorder: 'border-amber-200',
+
+    // Buttons
+    primaryBtn: 'bg-amber-700 hover:bg-amber-800 text-white shadow-sm font-bold',
+    secondaryBtn: 'bg-stone-200/80 hover:bg-stone-300 text-stone-800 border border-stone-300 font-bold',
+    accentPill: 'bg-amber-100 text-amber-900 border border-amber-200',
+    progressGradient: 'from-amber-400 via-amber-600 to-orange-600',
   },
-  'sage-meadow': {
-    id: 'sage-meadow',
-    name: 'Sage Meadow',
-    description: 'Tranquil earthy sage green, peaceful and natural.',
-    icon: '🍃',
-    colorSwatch: '#10b981',
-    isDark: false,
-    bgGradient: 'bg-gradient-to-br from-emerald-50/80 via-teal-50/60 to-slate-100',
-    cardBg: 'bg-white/85 backdrop-blur-md',
-    cardBorder: 'border-emerald-200/70',
-    headerBg: 'bg-white/85 backdrop-blur-md border-emerald-200/80',
-    accentBadge: 'bg-emerald-100 text-emerald-900 border-emerald-200',
-  },
-  'twilight-dark': {
-    id: 'twilight-dark',
-    name: 'Twilight Slate (Dark)',
-    description: 'Deep navy-slate dark mode for evening use and eye comfort.',
-    icon: '🌙',
-    colorSwatch: '#6366f1',
-    isDark: true,
-    bgGradient: 'bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950',
-    cardBg: 'bg-slate-900/80 backdrop-blur-md',
-    cardBorder: 'border-slate-800',
-    headerBg: 'bg-slate-950/85 backdrop-blur-md border-slate-800',
-    accentBadge: 'bg-indigo-950 text-indigo-300 border-indigo-800',
-  },
+
+  // ☀️ Classic Sunshine
   'classic-sunshine': {
     id: 'classic-sunshine',
     name: 'Classic Sunshine',
-    description: 'The original vibrant high-energy gold & yellow palette.',
+    subtitle: 'Original Cheerful Gold',
+    description: 'The original vibrant high-energy gold & deep indigo palette.',
     icon: '☀️',
+    swatches: ['#312e81', '#ca8a04', '#facc15', '#fef9c3', '#fefce8'],
     colorSwatch: '#eab308',
     isDark: false,
     bgGradient: 'bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50',
-    cardBg: 'bg-white/90 backdrop-blur-md',
-    cardBorder: 'border-yellow-200',
-    headerBg: 'bg-white/90 backdrop-blur-md border-yellow-200',
-    accentBadge: 'bg-yellow-100 text-yellow-900 border-yellow-300',
+    pageBackground: '#fefce8',
+
+    // Animated Hero Banner
+    bannerGradient: 'bg-gradient-to-r from-indigo-900 via-indigo-800 to-amber-500',
+    bannerBorder: 'border-yellow-400',
+    bannerGlow: 'shadow-[0_10px_30px_rgba(49,46,129,0.35)]',
+
+    // Header / Navbar
+    headerBg: 'bg-indigo-900 backdrop-blur-md',
+    headerBorder: 'border-yellow-400',
+    headerLogoBg: 'bg-yellow-400 shadow-yellow-400/30',
+    headerLogoText: 'text-indigo-950 font-black',
+    headerTextColor: 'text-white',
+
+    // Family Goal Banner
+    goalBannerBg: 'bg-gradient-to-r from-yellow-50 via-amber-50 to-yellow-100/90 backdrop-blur-md',
+    goalBannerBorder: 'border-yellow-300',
+    goalBannerIconBg: 'bg-yellow-200 text-yellow-950 border border-yellow-300',
+    goalBannerProgress: 'bg-gradient-to-r from-yellow-400 via-orange-400 to-indigo-600',
+    goalBadge: 'bg-yellow-200 text-slate-900 border border-yellow-300',
+    goalTitleColor: 'text-slate-900',
+
+    // Kid Cards
+    kidCardBg: 'bg-gradient-to-b from-white/95 to-yellow-50/70 backdrop-blur-md',
+    kidCardBorder: 'border-yellow-200',
+    kidCardHover: 'hover:border-yellow-400 hover:shadow-[0_16px_36px_rgba(234,179,8,0.25)]',
+    kidCardStatsBg: 'bg-yellow-50/60 border border-yellow-200',
+    kidCardNameColor: 'text-slate-900',
+    kidCardSubtextColor: 'text-slate-500',
+    kidCardProgress: 'bg-gradient-to-r from-yellow-400 via-orange-400 to-indigo-600',
+    kidCardAvatarBorder: 'border-yellow-300',
+
+    // Buttons
+    primaryBtn: 'bg-indigo-900 hover:bg-indigo-800 text-yellow-300 shadow-sm font-black',
+    secondaryBtn: 'bg-yellow-200 hover:bg-yellow-300 text-slate-900 border border-yellow-300 font-bold',
+    accentPill: 'bg-yellow-200 text-slate-900 border border-yellow-300',
+    progressGradient: 'from-yellow-400 via-orange-400 to-indigo-600',
   },
 };
 
-const THEME_STORAGE_KEY = 'chorequest_theme_id_v1';
+const THEME_STORAGE_KEY = 'chorequest_theme_id_v4';
 
 export function getSavedThemeId(): AppThemeId {
-  if (typeof window === 'undefined') return 'soft-calm';
+  if (typeof window === 'undefined') return 'coastal-horizon';
   try {
     const saved = localStorage.getItem(THEME_STORAGE_KEY) as AppThemeId | null;
     if (saved && APP_THEMES[saved]) {
@@ -94,14 +371,13 @@ export function getSavedThemeId(): AppThemeId {
   } catch (e) {
     // Ignore localStorage read failures
   }
-  return 'soft-calm';
+  return 'coastal-horizon';
 }
 
 export function saveThemeId(themeId: AppThemeId): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(THEME_STORAGE_KEY, themeId);
-    // Also toggle dark class on html root for tailwind dark: modifiers
     if (APP_THEMES[themeId]?.isDark) {
       document.documentElement.classList.add('dark');
     } else {

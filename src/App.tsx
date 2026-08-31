@@ -284,7 +284,7 @@ export default function App() {
     );
   }
 
-  const themeConfig = APP_THEMES[currentTheme] || APP_THEMES['soft-calm'];
+  const themeConfig = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
 
   return (
     <div
@@ -341,6 +341,7 @@ export default function App() {
             settings={database.settings}
             events={database.events || []}
             database={database}
+            currentTheme={currentTheme}
             onToggleCompleteChore={handleToggleCompleteChore}
             onSkipChoreWithReason={handleSkipChoreWithReason}
             onUndoChoreStatus={handleUndoChoreStatus}
@@ -353,6 +354,7 @@ export default function App() {
             kids={database.kids}
             events={database.events || []}
             database={database}
+            currentTheme={currentTheme}
             onSelectKid={(kid) => setActiveKidId(kid.id)}
             onOpenParentPin={() => setIsPinModalOpen(true)}
             onOpenCalendar={() => setIsCalendarOpen(true)}

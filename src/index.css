@@ -35,7 +35,33 @@
   border: 1px solid rgba(30, 41, 59, 0.8);
 }
 
-/* Custom smooth scrollbars */
+/* Shimmer animation for animated banner */
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-150%) skewX(-15deg);
+  }
+  50%, 100% {
+    transform: translateX(150%) skewX(-15deg);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmerSweep 4s ease-in-out infinite;
+}
+
+@keyframes bannerPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.008);
+  }
+}
+
+.animate-banner-pulse {
+  animation: bannerPulse 5s ease-in-out infinite;
+}
+
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }

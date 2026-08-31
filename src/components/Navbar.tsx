@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Shield, Sparkles, Volume2, VolumeX, Wifi, Server, LogOut, ArrowLeft, Calendar as CalendarIcon, CloudSun } from 'lucide-react';
 import { KidProfile, AppSettings, CalendarEvent } from '../types';
 import { sound } from '../utils/sound';
 import { getSeasonalWeatherForDate } from '../utils/calendar';
 import { getTodayDateString } from '../utils/storage';
-import { AppThemeId } from '../utils/theme';
+import { AppThemeId, APP_THEMES } from '../utils/theme';
 import { ThemeSelector } from './ThemeSelector';
 
 interface NavbarProps {
@@ -34,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   events = [],
   isCalendarOpen = false,
   isMenuOpen = false,
-  currentTheme = 'soft-calm',
+  currentTheme = 'coastal-horizon',
   onThemeChange,
   onOpenParentPin,
   onExitParentMode,
@@ -49,9 +49,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
   const todayEventsCount = events.filter((e) => e.date === todayStr).length;
+  const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
 
   return (
-    <header className="sticky top-0 z-40 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-8 py-3 sm:py-3.5 flex justify-between items-center shadow-sm transition-colors duration-300">
+    <header className={`sticky top-0 z-40 ${theme.headerBg} border-b ${theme.headerBorder} px-4 sm:px-8 py-3 sm:py-3.5 flex justify-between items-center shadow-sm transition-all duration-300`}>
       <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2 sm:gap-3">
         {/* Brand & Left Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
@@ -79,12 +80,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group"
           >
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-sky-500 dark:bg-indigo-600 rounded-2xl flex items-center justify-center shadow-md transform -rotate-3 group-hover:rotate-0 transition-transform shrink-0">
-              <span className="text-white text-lg sm:text-2xl font-black">CQ</span>
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 ${theme.headerLogoBg} rounded-2xl flex items-center justify-center shadow-md transform -rotate-3 group-hover:rotate-0 transition-transform shrink-0`}>
+              <span className={`text-lg sm:text-2xl font-black ${theme.headerLogoText}`}>CQ</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white italic">
+                <h1 className={`text-xl sm:text-2xl font-black tracking-tight ${theme.headerTextColor} italic`}>
                   ChoreQuest
                 </h1>
                 <span className="hidden lg:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
@@ -92,7 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Pi Active
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold hidden sm:block">
+              <p className={`text-[11px] sm:text-xs font-bold hidden sm:block opacity-80 ${theme.headerTextColor}`}>
                 {isParentMode ? 'Parent Admin Control' : settings.familyName || 'Family Chore Server'}
               </p>
             </div>
@@ -263,4 +264,3 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
-

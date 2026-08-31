@@ -10,6 +10,7 @@ import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getBountyChores } from '../utils/storage';
 import { getSeasonalWeatherForDate, EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../utils/calendar';
 import { sound } from '../utils/sound';
+import { AppThemeId, APP_THEMES } from '../utils/theme';
 
 interface KidDashboardProps {
   kid: KidProfile;
@@ -20,6 +21,7 @@ interface KidDashboardProps {
   settings: AppSettings;
   events?: CalendarEvent[];
   database?: FamilyDatabase;
+  currentTheme?: AppThemeId;
   onToggleCompleteChore: (chore: ChoreItem) => void;
   onSkipChoreWithReason: (choreId: string, category: 'sick' | 'supplies' | 'time' | 'already_done' | 'need_help' | 'other', note: string) => void;
   onUndoChoreStatus: (choreId: string) => void;
@@ -37,6 +39,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   settings,
   events = [],
   database,
+  currentTheme = 'coastal-horizon',
   onToggleCompleteChore,
   onSkipChoreWithReason,
   onUndoChoreStatus,
@@ -44,6 +47,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   onOpenCalendar,
   onOpenGoalManager,
 }) => {
+  const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -114,6 +118,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
         {database && (
           <FamilyGoalBanner
             database={database}
+            currentTheme={currentTheme}
             onEditGoal={onOpenGoalManager}
           />
         )}
@@ -123,7 +128,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           style={{
             borderColor: kid.color || '#3b82f6',
           }}
-          className="bg-white rounded-3xl p-6 sm:p-7 border-b-8 border-r-4 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-sm relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6"
+          className={`${theme.kidCardBg} rounded-3xl p-6 sm:p-7 border-b-8 border-r-4 border-t-2 border-l-2 border-t-black/5 border-l-black/5 shadow-md relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6`}
         >
           <div className="flex items-center gap-4">
             <div

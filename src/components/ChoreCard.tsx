@@ -125,8 +125,8 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   return (
     <div
       id={`chore-card-${chore.id}`}
-      className={`group relative bg-white p-5 sm:p-6 rounded-3xl border-b-8 border-r-4 ${borderClass} border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-sm hover:shadow-md transition-all duration-200 ${
-        isCompleted ? 'opacity-75' : ''
+      className={`group relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all duration-200 ${
+        isCompleted ? 'opacity-70 dark:opacity-60' : ''
       }`}
     >
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -157,14 +157,14 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
               </span>
 
               {category && (
-                <span className="text-[11px] font-extrabold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
                   {category.name}
                 </span>
               )}
 
               {/* Star reward badge */}
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-pink-100 text-pink-700 border border-pink-300">
-                <Star className="w-3 h-3 fill-pink-500 text-pink-500" />
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
                 +{chore.stars + (chore.bountyBonusStars || 0)} Points
               </span>
 
@@ -177,10 +177,10 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                     sound.playTap();
                     onStartTimer(chore);
                   }}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-sky-50 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-slate-700 transition-colors cursor-pointer"
                   title="Start Interactive Countdown Timer"
                 >
-                  <Timer className="w-3 h-3 text-indigo-600" />
+                  <Timer className="w-3 h-3 text-sky-600 dark:text-sky-400" />
                   <span>{chore.timerMinutes ? `${chore.timerMinutes}m Timer` : 'Timer'}</span>
                 </button>
               )}
@@ -188,26 +188,32 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
 
             <h3
               className={`text-lg sm:text-xl font-black tracking-tight ${
-                isCompleted ? 'text-slate-400 line-through decoration-slate-400/80' : 'text-slate-800'
+                isCompleted
+                  ? 'text-slate-400 dark:text-slate-500 line-through decoration-slate-400/80'
+                  : 'text-slate-900 dark:text-white'
               }`}
             >
               {chore.title}
             </h3>
 
             {chore.description && (
-              <p className={`text-xs sm:text-sm mt-0.5 font-medium leading-relaxed ${isCompleted ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p
+                className={`text-xs sm:text-sm mt-0.5 font-medium leading-relaxed ${
+                  isCompleted ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'
+                }`}
+              >
                 {chore.description}
               </p>
             )}
 
             {/* Step-by-Step Checklist (Subtasks) */}
             {chore.subtasks && chore.subtasks.length > 0 && (
-              <div className="mt-3 p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                <div className="flex items-center justify-between text-[11px] font-black text-slate-600 mb-2">
+              <div className="mt-3 p-3 bg-slate-50/90 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700">
+                <div className="flex items-center justify-between text-[11px] font-black text-slate-600 dark:text-slate-400 mb-2">
                   <span className="flex items-center gap-1">
                     <span>📋 Step-by-Step Guide</span>
                   </span>
-                  <span className={allSubtasksDone ? 'text-emerald-600 font-extrabold' : 'text-slate-500'}>
+                  <span className={allSubtasksDone ? 'text-emerald-600 dark:text-emerald-400 font-extrabold' : 'text-slate-500 dark:text-slate-400'}>
                     {subtasksDone} of {totalSubtasks} steps done
                   </span>
                 </div>
@@ -223,13 +229,13 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                         disabled={isCompleted}
                         className={`w-full text-left flex items-start gap-2 p-1.5 rounded-xl transition-all text-xs font-medium cursor-pointer ${
                           stepDone
-                            ? 'bg-emerald-50 text-emerald-800 font-semibold'
-                            : 'hover:bg-white text-slate-700'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-semibold'
+                            : 'hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                         }`}
                       >
                         <span className="mt-0.5 shrink-0">
                           {stepDone ? (
-                            <CheckSquare className="w-4 h-4 text-emerald-600" />
+                            <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           ) : (
                             <Square className="w-4 h-4 text-slate-400" />
                           )}
@@ -246,20 +252,20 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
 
             {/* Skipped Reason preview if applicable */}
             {isSkipped && log?.skippedReasonCategory && (
-              <div className="mt-2.5 p-3 rounded-2xl bg-amber-100/90 border border-amber-300 text-xs text-amber-900">
+              <div className="mt-2.5 p-3 rounded-2xl bg-amber-100/90 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200">
                 <div className="font-extrabold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-700" />
+                  <AlertTriangle className="w-4 h-4 text-amber-700 dark:text-amber-400" />
                   <span>Reason Logged: {log.skippedReasonCategory.replace('_', ' ').toUpperCase()}</span>
                 </div>
                 {log.skippedReason && (
-                  <p className="mt-1 text-amber-950 font-medium italic">"{log.skippedReason}"</p>
+                  <p className="mt-1 text-amber-950 dark:text-amber-100 font-medium italic">"{log.skippedReason}"</p>
                 )}
               </div>
             )}
 
             {/* Completed badge details */}
             {isCompleted && log?.completedAt && (
-              <div className="mt-1.5 text-xs text-emerald-700 font-bold flex items-center gap-1">
+              <div className="mt-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
                 <span>Finished today! +{chore.stars + (chore.bountyBonusStars || 0)} points added</span>
               </div>
@@ -268,13 +274,13 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
         </div>
 
         {/* Right Side: Action Controls */}
-        <div className="w-full sm:w-auto flex items-center justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+        <div className="w-full sm:w-auto flex items-center justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
           {isCompleted ? (
             <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
               <span className="text-emerald-500 font-black text-lg sm:text-xl italic tracking-wide">
                 DONE!
               </span>
-              <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shadow-xs">
+              <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs">
                 <Check className="w-7 h-7 stroke-[4]" />
               </div>
               <button
@@ -283,7 +289,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                   sound.playTap();
                   onUndo(chore.id);
                 }}
-                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                 title="Undo completion"
               >
                 <Undo2 className="w-4 h-4" />
@@ -305,7 +311,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                   sound.playTap();
                   onUndo(chore.id);
                 }}
-                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                 title="Clear skipped status"
               >
                 <Undo2 className="w-4 h-4" />
@@ -320,7 +326,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                   sound.playTap();
                   onOpenSkipModal(chore);
                 }}
-                className="bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200 font-bold px-3.5 py-2.5 rounded-xl transition-all cursor-pointer text-xs sm:text-sm"
+                className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 font-bold px-3.5 py-2.5 rounded-xl transition-all cursor-pointer text-xs sm:text-sm"
               >
                 Can't do it...
               </button>

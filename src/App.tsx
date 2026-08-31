@@ -3,6 +3,7 @@ import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, RewardItem, RewardRede
 import { loadDatabase, saveDatabase, getTodayDateString } from './utils/storage';
 import { fetchServerDatabase, pushServerDatabase, subscribeToDatabaseSync } from './utils/api';
 import { sound } from './utils/sound';
+import { AppThemeId, APP_THEMES, getSavedThemeId, saveThemeId } from './utils/theme';
 import { Navbar } from './components/Navbar';
 import { KidSelector } from './components/KidSelector';
 import { KidDashboard } from './components/KidDashboard';
@@ -27,6 +28,17 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [isSyncConnected, setIsSyncConnected] = useState<boolean>(true);
+  const [currentTheme, setCurrentTheme] = useState<AppThemeId>(() => getSavedThemeId());
+
+  // Synchronize theme on startup and changes
+  useEffect(() => {
+    saveThemeId(currentTheme);
+  }, [currentTheme]);
+
+  const handleThemeChange = (newTheme: AppThemeId) => {
+    setCurrentTheme(newTheme);
+    saveThemeId(newTheme);
+  };
 
   // Synchronize sound engine with database setting
   useEffect(() => {
@@ -272,8 +284,16 @@ export default function App() {
     );
   }
 
+  const themeConfig = APP_THEMES[currentTheme] || APP_THEMES['soft-calm'];
+
   return (
-    <div className="min-h-screen bg-yellow-50 text-slate-800 flex flex-col font-sans selection:bg-yellow-200">
+    <div
+      className={`min-h-screen ${themeConfig.bgGradient} flex flex-col font-sans transition-colors duration-300 ${
+        themeConfig.isDark
+          ? 'dark text-slate-100 selection:bg-indigo-500 selection:text-white'
+          : 'text-slate-800 selection:bg-sky-200 selection:text-slate-900'
+      }`}
+    >
       {/* Top Navigation */}
       <Navbar
         settings={database.settings}
@@ -282,6 +302,8 @@ export default function App() {
         events={database.events || []}
         isCalendarOpen={isCalendarOpen}
         isMenuOpen={isMenuOpen}
+        currentTheme={currentTheme}
+        onThemeChange={handleThemeChange}
         onOpenParentPin={() => setIsPinModalOpen(true)}
         onExitParentMode={() => {
           setIsParentMode(false);

@@ -36,12 +36,12 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
     <div
       id="family-goal-banner"
       onClick={onEditGoal ? () => { sound.playTap(); onEditGoal(); } : undefined}
-      className={`relative overflow-hidden rounded-3xl border-2 transition-all p-4 sm:p-5 shadow-sm ${
+      className={`relative overflow-hidden rounded-3xl border transition-all p-4 sm:p-5 shadow-sm backdrop-blur-md ${
         onEditGoal ? 'cursor-pointer hover:shadow-md hover:border-amber-400 group' : ''
       } ${
         isReached
-          ? 'bg-gradient-to-r from-amber-100 via-yellow-100 to-emerald-100 border-amber-400 ring-2 ring-amber-400/50'
-          : 'bg-white border-amber-200'
+          ? 'bg-gradient-to-r from-amber-100/90 via-amber-50/90 to-emerald-100/90 dark:from-amber-950/70 dark:via-slate-900/80 dark:to-emerald-950/70 border-amber-400/80 ring-2 ring-amber-400/30'
+          : 'bg-white/80 dark:bg-slate-900/80 border-slate-200/80 dark:border-slate-800'
       }`}
     >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -54,7 +54,7 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
             } ${
               isReached
                 ? 'bg-amber-400 text-yellow-950 animate-bounce cursor-pointer'
-                : 'bg-amber-100 text-amber-900'
+                : 'bg-amber-100/80 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200'
             }`}
           >
             {goal.icon || '🏆'}
@@ -62,8 +62,8 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-200 text-amber-950 border border-amber-300">
-                <Trophy className="w-3 h-3 text-amber-700" />
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
+                <Trophy className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                 <span>Weekly Family Teamwork Goal</span>
               </span>
               {isReached ? (
@@ -73,19 +73,19 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
                 </span>
               ) : (
                 onEditGoal && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-900 text-yellow-300 group-hover:bg-indigo-800 transition-colors">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-800 dark:bg-slate-700 text-white group-hover:bg-slate-700 transition-colors">
                     <span>Change / View Options ⚙️</span>
                   </span>
                 )
               )}
             </div>
 
-            <h3 className="text-base sm:text-lg font-black text-slate-900 truncate mt-0.5 group-hover:text-indigo-950 transition-colors">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate mt-0.5 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
               {goal.title}
             </h3>
 
-            <p className="text-xs font-semibold text-slate-600 truncate">
-              🎁 Reward: <span className="text-pink-600 font-extrabold">{goal.reward}</span>
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
+              🎁 Reward: <span className="text-pink-600 dark:text-pink-400 font-extrabold">{goal.reward}</span>
             </p>
           </div>
         </div>
@@ -93,16 +93,16 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
         {/* Right Side: Progress Meter & Stats */}
         <div className="w-full md:w-72 shrink-0">
           <div className="flex items-center justify-between text-xs font-black mb-1.5">
-            <span className="text-slate-600">
+            <span className="text-slate-600 dark:text-slate-400">
               {isReached ? '🎉 Target Smashed!' : `${remaining} more chores to unlock!`}
             </span>
-            <span className="text-indigo-950 font-black">
+            <span className="text-slate-900 dark:text-white font-black">
               {completedCount} / {target} ({percent}%)
             </span>
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200 shadow-inner">
+          <div className="w-full h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200/80 dark:border-slate-700 shadow-inner">
             <div
               className={`h-full rounded-full transition-all duration-700 ${
                 isReached
@@ -122,7 +122,7 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
                   sound.playTap();
                   onEditGoal();
                 }}
-                className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-900 hover:text-indigo-700 bg-amber-100/80 hover:bg-amber-200 px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs"
+                className="inline-flex items-center gap-1 text-[11px] font-black text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-slate-100/90 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs border border-slate-200/80 dark:border-slate-700"
               >
                 <span>{isParentMode ? 'Admin Goal Settings ⚙️' : 'View / Change Goal 🎯'}</span>
                 <ChevronRight className="w-3 h-3" />

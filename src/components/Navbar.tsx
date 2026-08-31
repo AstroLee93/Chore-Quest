@@ -4,6 +4,8 @@ import { KidProfile, AppSettings, CalendarEvent } from '../types';
 import { sound } from '../utils/sound';
 import { getSeasonalWeatherForDate } from '../utils/calendar';
 import { getTodayDateString } from '../utils/storage';
+import { AppThemeId } from '../utils/theme';
+import { ThemeSelector } from './ThemeSelector';
 
 interface NavbarProps {
   settings: AppSettings;
@@ -12,6 +14,8 @@ interface NavbarProps {
   events?: CalendarEvent[];
   isCalendarOpen?: boolean;
   isMenuOpen?: boolean;
+  currentTheme?: AppThemeId;
+  onThemeChange?: (theme: AppThemeId) => void;
   onOpenParentPin: () => void;
   onExitParentMode: () => void;
   onSelectKid: (kid: KidProfile | null) => void;
@@ -30,6 +34,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   events = [],
   isCalendarOpen = false,
   isMenuOpen = false,
+  currentTheme = 'soft-calm',
+  onThemeChange,
   onOpenParentPin,
   onExitParentMode,
   onSelectKid,
@@ -45,10 +51,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const todayEventsCount = events.filter((e) => e.date === todayStr).length;
 
   return (
-    <header className="sticky top-0 z-30 bg-white border-b-4 border-yellow-200 px-4 sm:px-8 py-3.5 sm:py-4 flex justify-between items-center shadow-xs">
-      <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3">
+    <header className="sticky top-0 z-40 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-8 py-3 sm:py-3.5 flex justify-between items-center shadow-sm transition-colors duration-300">
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2 sm:gap-3">
         {/* Brand & Left Actions */}
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {activeKid && !isParentMode && (
             <button
               id="btn-back-to-kids"
@@ -56,7 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 sound.playTap();
                 onSelectKid(null);
               }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-yellow-100 hover:bg-yellow-200 text-slate-800 border-2 border-yellow-300 text-xs sm:text-sm font-black transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-black transition-all cursor-pointer shadow-2xs"
               title="Switch Child"
             >
               <ArrowLeft className="w-4 h-4 stroke-[3]" />
@@ -71,22 +77,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onSelectKid(null);
               }
             }}
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group"
           >
-            <div className="w-11 h-11 sm:w-14 sm:h-14 bg-indigo-500 rounded-2xl flex items-center justify-center shadow-lg transform -rotate-3 group-hover:rotate-0 transition-transform shrink-0">
-              <span className="text-white text-xl sm:text-3xl font-black">CQ</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-sky-500 dark:bg-indigo-600 rounded-2xl flex items-center justify-center shadow-md transform -rotate-3 group-hover:rotate-0 transition-transform shrink-0">
+              <span className="text-white text-lg sm:text-2xl font-black">CQ</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-indigo-900 italic">
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white italic">
                   ChoreQuest
                 </h1>
-                <span className="hidden lg:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  <Wifi className="w-3 h-3 text-emerald-600" />
+                <span className="hidden lg:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                  <Wifi className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   Pi Active
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-bold hidden sm:block">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold hidden sm:block">
                 {isParentMode ? 'Parent Admin Control' : settings.familyName || 'Family Chore Server'}
               </p>
             </div>
@@ -202,6 +208,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="hidden xl:inline">Host Guide</span>
             </button>
 
+            {/* Eye-Comfort Theme & Glass Switcher */}
+            {onThemeChange && (
+              <ThemeSelector currentTheme={currentTheme} onThemeChange={onThemeChange} />
+            )}
+
             {/* Sound Toggle */}
             <button
               id="btn-sound-toggle"
@@ -209,11 +220,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onToggleSound();
                 sound.playTap();
               }}
-              className="p-2.5 sm:p-3 rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+              className="p-2.5 sm:p-3 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100/80 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
               title={settings.soundEnabled ? 'Mute Sounds' : 'Unmute Sounds'}
             >
               {settings.soundEnabled ? (
-                <Volume2 className="w-4 h-4 text-indigo-600 stroke-[2.5]" />
+                <Volume2 className="w-4 h-4 text-sky-600 dark:text-sky-400 stroke-[2.5]" />
               ) : (
                 <VolumeX className="w-4 h-4 text-slate-400 stroke-[2.5]" />
               )}

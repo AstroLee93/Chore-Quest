@@ -47,7 +47,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   };
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
+    <div className={`relative inline-block text-left ${isOpen ? 'z-50' : 'z-20'}`} ref={dropdownRef}>
       {/* Trigger Button with mini palette preview */}
       <button
         id="btn-theme-switcher"

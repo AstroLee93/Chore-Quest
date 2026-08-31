@@ -272,3 +272,109 @@ export const convertGoogleEventToCalendarEvent = (
     isImportant: /urgent|important|must|mandatory|due|test|exam/i.test(`${summary} ${description}`),
   };
 };
+
+// Helper: Parse standard iCalendar (.ics) format exported from Google Calendar or Apple Calendar
+export const parseIcsContent = (icsText: string, kids: KidProfile[] = []): CalendarEvent[] => {
+  const events: CalendarEvent[] = [];
+  // Unfold multi-line ICS lines (lines starting with space or tab are continuations)
+  const unfolded = icsText.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '');
+  const lines = unfolded.split(/\r\n|\r|\n/);
+
+  let inEvent = false;
+  let summary = '';
+  let description = '';
+  let location = '';
+  let dtStartRaw = '';
+  let dtEndRaw = '';
+  let uid = '';
+
+  const parseIcsDate = (val: string): { date: string; time?: string } => {
+    // Clean parameter prefix if present, e.g. "TZID=America/New_York:20260901T143000" or "VALUE=DATE:20260901"
+    const colonIdx = val.indexOf(':');
+    const dateStr = colonIdx >= 0 ? val.substring(colonIdx + 1).trim() : val.trim();
+
+    if (dateStr.length >= 8) {
+      const year = dateStr.substring(0, 4);
+      const month = dateStr.substring(4, 6);
+      const day = dateStr.substring(6, 8);
+      const formattedDate = `${year}-${month}-${day}`;
+
+      if (dateStr.includes('T')) {
+        const timePart = dateStr.split('T')[1]?.replace('Z', '') || '';
+        if (timePart.length >= 4) {
+          const hour = timePart.substring(0, 2);
+          const min = timePart.substring(2, 4);
+          return { date: formattedDate, time: `${hour}:${min}` };
+        }
+      }
+      return { date: formattedDate };
+    }
+    return { date: new Date().toISOString().split('T')[0] };
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('BEGIN:VEVENT')) {
+      inEvent = true;
+      summary = '';
+      description = '';
+      location = '';
+      dtStartRaw = '';
+      dtEndRaw = '';
+      uid = `ics-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    } else if (trimmed.startsWith('END:VEVENT') && inEvent) {
+      inEvent = false;
+      if (dtStartRaw) {
+        const startInfo = parseIcsDate(dtStartRaw);
+        const endInfo = dtEndRaw ? parseIcsDate(dtEndRaw) : undefined;
+        const cleanSummary = summary.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\n/g, ' ').trim() || 'Untitled Event';
+        const cleanDesc = description.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\n/g, '\n').trim();
+        const { category, icon } = inferCategoryAndIcon(cleanSummary, cleanDesc);
+
+        // Check if title mentions any specific kid
+        let assignedKidIds: string[] = ['all'];
+        const matchedKid = kids.find((k) => {
+          const kidNameRegex = new RegExp(`\\b${k.name.trim()}\\b`, 'i');
+          return kidNameRegex.test(cleanSummary) || kidNameRegex.test(cleanDesc);
+        });
+        if (matchedKid) {
+          assignedKidIds = [matchedKid.id];
+        }
+
+        events.push({
+          id: uid,
+          title: cleanSummary,
+          description: cleanDesc || undefined,
+          date: startInfo.date,
+          time: startInfo.time,
+          endTime: endInfo?.time,
+          category,
+          icon,
+          location: location.replace(/\\,/g, ',').trim() || undefined,
+          assignedKidIds,
+          isImportant: /urgent|important|must|mandatory|due|test|exam/i.test(`${cleanSummary} ${cleanDesc}`),
+        });
+      }
+    } else if (inEvent) {
+      if (trimmed.startsWith('SUMMARY')) {
+        const idx = trimmed.indexOf(':');
+        if (idx >= 0) summary = trimmed.substring(idx + 1);
+      } else if (trimmed.startsWith('DESCRIPTION')) {
+        const idx = trimmed.indexOf(':');
+        if (idx >= 0) description = trimmed.substring(idx + 1);
+      } else if (trimmed.startsWith('LOCATION')) {
+        const idx = trimmed.indexOf(':');
+        if (idx >= 0) location = trimmed.substring(idx + 1);
+      } else if (trimmed.startsWith('DTSTART')) {
+        dtStartRaw = trimmed;
+      } else if (trimmed.startsWith('DTEND')) {
+        dtEndRaw = trimmed;
+      } else if (trimmed.startsWith('UID:')) {
+        uid = `ics-${trimmed.substring(4).trim().replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+      }
+    }
+  }
+
+  return events;
+};
+

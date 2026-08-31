@@ -138,7 +138,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   return (
     <div className={`min-h-screen ${theme.kioskBg} flex flex-col p-4 sm:p-6 select-none overflow-x-hidden font-sans transition-colors duration-300`}>
       {/* THEMED KIOSK HEADER: Clock, Weather, Family Name, Theme Switcher & Controls */}
-      <header className={`flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 sm:p-5 rounded-3xl ${theme.kioskHeaderBg} border ${theme.kioskHeaderBorder} shadow-xl mb-4`}>
+      <header className={`relative z-40 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 sm:p-5 rounded-3xl ${theme.kioskHeaderBg} border ${theme.kioskHeaderBorder} shadow-xl mb-4`}>
         {/* Left: Branding & Family Title */}
         <div className="flex items-center gap-4">
           <div className={`w-12 h-12 rounded-2xl ${theme.kioskHeaderLogoBg} ${theme.kioskHeaderLogoText} flex items-center justify-center text-2xl shadow-md shrink-0`}>
@@ -189,7 +189,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         </div>
 
         {/* Right: Actions, Theme Switcher, Menu, Calendar, Fullscreen & Exit */}
-        <div className="flex items-center gap-2 flex-wrap self-end lg:self-center">
+        <div className="flex items-center gap-2 flex-wrap self-end lg:self-center relative z-50">
           {/* Theme Switcher in Kiosk */}
           {onThemeChange && (
             <ThemeSelector
@@ -261,7 +261,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
       </header>
 
       {/* Shared Family Goal Bar */}
-      <div className="mb-4">
+      <div className="mb-4 relative z-10">
         <FamilyGoalBanner
           database={database}
           currentTheme={currentTheme}

@@ -50,6 +50,33 @@ export interface AppThemeConfig {
   kidCardProgress: string;
   kidCardAvatarBorder: string;
 
+  // Kiosk Specific Theme Tokens
+  kioskBg: string;
+  kioskHeaderBg: string;
+  kioskHeaderBorder: string;
+  kioskHeaderLogoBg: string;
+  kioskHeaderLogoText: string;
+  kioskHeaderTextColor: string;
+  kioskClockBg: string;
+  kioskClockText: string;
+  kioskMvpSpotlightBg: string;
+  kioskMvpSpotlightBorder: string;
+  kioskCardBg: string;
+  kioskCardBorder: string;
+  kioskCardMvpBorder: string;
+  kioskCardMvpBg: string;
+  kioskCardItemBg: string;
+  kioskCardItemDone: string;
+  kioskSummaryCardBg: string;
+  kioskSummaryCardBorder: string;
+  kioskFooterBorder: string;
+  kioskFooterSlateBg: string;
+  kioskFooterSlateBorder: string;
+  kioskFooterPillBg: string;
+  kioskFooterPillText: string;
+  kioskFooterPillSecondaryBg: string;
+  kioskFooterPillSecondaryText: string;
+
   // Buttons & Accents
   primaryBtn: string;
   secondaryBtn: string;
@@ -101,6 +128,33 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     kidCardProgress: 'bg-gradient-to-r from-[#77B7D0] via-[#579FB6] to-[#E2BAB1]',
     kidCardAvatarBorder: 'border-[#77B7D0]/80',
 
+    // Kiosk Theme Tokens
+    kioskBg: 'bg-gradient-to-br from-[#0C222B] via-[#143B47] to-[#08171E] text-white',
+    kioskHeaderBg: 'bg-[#0C222B]/90 backdrop-blur-md',
+    kioskHeaderBorder: 'border-[#579FB6]/40',
+    kioskHeaderLogoBg: 'bg-[#579FB6] border border-[#77B7D0]',
+    kioskHeaderLogoText: 'text-white',
+    kioskHeaderTextColor: 'text-white',
+    kioskClockBg: 'bg-[#143B47]/90 border border-[#579FB6]/40 shadow-md',
+    kioskClockText: 'text-[#B3E0F4]',
+    kioskMvpSpotlightBg: 'bg-gradient-to-r from-[#1A4553]/90 via-[#245D70]/85 to-[#1A4553]/90',
+    kioskMvpSpotlightBorder: 'border-[#77B7D0] shadow-[0_10px_30px_rgba(87,159,182,0.35)]',
+    kioskCardBg: 'bg-[#143B47]/85 backdrop-blur-md shadow-xl',
+    kioskCardBorder: 'border-[#579FB6]/50',
+    kioskCardMvpBorder: 'border-[#77B7D0] ring-4 ring-[#77B7D0]/35 shadow-2xl shadow-[#579FB6]/30',
+    kioskCardMvpBg: 'bg-gradient-to-b from-[#1E5263]/90 via-[#143B47]/95 to-[#0C222B]/95',
+    kioskCardItemBg: 'bg-[#0C222B]/75 border border-[#579FB6]/35 text-white hover:border-[#77B7D0]',
+    kioskCardItemDone: 'bg-[#579FB6]/25 border border-[#77B7D0]/50 text-[#B3E0F4]',
+    kioskSummaryCardBg: 'bg-[#143B47]/85 backdrop-blur-md',
+    kioskSummaryCardBorder: 'border-[#579FB6]/50',
+    kioskFooterBorder: 'border-[#579FB6]/40',
+    kioskFooterSlateBg: 'bg-[#143B47]/85 backdrop-blur-md hover:bg-[#1A4553] transition-all',
+    kioskFooterSlateBorder: 'border-[#579FB6]/40 hover:border-[#77B7D0]',
+    kioskFooterPillBg: 'bg-[#579FB6] border border-[#77B7D0]',
+    kioskFooterPillText: 'text-white font-extrabold',
+    kioskFooterPillSecondaryBg: 'bg-[#EED3CE]/20 border border-[#E2BAB1]/50',
+    kioskFooterPillSecondaryText: 'text-[#EED3CE] font-extrabold',
+
     // Buttons
     primaryBtn: 'bg-[#579FB6] hover:bg-[#46869B] text-white shadow-sm font-bold',
     secondaryBtn: 'bg-[#EED3CE]/70 hover:bg-[#EED3CE] text-[#3D2621] border border-[#E2BAB1] font-bold',
@@ -150,6 +204,33 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     kidCardSubtextColor: 'text-[#35524B]',
     kidCardProgress: 'bg-gradient-to-r from-[#6B9E96] via-[#2C524C] to-[#192E26]',
     kidCardAvatarBorder: 'border-[#6B9E96]/80',
+
+    // Kiosk Theme Tokens
+    kioskBg: 'bg-gradient-to-br from-[#0E1A16] via-[#192E26] to-[#0A1310] text-white',
+    kioskHeaderBg: 'bg-[#0E1A16]/90 backdrop-blur-md',
+    kioskHeaderBorder: 'border-[#6B9E96]/40',
+    kioskHeaderLogoBg: 'bg-[#2C524C] border border-[#6B9E96]',
+    kioskHeaderLogoText: 'text-white',
+    kioskHeaderTextColor: 'text-white',
+    kioskClockBg: 'bg-[#192E26]/90 border border-[#6B9E96]/40 shadow-md',
+    kioskClockText: 'text-[#6B9E96]',
+    kioskMvpSpotlightBg: 'bg-gradient-to-r from-[#192E26]/90 via-[#2C524C]/85 to-[#192E26]/90',
+    kioskMvpSpotlightBorder: 'border-[#6B9E96] shadow-[0_10px_30px_rgba(44,82,76,0.35)]',
+    kioskCardBg: 'bg-[#192E26]/85 backdrop-blur-md shadow-xl',
+    kioskCardBorder: 'border-[#6B9E96]/50',
+    kioskCardMvpBorder: 'border-[#6B9E96] ring-4 ring-[#6B9E96]/35 shadow-2xl shadow-[#2C524C]/30',
+    kioskCardMvpBg: 'bg-gradient-to-b from-[#2C524C]/90 via-[#192E26]/95 to-[#0E1A16]/95',
+    kioskCardItemBg: 'bg-[#0E1A16]/75 border border-[#6B9E96]/35 text-white hover:border-[#6B9E96]',
+    kioskCardItemDone: 'bg-[#2C524C]/35 border border-[#6B9E96]/50 text-[#E5EDE9]',
+    kioskSummaryCardBg: 'bg-[#192E26]/85 backdrop-blur-md',
+    kioskSummaryCardBorder: 'border-[#6B9E96]/50',
+    kioskFooterBorder: 'border-[#6B9E96]/40',
+    kioskFooterSlateBg: 'bg-[#192E26]/85 backdrop-blur-md hover:bg-[#233F34] transition-all',
+    kioskFooterSlateBorder: 'border-[#6B9E96]/40 hover:border-[#6B9E96]',
+    kioskFooterPillBg: 'bg-[#2C524C] border border-[#6B9E96]',
+    kioskFooterPillText: 'text-white font-extrabold',
+    kioskFooterPillSecondaryBg: 'bg-[#6B9E96]/25 border border-[#6B9E96]/50',
+    kioskFooterPillSecondaryText: 'text-[#E5EDE9] font-extrabold',
 
     // Buttons
     primaryBtn: 'bg-[#2C524C] hover:bg-[#192E26] text-white shadow-sm font-bold',
@@ -201,6 +282,33 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     kidCardProgress: 'bg-gradient-to-r from-[#56575C] via-[#6C6C72] to-[#C8C8CA]',
     kidCardAvatarBorder: 'border-[#6C6C72]',
 
+    // Kiosk Theme Tokens
+    kioskBg: 'bg-gradient-to-br from-[#120E11] via-[#1E181D] to-[#0D0A0C] text-white',
+    kioskHeaderBg: 'bg-[#120E11]/90 backdrop-blur-md',
+    kioskHeaderBorder: 'border-[#56575C]/50',
+    kioskHeaderLogoBg: 'bg-[#342A31] border border-[#6C6C72]',
+    kioskHeaderLogoText: 'text-white',
+    kioskHeaderTextColor: 'text-white',
+    kioskClockBg: 'bg-[#1E181D]/90 border border-[#56575C]/50 shadow-md',
+    kioskClockText: 'text-[#C8C8CA]',
+    kioskMvpSpotlightBg: 'bg-gradient-to-r from-[#2A2329]/90 via-[#342A31]/90 to-[#23252A]/90',
+    kioskMvpSpotlightBorder: 'border-[#6C6C72] shadow-[0_10px_30px_rgba(0,0,0,0.7)]',
+    kioskCardBg: 'bg-[#1E181D]/85 backdrop-blur-md shadow-xl',
+    kioskCardBorder: 'border-[#56575C]/60',
+    kioskCardMvpBorder: 'border-[#C8C8CA] ring-4 ring-[#C8C8CA]/30 shadow-2xl shadow-black/60',
+    kioskCardMvpBg: 'bg-gradient-to-b from-[#342A31]/90 via-[#2A2329]/95 to-[#120E11]/95',
+    kioskCardItemBg: 'bg-[#120E11]/80 border border-[#56575C]/45 text-white hover:border-[#6C6C72]',
+    kioskCardItemDone: 'bg-[#342A31]/60 border border-[#56575C]/70 text-[#C8C8CA]',
+    kioskSummaryCardBg: 'bg-[#1E181D]/85 backdrop-blur-md',
+    kioskSummaryCardBorder: 'border-[#56575C]/60',
+    kioskFooterBorder: 'border-[#56575C]/50',
+    kioskFooterSlateBg: 'bg-[#1E181D]/90 backdrop-blur-md hover:bg-[#2A2329] transition-all',
+    kioskFooterSlateBorder: 'border-[#56575C]/50 hover:border-[#6C6C72]',
+    kioskFooterPillBg: 'bg-[#342A31] border border-[#56575C]',
+    kioskFooterPillText: 'text-[#EDEDEE] font-extrabold',
+    kioskFooterPillSecondaryBg: 'bg-[#56575C]/35 border border-[#6C6C72]',
+    kioskFooterPillSecondaryText: 'text-[#EDEDEE] font-extrabold',
+
     // Buttons
     primaryBtn: 'bg-[#56575C] hover:bg-[#6C6C72] text-white shadow-sm border border-[#6C6C72] font-bold',
     secondaryBtn: 'bg-[#342A31] hover:bg-[#443841] text-[#EDEDEE] border border-[#56575C] font-bold',
@@ -250,6 +358,33 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     kidCardSubtextColor: 'text-slate-500',
     kidCardProgress: 'bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600',
     kidCardAvatarBorder: 'border-sky-200',
+
+    // Kiosk Theme Tokens
+    kioskBg: 'bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0A0F1D] text-white',
+    kioskHeaderBg: 'bg-[#0F172A]/90 backdrop-blur-md',
+    kioskHeaderBorder: 'border-sky-600/40',
+    kioskHeaderLogoBg: 'bg-sky-600 border border-sky-400',
+    kioskHeaderLogoText: 'text-white',
+    kioskHeaderTextColor: 'text-white',
+    kioskClockBg: 'bg-slate-900/85 border border-sky-700/40 shadow-md',
+    kioskClockText: 'text-sky-300',
+    kioskMvpSpotlightBg: 'bg-gradient-to-r from-sky-950/90 via-blue-950/85 to-indigo-950/90',
+    kioskMvpSpotlightBorder: 'border-sky-400 shadow-[0_10px_30px_rgba(2,132,199,0.35)]',
+    kioskCardBg: 'bg-slate-900/85 backdrop-blur-md shadow-xl',
+    kioskCardBorder: 'border-sky-700/40',
+    kioskCardMvpBorder: 'border-sky-400 ring-4 ring-sky-400/35 shadow-2xl shadow-sky-500/25',
+    kioskCardMvpBg: 'bg-gradient-to-b from-sky-950/80 via-slate-900/95 to-slate-950/95',
+    kioskCardItemBg: 'bg-slate-950/75 border border-slate-700/70 text-white hover:border-sky-500',
+    kioskCardItemDone: 'bg-sky-950/45 border border-sky-800/80 text-sky-200',
+    kioskSummaryCardBg: 'bg-slate-900/85 backdrop-blur-md',
+    kioskSummaryCardBorder: 'border-sky-700/40',
+    kioskFooterBorder: 'border-sky-800/40',
+    kioskFooterSlateBg: 'bg-slate-900/90 backdrop-blur-md hover:bg-slate-850 transition-all',
+    kioskFooterSlateBorder: 'border-sky-800/50 hover:border-sky-500',
+    kioskFooterPillBg: 'bg-sky-600 border border-sky-400',
+    kioskFooterPillText: 'text-white font-extrabold',
+    kioskFooterPillSecondaryBg: 'bg-blue-900/60 border border-blue-700/70',
+    kioskFooterPillSecondaryText: 'text-sky-200 font-extrabold',
 
     // Buttons
     primaryBtn: 'bg-sky-600 hover:bg-sky-700 text-white shadow-sm font-bold',
@@ -301,6 +436,33 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     kidCardProgress: 'bg-gradient-to-r from-amber-400 via-amber-600 to-orange-600',
     kidCardAvatarBorder: 'border-amber-200',
 
+    // Kiosk Theme Tokens
+    kioskBg: 'bg-gradient-to-br from-[#1C1917] via-[#292524] to-[#141210] text-white',
+    kioskHeaderBg: 'bg-[#1C1917]/90 backdrop-blur-md',
+    kioskHeaderBorder: 'border-amber-700/50',
+    kioskHeaderLogoBg: 'bg-amber-700 border border-amber-500',
+    kioskHeaderLogoText: 'text-white',
+    kioskHeaderTextColor: 'text-white',
+    kioskClockBg: 'bg-[#292524]/85 border border-amber-700/40 shadow-md',
+    kioskClockText: 'text-amber-300',
+    kioskMvpSpotlightBg: 'bg-gradient-to-r from-amber-950/90 via-stone-900/85 to-amber-950/90',
+    kioskMvpSpotlightBorder: 'border-amber-500 shadow-[0_10px_30px_rgba(217,119,6,0.35)]',
+    kioskCardBg: 'bg-[#292524]/85 backdrop-blur-md shadow-xl',
+    kioskCardBorder: 'border-amber-700/40',
+    kioskCardMvpBorder: 'border-amber-400 ring-4 ring-amber-400/35 shadow-2xl shadow-amber-600/25',
+    kioskCardMvpBg: 'bg-gradient-to-b from-amber-950/80 via-stone-900/95 to-stone-950/95',
+    kioskCardItemBg: 'bg-[#1C1917]/80 border border-stone-700/70 text-white hover:border-amber-500',
+    kioskCardItemDone: 'bg-amber-950/45 border border-amber-800/80 text-amber-200',
+    kioskSummaryCardBg: 'bg-[#292524]/85 backdrop-blur-md',
+    kioskSummaryCardBorder: 'border-amber-700/40',
+    kioskFooterBorder: 'border-amber-800/40',
+    kioskFooterSlateBg: 'bg-[#292524]/90 backdrop-blur-md hover:bg-[#383331] transition-all',
+    kioskFooterSlateBorder: 'border-amber-800/50 hover:border-amber-500',
+    kioskFooterPillBg: 'bg-amber-700 border border-amber-500',
+    kioskFooterPillText: 'text-white font-extrabold',
+    kioskFooterPillSecondaryBg: 'bg-stone-800 border border-stone-600',
+    kioskFooterPillSecondaryText: 'text-amber-200 font-extrabold',
+
     // Buttons
     primaryBtn: 'bg-amber-700 hover:bg-amber-800 text-white shadow-sm font-bold',
     secondaryBtn: 'bg-stone-200/80 hover:bg-stone-300 text-stone-800 border border-stone-300 font-bold',
@@ -350,6 +512,33 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     kidCardSubtextColor: 'text-slate-500',
     kidCardProgress: 'bg-gradient-to-r from-yellow-400 via-orange-400 to-indigo-600',
     kidCardAvatarBorder: 'border-yellow-300',
+
+    // Kiosk Theme Tokens
+    kioskBg: 'bg-gradient-to-br from-[#0F0D24] via-[#1E1B4B] to-[#0A091A] text-white',
+    kioskHeaderBg: 'bg-indigo-950/90 backdrop-blur-md',
+    kioskHeaderBorder: 'border-yellow-400/50',
+    kioskHeaderLogoBg: 'bg-yellow-400 border border-yellow-300',
+    kioskHeaderLogoText: 'text-indigo-950 font-black',
+    kioskHeaderTextColor: 'text-white',
+    kioskClockBg: 'bg-indigo-900/85 border border-yellow-400/40 shadow-md',
+    kioskClockText: 'text-yellow-400',
+    kioskMvpSpotlightBg: 'bg-gradient-to-r from-indigo-950/90 via-indigo-900/85 to-amber-950/90',
+    kioskMvpSpotlightBorder: 'border-yellow-400 shadow-[0_10px_30px_rgba(234,179,8,0.35)]',
+    kioskCardBg: 'bg-indigo-950/85 backdrop-blur-md shadow-xl',
+    kioskCardBorder: 'border-indigo-700/60',
+    kioskCardMvpBorder: 'border-yellow-400 ring-4 ring-yellow-400/35 shadow-2xl shadow-yellow-500/25',
+    kioskCardMvpBg: 'bg-gradient-to-b from-indigo-900/90 via-indigo-950/95 to-slate-950/95',
+    kioskCardItemBg: 'bg-indigo-900/60 border border-indigo-700/70 text-white hover:border-yellow-400',
+    kioskCardItemDone: 'bg-emerald-950/45 border border-emerald-700/80 text-emerald-200',
+    kioskSummaryCardBg: 'bg-indigo-950/85 backdrop-blur-md',
+    kioskSummaryCardBorder: 'border-indigo-700/60',
+    kioskFooterBorder: 'border-indigo-800/60',
+    kioskFooterSlateBg: 'bg-indigo-950/90 backdrop-blur-md hover:bg-indigo-900 transition-all',
+    kioskFooterSlateBorder: 'border-indigo-800/60 hover:border-yellow-400',
+    kioskFooterPillBg: 'bg-yellow-400 border border-yellow-300',
+    kioskFooterPillText: 'text-indigo-950 font-black',
+    kioskFooterPillSecondaryBg: 'bg-indigo-900 border border-indigo-700',
+    kioskFooterPillSecondaryText: 'text-yellow-300 font-extrabold',
 
     // Buttons
     primaryBtn: 'bg-indigo-900 hover:bg-indigo-800 text-yellow-300 shadow-sm font-black',

@@ -6,13 +6,17 @@ import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getK
 import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar';
 import { getCurrentDayOfWeekKey, DEFAULT_WEEKLY_MENU, DAY_METADATA } from '../utils/menu';
 import { sound } from '../utils/sound';
+import { AppThemeId, APP_THEMES } from '../utils/theme';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { ChoreTimerModal } from './ChoreTimerModal';
 import { FamilyGoalModal } from './FamilyGoalModal';
 import { WeeklyMenuModal } from './WeeklyMenuModal';
+import { ThemeSelector } from './ThemeSelector';
 
 interface KioskDashboardProps {
   database: FamilyDatabase;
+  currentTheme?: AppThemeId;
+  onThemeChange?: (themeId: AppThemeId) => void;
   onUpdateDatabase: (updated: FamilyDatabase) => void;
   onExitKiosk: () => void;
   onOpenCalendar?: () => void;
@@ -21,6 +25,8 @@ interface KioskDashboardProps {
 
 export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   database,
+  currentTheme = 'coastal-horizon',
+  onThemeChange,
   onUpdateDatabase,
   onExitKiosk,
   onOpenCalendar,
@@ -32,6 +38,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [isMenuModalOpen, setIsMenuModalOpen] = useState<boolean>(false);
 
+  const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
   const todayDayKey = getCurrentDayOfWeekKey();
@@ -129,40 +136,41 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const bountyChores = (database.chores || []).filter((c) => c.isActive && c.isBounty);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col p-4 sm:p-6 select-none overflow-x-hidden font-sans">
-      {/* Kiosk Top Bar: Clock, Weather, Family Name, Controls */}
-      <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+    <div className={`min-h-screen ${theme.kioskBg} flex flex-col p-4 sm:p-6 select-none overflow-x-hidden font-sans transition-colors duration-300`}>
+      {/* THEMED KIOSK HEADER: Clock, Weather, Family Name, Theme Switcher & Controls */}
+      <header className={`flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 sm:p-5 rounded-3xl ${theme.kioskHeaderBg} border ${theme.kioskHeaderBorder} shadow-xl mb-4`}>
+        {/* Left: Branding & Family Title */}
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-900 border-2 border-indigo-700 flex items-center justify-center text-2xl shadow-inner">
+          <div className={`w-12 h-12 rounded-2xl ${theme.kioskHeaderLogoBg} ${theme.kioskHeaderLogoText} flex items-center justify-center text-2xl shadow-md shrink-0`}>
             🏰
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md bg-indigo-600/60 text-yellow-300 text-[10px] font-black uppercase tracking-wider">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${theme.accentPill}`}>
                 Ambient Kiosk Display
               </span>
-              <span className="text-xs text-slate-400 font-bold">
+              <span className="text-xs font-bold opacity-80 text-white">
                 {database.settings.familyName} Command Center
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
               ChoreQuest Live Dashboard
             </h1>
           </div>
         </div>
 
-        {/* Center Clock & Date */}
-        <div className="flex items-center gap-4 sm:gap-6 bg-slate-900/90 border border-slate-800 px-5 py-2.5 rounded-2xl shadow-md">
+        {/* Center: Themed Clock & Live Weather */}
+        <div className={`flex items-center gap-4 sm:gap-6 px-5 py-2.5 rounded-2xl ${theme.kioskClockBg} self-stretch sm:self-auto justify-center`}>
           <div className="text-left">
-            <div className="text-2xl sm:text-3xl font-black tracking-tight text-yellow-400 font-mono">
+            <div className={`text-2xl sm:text-3xl font-black tracking-tight font-mono ${theme.kioskClockText}`}>
               {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </div>
-            <div className="text-[11px] font-bold text-slate-400">
+            <div className="text-[11px] font-bold opacity-80 text-white">
               {currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
           </div>
 
-          <div className="h-8 w-px bg-slate-800" />
+          <div className="h-8 w-px bg-white/20" />
 
           {/* Live Weather */}
           <div className="flex items-center gap-2">
@@ -173,15 +181,23 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               <div className="text-sm font-black text-white">
                 {todayWeather.tempHigh}°{database.settings.tempUnit || 'F'}
               </div>
-              <div className="text-[10px] font-semibold text-slate-400 capitalize">
+              <div className="text-[10px] font-semibold opacity-80 text-white capitalize">
                 {todayWeather.condition.replace('_', ' ')}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2 self-end md:self-center">
+        {/* Right: Actions, Theme Switcher, Menu, Calendar, Fullscreen & Exit */}
+        <div className="flex items-center gap-2 flex-wrap self-end lg:self-center">
+          {/* Theme Switcher in Kiosk */}
+          {onThemeChange && (
+            <ThemeSelector
+              currentTheme={currentTheme}
+              onThemeChange={onThemeChange}
+            />
+          )}
+
           {/* Dinner Menu Button */}
           <button
             id="btn-kiosk-dinner-menu"
@@ -193,7 +209,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                 setIsMenuModalOpen(true);
               }
             }}
-            className="p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-700 font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs"
+            className={`p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl ${theme.kioskFooterPillSecondaryBg} ${theme.kioskFooterPillSecondaryText} font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs`}
             title="Open Weekly Dinner Menu & Kids' Choice Voting"
           >
             <span className="text-sm">{todayMenuPlan.icon || '🍽️'}</span>
@@ -211,9 +227,9 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                 sound.playTap();
                 onOpenCalendar();
               }}
-              className="p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-yellow-300 border border-slate-700 font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+              className={`p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl ${theme.kioskClockBg} text-white font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95`}
             >
-              <CalendarIcon className="w-4 h-4 text-yellow-400" />
+              <CalendarIcon className="w-4 h-4 text-amber-300" />
               <span className="hidden sm:inline">Calendar</span>
               {todayEvents.length > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-indigo-600 text-white text-[10px] font-black">
@@ -225,7 +241,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
           <button
             onClick={handleToggleFullscreen}
-            className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-all cursor-pointer"
+            className={`p-2.5 rounded-xl ${theme.kioskClockBg} text-white hover:opacity-90 transition-all cursor-pointer`}
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Kiosk'}
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
@@ -245,9 +261,10 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
       </header>
 
       {/* Shared Family Goal Bar */}
-      <div className="my-4">
+      <div className="mb-4">
         <FamilyGoalBanner
           database={database}
+          currentTheme={currentTheme}
           isParentMode={false}
           onEditGoal={() => {
             sound.playTap();
@@ -291,16 +308,16 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         };
 
         return (
-          <div className="flex-1 flex flex-col gap-4 my-2">
+          <div className="flex-1 flex flex-col gap-4 mb-4">
             {/* MVP Excellence Spotlight Showcase Bar */}
             {mvpKid && (
               <div
                 id="kiosk-mvp-spotlight-bar"
-                className="relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-amber-950/80 via-yellow-950/70 to-amber-950/80 border-2 border-amber-400/80 shadow-2xl shadow-amber-500/20 flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in"
+                className={`relative overflow-hidden rounded-3xl p-4 sm:p-5 ${theme.kioskMvpSpotlightBg} border-2 ${theme.kioskMvpSpotlightBorder} flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in`}
               >
                 {/* Background Ambient Glow */}
-                <div className="absolute -top-10 -left-10 w-40 h-40 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-yellow-500/20 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -top-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
                 {/* Left: MVP Avatar + Celebration Title */}
                 <div className="flex items-center gap-4 text-center md:text-left z-10">
@@ -310,7 +327,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     </div>
                     <div
                       style={{
-                        backgroundColor: `${mvpKid.color}40`,
+                        backgroundColor: `${mvpKid.color || '#3b82f6'}40`,
                         borderColor: '#fbbf24',
                       }}
                       className="w-16 h-16 rounded-2xl border-2 border-amber-300 ring-4 ring-amber-400/40 flex items-center justify-center text-3xl shadow-lg shadow-amber-500/30"
@@ -332,7 +349,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                       {mvpKid.name} is Leading with{' '}
                       <span className="text-amber-300 font-extrabold">{mvpKid.stars} Points</span>!
                     </h2>
-                    <p className="text-xs font-bold text-amber-200/80">
+                    <p className="text-xs font-bold text-white/80">
                       🔥 {mvpKid.streakDays} Day Streak • Exemplary Dedication & Chore Mastery!
                     </p>
                   </div>
@@ -340,15 +357,15 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
                 {/* Right: Quick Celebration Action Button & Highlights */}
                 <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-center">
-                  <div className="hidden lg:flex items-center gap-2 bg-black/40 border border-amber-500/30 px-3.5 py-2 rounded-2xl">
+                  <div className={`hidden lg:flex items-center gap-2 ${theme.kioskClockBg} px-3.5 py-2 rounded-2xl`}>
                     <div className="text-center px-2">
                       <div className="text-xs font-black text-amber-400">⭐ {mvpKid.stars}</div>
-                      <div className="text-[10px] text-slate-400 font-bold">Stars Earned</div>
+                      <div className="text-[10px] text-white/70 font-bold">Stars Earned</div>
                     </div>
-                    <div className="w-px h-6 bg-slate-800" />
+                    <div className="w-px h-6 bg-white/20" />
                     <div className="text-center px-2">
                       <div className="text-xs font-black text-amber-400">🔥 {mvpKid.streakDays}d</div>
-                      <div className="text-[10px] text-slate-400 font-bold">Streak</div>
+                      <div className="text-[10px] text-white/70 font-bold">Streak</div>
                     </div>
                   </div>
 
@@ -364,7 +381,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               </div>
             )}
 
-            {/* Kids Cards Grid (Dynamically Scaled to fill space) */}
+            {/* THEMED KIOSK CARDS GRID (Dynamically Scaled to fill space) */}
             <div
               className={`flex-1 grid gap-4 sm:gap-6 ${
                 database.kids.length === 1
@@ -399,10 +416,10 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     id={`kiosk-kid-card-${kid.id}`}
                     className={`rounded-3xl border-2 p-4 sm:p-6 flex flex-col justify-between transition-all relative overflow-hidden min-h-[420px] ${
                       isMvp
-                        ? 'border-amber-400 ring-4 ring-amber-400/40 shadow-2xl shadow-amber-500/25 bg-gradient-to-b from-amber-950/40 via-slate-900/95 to-slate-900/95'
+                        ? `${theme.kioskCardMvpBg} ${theme.kioskCardMvpBorder}`
                         : isAllDone
-                          ? 'border-emerald-500 shadow-xl shadow-emerald-500/10 bg-slate-900/90'
-                          : 'border-slate-800 hover:border-slate-700 bg-slate-900/90 shadow-md'
+                          ? `${theme.kioskCardBg} border-emerald-500 shadow-xl shadow-emerald-500/10`
+                          : `${theme.kioskCardBg} ${theme.kioskCardBorder}`
                     }`}
                   >
                     {/* MVP Top Banner */}
@@ -421,7 +438,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
                     {/* Kid Header */}
                     <div>
-                      <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                      <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/15">
                         <div className="flex items-center gap-3">
                           {/* Avatar with Crown for MVP */}
                           <div className="relative">
@@ -435,8 +452,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                             )}
                             <div
                               style={{
-                                backgroundColor: isMvp ? `${kid.color}40` : `${kid.color}25`,
-                                borderColor: isMvp ? '#fbbf24' : kid.color,
+                                backgroundColor: isMvp ? `${kid.color || '#3b82f6'}40` : `${kid.color || '#3b82f6'}25`,
+                                borderColor: isMvp ? '#fbbf24' : (kid.color || '#3b82f6'),
                               }}
                               className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-3xl shrink-0 shadow-inner transition-transform ${
                                 isMvp ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-900 scale-105' : ''
@@ -460,7 +477,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                 </span>
                               )}
                             </h2>
-                            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mt-0.5">
+                            <div className="flex items-center gap-2 text-xs font-bold text-white/80 mt-0.5">
                               <span>{level.icon} {level.title}</span>
                             </div>
                           </div>
@@ -472,10 +489,10 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black ${
                               isMvp
                                 ? 'bg-amber-400 text-slate-950 shadow-md ring-1 ring-amber-300'
-                                : 'bg-pink-950/80 border border-pink-700/60 text-pink-300'
+                                : `${theme.kioskFooterPillSecondaryBg} ${theme.kioskFooterPillSecondaryText}`
                             }`}
                           >
-                            <Star className={`w-3.5 h-3.5 ${isMvp ? 'fill-slate-950 text-slate-950' : 'fill-pink-400 text-pink-400'}`} />
+                            <Star className={`w-3.5 h-3.5 ${isMvp ? 'fill-slate-950 text-slate-950' : 'fill-amber-400 text-amber-400'}`} />
                             <span>{kid.stars} Pts</span>
                           </div>
                           <div className="flex items-center justify-end gap-1 text-[11px] font-black text-amber-400 mt-1">
@@ -487,18 +504,18 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
                       {/* Progress bar */}
                       <div className="my-3">
-                        <div className="flex items-center justify-between text-xs font-black text-slate-400 mb-1.5">
+                        <div className="flex items-center justify-between text-xs font-black text-white/80 mb-1.5">
                           <span>Today's Missions</span>
-                          <span className={isAllDone ? 'text-emerald-400 font-extrabold' : 'text-slate-300'}>
+                          <span className={isAllDone ? 'text-emerald-400 font-extrabold' : 'text-white'}>
                             {completedCount} / {totalChores} ({percent}%)
                           </span>
                         </div>
-                        <div className="w-full h-3.5 bg-slate-800 rounded-full overflow-hidden p-0.5">
+                        <div className="w-full h-3.5 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/10">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${
                               isAllDone
                                 ? 'bg-gradient-to-r from-emerald-400 to-teal-300'
-                                : 'bg-gradient-to-r from-amber-400 to-pink-500'
+                                : theme.kidCardProgress
                             }`}
                             style={{ width: `${percent}%` }}
                           />
@@ -508,7 +525,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                       {/* Chores Quick-Check list */}
                       <div className="space-y-2 mt-3 max-h-72 overflow-y-auto pr-1">
                         {kidChores.length === 0 ? (
-                          <div className="text-center py-8 text-slate-500 text-xs font-bold">
+                          <div className="text-center py-8 text-white/60 text-xs font-bold">
                             No missions scheduled for today! 🏖️
                           </div>
                         ) : (
@@ -523,8 +540,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                 key={chore.id}
                                 className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                                   isDone
-                                    ? 'bg-emerald-950/40 border-emerald-800/60 text-slate-400'
-                                    : 'bg-slate-800/80 border-slate-700 text-white hover:border-slate-600'
+                                    ? theme.kioskCardItemDone
+                                    : theme.kioskCardItemBg
                                 }`}
                               >
                                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -532,17 +549,17 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                   <div className="min-w-0">
                                     <div
                                       className={`text-xs sm:text-sm font-black truncate ${
-                                        isDone ? 'line-through text-slate-400' : 'text-white'
+                                        isDone ? 'line-through opacity-70 text-white' : 'text-white'
                                       }`}
                                     >
                                       {chore.title}
                                     </div>
-                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                                      <span className="text-amber-400 font-extrabold">
+                                    <div className="flex items-center gap-2 text-[10px] font-bold text-white/70">
+                                      <span className="text-amber-300 font-extrabold">
                                         +{chore.stars + (chore.bountyBonusStars || 0)} pts
                                       </span>
                                       {chore.timerMinutes && (
-                                        <span className="text-indigo-400 flex items-center gap-0.5">
+                                        <span className="text-sky-300 flex items-center gap-0.5">
                                           <Timer className="w-3 h-3" />
                                           <span>{chore.timerMinutes}m timer</span>
                                         </span>
@@ -559,7 +576,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                         sound.playTap();
                                         setActiveTimerChore(chore);
                                       }}
-                                      className="p-2 rounded-xl bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 transition-all cursor-pointer"
+                                      className={`p-2 rounded-xl ${theme.kioskClockBg} text-white hover:opacity-90 transition-all cursor-pointer`}
                                       title="Start Focus Timer"
                                     >
                                       <Timer className="w-4 h-4" />
@@ -593,32 +610,32 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
               {/* Household Summary Card if 1 or 2 kids are present to balance the screen layout */}
               {database.kids.length <= 2 && (
-                <div className="rounded-3xl border-2 border-slate-800 bg-slate-900/80 p-5 flex flex-col justify-between min-h-[420px]">
+                <div className={`rounded-3xl border-2 ${theme.kioskSummaryCardBorder} ${theme.kioskSummaryCardBg} p-5 flex flex-col justify-between min-h-[420px]`}>
                   <div>
-                    <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
-                      <div className="w-12 h-12 rounded-2xl bg-indigo-950 border border-indigo-700 text-yellow-300 flex items-center justify-center text-2xl">
+                    <div className="flex items-center gap-3 pb-3 border-b border-white/15">
+                      <div className={`w-12 h-12 rounded-2xl ${theme.kioskHeaderLogoBg} ${theme.kioskHeaderLogoText} flex items-center justify-center text-2xl`}>
                         🏰
                       </div>
                       <div>
                         <h3 className="text-base font-black text-white">Daily Household Quest Hub</h3>
-                        <p className="text-xs text-slate-400 font-bold">Family Teamwork & Milestones</p>
+                        <p className="text-xs text-white/80 font-bold">Family Teamwork & Milestones</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 my-4">
-                      <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-center">
+                      <div className={`p-3 rounded-2xl ${theme.kioskCardItemBg} text-center`}>
                         <div className="text-xl font-black text-emerald-400">
                           {totalFamilyCompletedToday} / {totalFamilyChoresToday}
                         </div>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                        <div className="text-[10px] font-bold text-white/70 uppercase mt-0.5">
                           Chores Done Today
                         </div>
                       </div>
-                      <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-center">
-                        <div className="text-xl font-black text-yellow-400">
+                      <div className={`p-3 rounded-2xl ${theme.kioskCardItemBg} text-center`}>
+                        <div className="text-xl font-black text-amber-300">
                           ⭐ {database.kids.reduce((a, k) => a + k.stars, 0)}
                         </div>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                        <div className="text-[10px] font-bold text-white/70 uppercase mt-0.5">
                           Total Family Stars
                         </div>
                       </div>
@@ -626,27 +643,27 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
                     {/* Schedule Quick Peek */}
                     <div className="mt-2">
-                      <div className="text-xs font-black text-slate-300 mb-2 flex items-center gap-1.5">
-                        <CalendarIcon className="w-3.5 h-3.5 text-indigo-400" />
+                      <div className="text-xs font-black text-white mb-2 flex items-center gap-1.5">
+                        <CalendarIcon className="w-3.5 h-3.5 text-amber-300" />
                         <span>Today's Family Schedule</span>
                       </div>
                       <div className="space-y-1.5 max-h-36 overflow-y-auto">
                         {todayEvents.length === 0 ? (
-                          <div className="text-xs text-slate-500 italic py-2">
+                          <div className="text-xs text-white/60 italic py-2">
                             No special practices or events scheduled for today.
                           </div>
                         ) : (
                           todayEvents.map((e) => (
                             <div
                               key={e.id}
-                              className="p-2 rounded-xl bg-slate-800/60 border border-slate-700 flex items-center justify-between text-xs"
+                              className={`p-2 rounded-xl ${theme.kioskCardItemBg} flex items-center justify-between text-xs`}
                             >
                               <div className="flex items-center gap-2">
                                 <span>{e.icon || '📌'}</span>
                                 <span className="font-bold text-white truncate">{e.title}</span>
                               </div>
                               {e.time && (
-                                <span className="text-[10px] font-mono text-yellow-400 bg-slate-900 px-2 py-0.5 rounded-md">
+                                <span className={`text-[10px] font-mono ${theme.kioskClockText} px-2 py-0.5 rounded-md bg-black/40`}>
                                   {e.time}
                                 </span>
                               )}
@@ -658,7 +675,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                   </div>
 
                   {/* Motivational Quote */}
-                  <div className="pt-3 border-t border-slate-800 text-[11px] text-amber-200/90 font-bold italic text-center">
+                  <div className="pt-3 border-t border-white/15 text-[11px] text-amber-200 font-bold italic text-center">
                     "Every completed mission brings the whole family closer to the Friday Reward! 🚀"
                   </div>
                 </div>
@@ -668,9 +685,9 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         );
       })()}
 
-      {/* Bottom Ticker: Today's Dinner, Today's Schedule & Bonus Bounties */}
-      <footer className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-4 border-t border-slate-800 text-xs">
-        {/* Tonight's Dinner Preview Pill */}
+      {/* THEMED BORDER SLATES (AREA AT BOTTOM OF KIOSK): Today's Dinner, Today's Schedule & Bonus Bounties */}
+      <footer className={`grid grid-cols-1 md:grid-cols-3 gap-3 pt-4 ${theme.kioskFooterBorder} text-xs`}>
+        {/* Tonight's Dinner Preview Slate Card */}
         <div
           onClick={() => {
             sound.playTap();
@@ -680,9 +697,9 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               setIsMenuModalOpen(true);
             }
           }}
-          className="p-3 rounded-2xl bg-slate-900 border border-amber-800/60 hover:border-amber-500 flex items-center gap-3 cursor-pointer transition-all hover:bg-slate-850 active:scale-98 shadow-xs"
+          className={`p-3 rounded-2xl ${theme.kioskFooterSlateBg} ${theme.kioskFooterSlateBorder} flex items-center gap-3 cursor-pointer transition-all active:scale-98 shadow-md`}
         >
-          <div className="p-2 rounded-xl bg-amber-950/90 text-amber-300 font-bold shrink-0 flex items-center gap-1.5 border border-amber-700/50">
+          <div className={`p-2 rounded-xl ${theme.kioskFooterPillSecondaryBg} ${theme.kioskFooterPillSecondaryText} font-bold shrink-0 flex items-center gap-1.5`}>
             <span className="text-base">{todayMenuPlan.icon || '🍽️'}</span>
             <span>Tonight's Dinner</span>
           </div>
@@ -690,13 +707,13 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
             <div className="font-extrabold text-white truncate text-xs">
               {todayMenuPlan.mainDish}
             </div>
-            <div className="text-[10px] text-amber-400 font-semibold truncate">
+            <div className="text-[10px] text-amber-300 font-semibold truncate">
               {todayMenuPlan.votingEnabled ? '🗳️ Kids Vote Open — Tap to Vote!' : `👨‍🍳 ${todayMenuPlan.preparedBy || 'Family'}`}
             </div>
           </div>
         </div>
 
-        {/* Today's Schedule */}
+        {/* Today's Schedule Slate Card */}
         <div
           onClick={() => {
             if (onOpenCalendar) {
@@ -704,47 +721,47 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               onOpenCalendar();
             }
           }}
-          className={`p-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3 ${onOpenCalendar ? 'cursor-pointer hover:border-indigo-500' : ''}`}
+          className={`p-3 rounded-2xl ${theme.kioskFooterSlateBg} ${theme.kioskFooterSlateBorder} flex items-center gap-3 ${onOpenCalendar ? 'cursor-pointer' : ''} shadow-md`}
         >
-          <div className="p-2 rounded-xl bg-indigo-900 text-yellow-300 font-bold shrink-0">
+          <div className={`p-2 rounded-xl ${theme.kioskFooterPillBg} ${theme.kioskFooterPillText} font-bold shrink-0`}>
             📅 Today's Schedule
           </div>
           <div className="flex-1 overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-2">
             {todayEvents.length === 0 ? (
-              <span className="text-slate-500 italic">No practices or appointments today.</span>
+              <span className="text-white/60 italic">No practices or appointments today.</span>
             ) : (
               todayEvents.map((evt) => (
                 <span
                   key={evt.id}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold"
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl ${theme.kioskCardItemBg} text-white font-bold`}
                 >
                   <span>{evt.icon || '📌'}</span>
                   <span className="truncate max-w-[120px]">{evt.title}</span>
-                  {evt.time && <span className="text-yellow-400 font-mono">({evt.time})</span>}
+                  {evt.time && <span className={`font-mono ${theme.kioskClockText}`}>({evt.time})</span>}
                 </span>
               ))
             )}
           </div>
         </div>
 
-        {/* Bonus Bounties */}
-        <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-amber-900/80 text-amber-300 font-bold shrink-0 flex items-center gap-1">
-            <Target className="w-3.5 h-3.5 text-amber-400" />
+        {/* Bonus Bounties Slate Card */}
+        <div className={`p-3 rounded-2xl ${theme.kioskFooterSlateBg} ${theme.kioskFooterSlateBorder} flex items-center gap-3 shadow-md`}>
+          <div className={`p-2 rounded-xl ${theme.kioskFooterPillSecondaryBg} ${theme.kioskFooterPillSecondaryText} font-bold shrink-0 flex items-center gap-1`}>
+            <Target className="w-3.5 h-3.5" />
             <span>Bonus Bounties</span>
           </div>
           <div className="flex-1 overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-2">
             {bountyChores.length === 0 ? (
-              <span className="text-slate-500 italic">No extra bounties active.</span>
+              <span className="text-white/60 italic">No extra bounties active.</span>
             ) : (
               bountyChores.map((bounty) => (
                 <span
                   key={bounty.id}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-950/60 border border-amber-800/80 text-amber-200 font-bold"
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl ${theme.kioskCardItemBg} text-white font-bold`}
                 >
                   <span>{bounty.icon || '⭐'}</span>
                   <span className="truncate max-w-[120px]">{bounty.title}</span>
-                  <span className="text-yellow-400 font-black">+{bounty.stars + (bounty.bountyBonusStars || 0)} Pts</span>
+                  <span className="text-amber-300 font-black">+{bounty.stars + (bounty.bountyBonusStars || 0)} Pts</span>
                 </span>
               ))
             )}

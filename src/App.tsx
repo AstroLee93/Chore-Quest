@@ -249,10 +249,13 @@ export default function App() {
 
   // If Kiosk Mode is active, render the dedicated Kiosk Command Center View
   if (isKioskMode) {
+    const themeConfig = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
     return (
-      <div className="min-h-screen bg-slate-950 font-sans">
+      <div className={`min-h-screen ${themeConfig.kioskBg} font-sans`}>
         <KioskDashboard
           database={database}
+          currentTheme={currentTheme}
+          onThemeChange={handleThemeChange}
           onUpdateDatabase={handleUpdateDatabase}
           onExitKiosk={() => setIsKioskMode(false)}
           onOpenCalendar={() => setIsCalendarOpen(true)}

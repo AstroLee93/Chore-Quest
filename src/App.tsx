@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, RewardItem, RewardRedemption } from './types';
 import { loadDatabase, saveDatabase, getTodayDateString } from './utils/storage';
 import { fetchServerDatabase, pushServerDatabase, subscribeToDatabaseSync } from './utils/api';
@@ -30,72 +30,66 @@ export default function App() {
   const [isSyncConnected, setIsSyncConnected] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<AppThemeId>(() => getSavedThemeId());
 
-  // Synchronize theme on startup and changes
+  // Synchronize theme persistence
   useEffect(() => {
     saveThemeId(currentTheme);
   }, [currentTheme]);
 
-  const handleThemeChange = (newTheme: AppThemeId) => {
+  const handleThemeChange = useCallback((newTheme: AppThemeId) => {
     setCurrentTheme(newTheme);
     saveThemeId(newTheme);
-  };
+  }, []);
 
-  // Synchronize sound engine with database setting
+  // Synchronize sound engine setting
   useEffect(() => {
     sound.setEnabled(database.settings.soundEnabled);
   }, [database.settings.soundEnabled]);
 
   // Initial load from server + real-time multi-session sync subscription
   useEffect(() => {
-    // 1. Initial fetch from server
     fetchServerDatabase().then((serverData) => {
-      if (serverData) {
-        setDatabase(serverData);
-      }
+      if (serverData) setDatabase(serverData);
     });
 
-    // 2. Real-time subscription (SSE + BroadcastChannel + window focus)
     const unsubscribe = subscribeToDatabaseSync(
-      (freshData) => {
-        setDatabase(freshData);
-      },
-      (connected) => {
-        setIsSyncConnected(connected);
-      }
+      (freshData) => setDatabase(freshData),
+      (connected) => setIsSyncConnected(connected)
     );
 
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
-  // Gracefully handle if active kid was deleted by a parent in another session
+  // Gracefully handle if active kid was deleted
   useEffect(() => {
     if (activeKidId && !database.kids.some((k) => k.id === activeKidId)) {
       setActiveKidId(null);
     }
   }, [database.kids, activeKidId]);
 
-  // Persist database updates locally and to server (broadcasts to all open sessions)
+  // Persist database updates locally and to server
   const handleUpdateDatabase = useCallback((updated: FamilyDatabase) => {
     setDatabase(updated);
     pushServerDatabase(updated);
   }, []);
 
-  const activeKid = database.kids.find((k) => k.id === activeKidId) || null;
-  const todayStr = getTodayDateString();
-
-  // --- Kid Actions ---
+  const activeKid = useMemo(
+    () => database.kids.find((k) => k.id === activeKidId) || null,
+    [database.kids, activeKidId]
+  );
+  const todayStr = useMemo(() => getTodayDateString(), []);
+  const themeConfig = useMemo(
+    () => APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'],
+    [currentTheme]
+  );
 
   // Complete a chore
-  const handleToggleCompleteChore = (chore: ChoreItem) => {
+  const handleToggleCompleteChore = useCallback((chore: ChoreItem) => {
     if (!activeKid) return;
 
     const existingLog = database.logs.find(
       (l) => l.choreId === chore.id && l.kidId === activeKid.id && l.date === todayStr
     );
 
-    // If already completed, nothing to do (undo handles retracting)
     if (existingLog?.status === 'completed') return;
 
     const newLog: ChoreLog = {
@@ -109,13 +103,11 @@ export default function App() {
       verifiedByParent: false,
     };
 
-    // Update logs
     const updatedLogs = [
       ...database.logs.filter((l) => !(l.choreId === chore.id && l.kidId === activeKid.id && l.date === todayStr)),
       newLog,
     ];
 
-    // Update kid's stars and streak
     const updatedKids = database.kids.map((k) => {
       if (k.id === activeKid.id) {
         const isNewActiveDay = k.lastActiveDate !== todayStr;
@@ -131,15 +123,11 @@ export default function App() {
       return k;
     });
 
-    handleUpdateDatabase({
-      ...database,
-      logs: updatedLogs,
-      kids: updatedKids,
-    });
-  };
+    handleUpdateDatabase({ ...database, logs: updatedLogs, kids: updatedKids });
+  }, [activeKid, database, todayStr, handleUpdateDatabase]);
 
-  // Skip a chore with an honest reason
-  const handleSkipChoreWithReason = (
+  // Skip a chore with reason
+  const handleSkipChoreWithReason = useCallback((
     choreId: string,
     category: 'sick' | 'supplies' | 'time' | 'already_done' | 'need_help' | 'other',
     note: string
@@ -163,50 +151,40 @@ export default function App() {
       newLog,
     ];
 
-    handleUpdateDatabase({
-      ...database,
-      logs: updatedLogs,
-    });
-  };
+    handleUpdateDatabase({ ...database, logs: updatedLogs });
+  }, [activeKid, database, todayStr, handleUpdateDatabase]);
 
-  // Undo chore completion / reset log
-  const handleUndoChoreStatus = (choreId: string) => {
+  // Undo chore status
+  const handleUndoChoreStatus = useCallback((choreId: string) => {
     if (!activeKid) return;
 
     const existingLog = database.logs.find(
       (l) => l.choreId === choreId && l.kidId === activeKid.id && l.date === todayStr
     );
-
     if (!existingLog) return;
 
-    // If it was completed with stars, deduct them
     let updatedKids = database.kids;
     if (existingLog.status === 'completed' && existingLog.starsAwarded > 0) {
-      updatedKids = database.kids.map((k) => {
-        if (k.id === activeKid.id) {
-          return {
-            ...k,
-            stars: Math.max(0, k.stars - existingLog.starsAwarded),
-            lifetimeStars: Math.max(0, k.lifetimeStars - existingLog.starsAwarded),
-          };
-        }
-        return k;
-      });
+      updatedKids = database.kids.map((k) =>
+        k.id === activeKid.id
+          ? {
+              ...k,
+              stars: Math.max(0, k.stars - existingLog.starsAwarded),
+              lifetimeStars: Math.max(0, k.lifetimeStars - existingLog.starsAwarded),
+            }
+          : k
+      );
     }
 
     const updatedLogs = database.logs.filter(
       (l) => !(l.choreId === choreId && l.kidId === activeKid.id && l.date === todayStr)
     );
 
-    handleUpdateDatabase({
-      ...database,
-      logs: updatedLogs,
-      kids: updatedKids,
-    });
-  };
+    handleUpdateDatabase({ ...database, logs: updatedLogs, kids: updatedKids });
+  }, [activeKid, database, todayStr, handleUpdateDatabase]);
 
-  // Redeem a reward in the store
-  const handleRedeemReward = (reward: RewardItem, note?: string) => {
+  // Redeem reward
+  const handleRedeemReward = useCallback((reward: RewardItem, note?: string) => {
     if (!activeKid || activeKid.stars < reward.starCost) return;
 
     const newRedemption: RewardRedemption = {
@@ -221,35 +199,27 @@ export default function App() {
       notes: note || undefined,
     };
 
-    const updatedKids = database.kids.map((k) => {
-      if (k.id === activeKid.id) {
-        return {
-          ...k,
-          stars: Math.max(0, k.stars - reward.starCost),
-        };
-      }
-      return k;
-    });
+    const updatedKids = database.kids.map((k) =>
+      k.id === activeKid.id ? { ...k, stars: Math.max(0, k.stars - reward.starCost) } : k
+    );
 
     handleUpdateDatabase({
       ...database,
       kids: updatedKids,
       redemptions: [newRedemption, ...database.redemptions],
     });
-  };
+  }, [activeKid, database, handleUpdateDatabase]);
 
   // Toggle sound
-  const handleToggleSound = () => {
-    const nextSound = !database.settings.soundEnabled;
+  const handleToggleSound = useCallback(() => {
     handleUpdateDatabase({
       ...database,
-      settings: { ...database.settings, soundEnabled: nextSound },
+      settings: { ...database.settings, soundEnabled: !database.settings.soundEnabled },
     });
-  };
+  }, [database, handleUpdateDatabase]);
 
-  // If Kiosk Mode is active, render the dedicated Kiosk Command Center View
+  // If Kiosk Mode is active
   if (isKioskMode) {
-    const themeConfig = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
     return (
       <div className={`min-h-screen ${themeConfig.kioskBg} font-sans`}>
         <KioskDashboard
@@ -262,7 +232,6 @@ export default function App() {
           onOpenMenu={() => setIsMenuOpen(true)}
         />
 
-        {/* Calendar Translucent Glass Overlay in Kiosk if triggered */}
         {isCalendarOpen && (
           <CalendarView
             database={database}
@@ -272,7 +241,6 @@ export default function App() {
           />
         )}
 
-        {/* Weekly Dinner Menu Overlay in Kiosk */}
         {isMenuOpen && (
           <WeeklyMenuModal
             isOpen={isMenuOpen}
@@ -287,8 +255,6 @@ export default function App() {
     );
   }
 
-  const themeConfig = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
-
   return (
     <div
       className={`min-h-screen ${themeConfig.bgGradient} flex flex-col font-sans transition-colors duration-300 ${
@@ -297,7 +263,6 @@ export default function App() {
           : 'text-slate-800 selection:bg-sky-200 selection:text-slate-900'
       }`}
     >
-      {/* Top Navigation */}
       <Navbar
         settings={database.settings}
         activeKid={activeKid}
@@ -313,9 +278,7 @@ export default function App() {
           setIsCalendarOpen(false);
           setIsMenuOpen(false);
         }}
-        onSelectKid={(kid) => {
-          setActiveKidId(kid ? kid.id : null);
-        }}
+        onSelectKid={(kid) => setActiveKidId(kid ? kid.id : null)}
         onToggleSound={handleToggleSound}
         onOpenPiGuide={() => setIsPiGuideOpen(true)}
         onOpenRewardStore={() => setIsRewardStoreOpen(true)}
@@ -324,7 +287,6 @@ export default function App() {
         onToggleKiosk={() => setIsKioskMode(true)}
       />
 
-      {/* Main Viewport Router */}
       <main className="flex-1 pb-16">
         {isParentMode ? (
           <ParentDashboard
@@ -366,7 +328,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Calendar Translucent Glass Overlay */}
       {isCalendarOpen && (
         <CalendarView
           database={database}
@@ -376,7 +337,6 @@ export default function App() {
         />
       )}
 
-      {/* Weekly Dinner Menu Translucent Overlay */}
       {isMenuOpen && (
         <WeeklyMenuModal
           isOpen={isMenuOpen}
@@ -388,7 +348,6 @@ export default function App() {
         />
       )}
 
-      {/* Family Goal Manager Modal */}
       {isGoalModalOpen && (
         <FamilyGoalModal
           isOpen={isGoalModalOpen}
@@ -399,7 +358,6 @@ export default function App() {
         />
       )}
 
-      {/* Footer */}
       <footer className="bg-white p-4 px-6 sm:px-8 border-t-2 border-yellow-200/80 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-xs gap-3">
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
           <span className="flex items-center gap-1.5 text-slate-700">
@@ -407,7 +365,7 @@ export default function App() {
               className={`w-2.5 h-2.5 rounded-full ${
                 isSyncConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
               }`}
-            ></span>
+            />
             <span>{isSyncConnected ? 'Live Multi-Device Sync Active' : 'Offline Mode (Local Cache)'}</span>
           </span>
           <span className="opacity-40">•</span>
@@ -431,7 +389,6 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Modals */}
       <ParentPinModal
         isOpen={isPinModalOpen}
         correctPin={database.settings.parentPin}
@@ -455,10 +412,7 @@ export default function App() {
         />
       )}
 
-      <PiGuideModal
-        isOpen={isPiGuideOpen}
-        onClose={() => setIsPiGuideOpen(false)}
-      />
+      <PiGuideModal isOpen={isPiGuideOpen} onClose={() => setIsPiGuideOpen(false)} />
     </div>
   );
 }

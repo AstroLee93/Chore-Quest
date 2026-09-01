@@ -378,3 +378,28 @@ export const parseIcsContent = (icsText: string, kids: KidProfile[] = []): Calen
   return events;
 };
 
+// Fetch and parse iCal feed directly from URL (e.g. Google Calendar Secret Address or webcal link)
+export const fetchIcsFeedFromUrl = async (
+  feedUrl: string,
+  kids: KidProfile[] = []
+): Promise<CalendarEvent[]> => {
+  if (!feedUrl || !feedUrl.trim()) {
+    throw new Error('Please enter a valid Google Calendar Secret iCal URL.');
+  }
+
+  const endpoint = `/api/calendar/fetch-ics?url=${encodeURIComponent(feedUrl.trim())}`;
+  const response = await fetch(endpoint);
+
+  if (!response.ok) {
+    const errorJson = await response.json().catch(() => ({}));
+    throw new Error(errorJson.error || `Failed to fetch calendar feed (HTTP ${response.status})`);
+  }
+
+  const icsText = await response.text();
+  const events = parseIcsContent(icsText, kids);
+  if (events.length === 0) {
+    throw new Error('No events could be extracted from this calendar feed. Make sure the URL is valid.');
+  }
+  return events;
+};
+

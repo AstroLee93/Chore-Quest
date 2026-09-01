@@ -9,7 +9,16 @@ const localBroadcast = typeof window !== 'undefined' && 'BroadcastChannel' in wi
   ? new BroadcastChannel('chorequest_sync_channel')
   : null;
 
-// Fetch full database from backend server
+// Cache last known database signature to avoid redundant JSON parsing, React re-renders, and disk writes
+let lastKnownSignature = '';
+
+function computeDatabaseSignature(db: FamilyDatabase): string {
+  if (!db) return '';
+  // Lightweight hash signature from kids, chores count, logs length, settings, and events
+  return `${db.kids?.map(k => `${k.id}_${k.stars}_${k.streakDays}`).join('|')}#${db.chores?.length}#${db.logs?.length}_${db.logs?.[db.logs.length - 1]?.id || ''}#${db.events?.length || 0}#${db.settings?.parentPin}_${db.settings?.soundEnabled}_${db.settings?.kioskTheme}`;
+}
+
+// Fetch full database from backend server with signature verification
 export async function fetchServerDatabase(): Promise<FamilyDatabase | null> {
   try {
     const res = await fetch('/api/database', {
@@ -17,8 +26,11 @@ export async function fetchServerDatabase(): Promise<FamilyDatabase | null> {
     });
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
     const data = (await res.json()) as FamilyDatabase;
-    // Cache locally as offline fallback
-    saveDatabase(data);
+    const newSig = computeDatabaseSignature(data);
+    if (newSig !== lastKnownSignature) {
+      lastKnownSignature = newSig;
+      saveDatabase(data);
+    }
     return data;
   } catch (err) {
     console.warn('[Sync API] Could not fetch server database, fallback to local storage:', err);
@@ -28,7 +40,10 @@ export async function fetchServerDatabase(): Promise<FamilyDatabase | null> {
 
 // Push updated database to server and broadcast to all connected sessions
 export async function pushServerDatabase(database: FamilyDatabase): Promise<boolean> {
-  // Always update local cache immediately
+  const newSig = computeDatabaseSignature(database);
+  lastKnownSignature = newSig;
+
+  // Cache locally
   saveDatabase(database);
 
   // Notify other tabs in same browser immediately
@@ -37,6 +52,7 @@ export async function pushServerDatabase(database: FamilyDatabase): Promise<bool
       type: 'DATABASE_UPDATED',
       database,
       senderId: CLIENT_SESSION_ID,
+      signature: newSig,
     });
   }
 
@@ -107,12 +123,23 @@ export function subscribeToDatabaseSync(
   let eventSource: EventSource | null = null;
   let reconnectTimeout: any = null;
   let isSubscribed = true;
+  let isSseConnected = false;
+
+  const applyDatabaseUpdateIfChanged = (db: FamilyDatabase) => {
+    if (!db) return;
+    const sig = computeDatabaseSignature(db);
+    if (sig !== lastKnownSignature) {
+      lastKnownSignature = sig;
+      saveDatabase(db);
+      onDatabaseUpdate(db);
+    }
+  };
 
   // Listen to same-browser tabs
   const handleLocalBroadcast = (event: MessageEvent) => {
     if (event.data?.type === 'DATABASE_UPDATED' && event.data.database) {
       if (event.data.senderId !== CLIENT_SESSION_ID) {
-        onDatabaseUpdate(event.data.database);
+        applyDatabaseUpdateIfChanged(event.data.database);
       }
     }
   };
@@ -128,6 +155,7 @@ export function subscribeToDatabaseSync(
       eventSource = new EventSource('/api/events');
 
       eventSource.onopen = () => {
+        isSseConnected = true;
         if (onConnectionChange) onConnectionChange(true);
       };
 
@@ -135,12 +163,12 @@ export function subscribeToDatabaseSync(
         try {
           const payload = JSON.parse(event.data);
           if (payload.type === 'DATABASE_UPDATED' && payload.database) {
-            // Apply update from server
-            onDatabaseUpdate(payload.database);
-            saveDatabase(payload.database);
+            // Ignore own broadcast
+            if (payload.senderId !== CLIENT_SESSION_ID) {
+              applyDatabaseUpdateIfChanged(payload.database);
+            }
           } else if (payload.type === 'CONNECTED' && payload.database) {
-            onDatabaseUpdate(payload.database);
-            saveDatabase(payload.database);
+            applyDatabaseUpdateIfChanged(payload.database);
           }
         } catch (e) {
           console.error('[Sync API] Error parsing SSE payload:', e);
@@ -148,21 +176,23 @@ export function subscribeToDatabaseSync(
       };
 
       eventSource.onerror = () => {
+        isSseConnected = false;
         if (onConnectionChange) onConnectionChange(false);
         if (eventSource) {
           eventSource.close();
           eventSource = null;
         }
-        // Reconnect after 3 seconds
+        // Reconnect after 4 seconds
         if (isSubscribed) {
-          reconnectTimeout = setTimeout(connectSSE, 3000);
+          reconnectTimeout = setTimeout(connectSSE, 4000);
         }
       };
     } catch (err) {
+      isSseConnected = false;
       console.warn('[Sync API] SSE connection error:', err);
       if (onConnectionChange) onConnectionChange(false);
       if (isSubscribed) {
-        reconnectTimeout = setTimeout(connectSSE, 4000);
+        reconnectTimeout = setTimeout(connectSSE, 5000);
       }
     }
   }
@@ -173,22 +203,22 @@ export function subscribeToDatabaseSync(
   const handleFocus = async () => {
     const fresh = await fetchServerDatabase();
     if (fresh) {
-      onDatabaseUpdate(fresh);
+      applyDatabaseUpdateIfChanged(fresh);
     }
   };
 
   window.addEventListener('focus', handleFocus);
   window.addEventListener('online', handleFocus);
 
-  // Polling heartbeat every 8 seconds as secondary guarantee
+  // Relaxed background polling: Only runs every 30 seconds as fallback watchdog, avoids UI stutter
   const pollInterval = setInterval(async () => {
-    if (!document.hidden) {
+    if (!document.hidden && !isSseConnected) {
       const fresh = await fetchServerDatabase();
       if (fresh) {
-        onDatabaseUpdate(fresh);
+        applyDatabaseUpdateIfChanged(fresh);
       }
     }
-  }, 8000);
+  }, 30000);
 
   return () => {
     isSubscribed = false;

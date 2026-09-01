@@ -1,5 +1,4 @@
 import { CalendarEvent, CalendarEventCategory, DayWeather, WeatherCondition } from '../types';
-import { getTodayDateString } from './storage';
 
 export interface CategoryMeta {
   id: CalendarEventCategory;
@@ -169,49 +168,31 @@ export function getRelativeDateString(daysOffset: number): string {
   return `${year}-${month}-${day}`;
 }
 
-// Generate deterministic realistic weather for any day of the year
+// Deterministic seasonal weather generator
 export function getSeasonalWeatherForDate(dateStr: string): DayWeather {
-  if (!dateStr) {
-    return { condition: 'sunny', tempHigh: 72, tempLow: 55, note: 'Comfortable day' };
-  }
-  const parts = dateStr.split('-').map(Number);
-  const month = parts[1] || 1; // 1-12
-  const day = parts[2] || 1;
+  if (!dateStr) return { condition: 'sunny', tempHigh: 72, tempLow: 55, note: 'Comfortable day' };
+  
+  const [, mStr, dStr] = dateStr.split('-');
+  const month = Number(mStr) || 1;
+  const day = Number(dStr) || 1;
   const hash = ((month * 31 + day) * 17) % 100;
 
-  // Northern hemisphere seasons
-  if (month === 12 || month === 1 || month === 2) {
-    // Winter
-    const high = 38 + (hash % 12);
-    const low = 24 + (hash % 10);
+  if (month === 12 || month <= 2) {
     const conds: WeatherCondition[] = ['cloudy', 'snowy', 'partly_cloudy', 'rainy', 'windy'];
-    const condition = conds[hash % conds.length];
-    return { condition, tempHigh: high, tempLow: low, source: 'auto' };
+    return { condition: conds[hash % conds.length], tempHigh: 38 + (hash % 12), tempLow: 24 + (hash % 10), source: 'auto' };
   } else if (month >= 3 && month <= 5) {
-    // Spring
-    const high = 58 + (hash % 16);
-    const low = 42 + (hash % 12);
     const conds: WeatherCondition[] = ['sunny', 'partly_cloudy', 'rainy', 'windy', 'sunny'];
-    const condition = conds[hash % conds.length];
-    return { condition, tempHigh: high, tempLow: low, source: 'auto' };
+    return { condition: conds[hash % conds.length], tempHigh: 58 + (hash % 16), tempLow: 42 + (hash % 12), source: 'auto' };
   } else if (month >= 6 && month <= 8) {
-    // Summer
-    const high = 78 + (hash % 15);
-    const low = 62 + (hash % 12);
     const conds: WeatherCondition[] = ['sunny', 'sunny', 'partly_cloudy', 'stormy', 'sunny'];
-    const condition = conds[hash % conds.length];
-    return { condition, tempHigh: high, tempLow: low, source: 'auto' };
+    return { condition: conds[hash % conds.length], tempHigh: 78 + (hash % 15), tempLow: 62 + (hash % 12), source: 'auto' };
   } else {
-    // Fall (Sep - Nov)
-    const high = 62 + (hash % 16);
-    const low = 44 + (hash % 14);
     const conds: WeatherCondition[] = ['sunny', 'partly_cloudy', 'windy', 'rainy', 'cloudy'];
-    const condition = conds[hash % conds.length];
-    return { condition, tempHigh: high, tempLow: low, source: 'auto' };
+    return { condition: conds[hash % conds.length], tempHigh: 62 + (hash % 16), tempLow: 44 + (hash % 14), source: 'auto' };
   }
 }
 
-// Initial seed calendar events covering practices, projects, field trips, birthdays
+// Initial seed calendar events
 export function getInitialSeedEvents(): CalendarEvent[] {
   return [
     {

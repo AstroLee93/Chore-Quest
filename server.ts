@@ -157,7 +157,53 @@ app.post('/api/change-pin', (req, res) => {
   res.json({ success: true, isDefaultPin: false });
 });
 
-// 6. SSE Real-time stream endpoint
+// 6. Fetch external iCal/ICS calendar feed (e.g. Google Calendar Secret iCal Address or webcal link)
+app.get('/api/calendar/fetch-ics', async (req, res) => {
+  const feedUrl = req.query.url as string;
+
+  if (!feedUrl || typeof feedUrl !== 'string') {
+    res.status(400).json({ error: 'Missing "url" query parameter.' });
+    return;
+  }
+
+  try {
+    // Normalize webcal:// to https://
+    let targetUrl = feedUrl.trim();
+    if (targetUrl.startsWith('webcal://')) {
+      targetUrl = 'https://' + targetUrl.substring(9);
+    } else if (targetUrl.startsWith('http://')) {
+      targetUrl = 'https://' + targetUrl.substring(7);
+    }
+
+    const response = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': 'ChoreQuest-CalendarSync/1.0 (Mozilla/5.0)',
+        'Accept': 'text/calendar, text/plain, */*',
+      },
+    });
+
+    if (!response.ok) {
+      res.status(response.status).json({
+        error: `Remote calendar server returned HTTP ${response.status}: ${response.statusText}`,
+      });
+      return;
+    }
+
+    const text = await response.text();
+    if (!text.includes('BEGIN:VCALENDAR')) {
+      res.status(400).json({ error: 'The provided URL does not return a valid iCalendar (.ics) feed.' });
+      return;
+    }
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.send(text);
+  } catch (err: any) {
+    console.error('[Server] Error fetching iCal feed:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch external calendar feed.' });
+  }
+});
+
+// 7. SSE Real-time stream endpoint
 app.get('/api/events', (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',

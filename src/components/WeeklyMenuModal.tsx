@@ -44,6 +44,8 @@ import {
 import { getTodayDateString, formatDateDisplay } from '../utils/storage';
 import { sound } from '../utils/sound';
 import { EmojiPicker } from './EmojiPicker';
+import { MealRecipeModal } from './MealRecipeModal';
+import { MealRecipe } from '../types';
 
 interface WeeklyMenuModalProps {
   isOpen: boolean;
@@ -81,6 +83,9 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
   const [isSuggestingOpen, setIsSuggestingOpen] = useState<boolean>(false);
   const [suggestionDish, setSuggestionDish] = useState<string>('');
   const [suggestionIcon, setSuggestionIcon] = useState<string>('🍲');
+
+  // Recipe Modal State
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState<boolean>(false);
 
   const menu: WeeklyDinnerMenu = database.weeklyMenu || DEFAULT_WEEKLY_MENU;
   const currentPlan: DailyDinnerPlan =
@@ -320,6 +325,26 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
     setNewOptionIcon('🍕');
   };
 
+  // --- Save Recipe for Selected Day ---
+  const handleSaveRecipe = (updatedRecipe: MealRecipe) => {
+    const updatedDays = {
+      ...menu.days,
+      [selectedDay]: {
+        ...currentPlan,
+        recipe: updatedRecipe,
+      },
+    };
+
+    onUpdateDatabase({
+      ...database,
+      weeklyMenu: {
+        ...menu,
+        days: updatedDays,
+        lastUpdated: new Date().toISOString(),
+      },
+    });
+  };
+
   // --- Parent: Load Preset Menu ---
   const handleApplyPreset = (preset: ReturnType<typeof getMealPresets>[0]) => {
     sound.playChoreComplete();
@@ -339,6 +364,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
           mainDish: presetDay.main,
           sideDishes: presetDay.side,
           icon: presetDay.icon,
+          recipe: presetDay.recipe || newDays[dayKey]?.recipe,
         };
       }
     });
@@ -647,8 +673,22 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                   </div>
                 </div>
 
-                {/* Edit Button for Parents */}
-                <div className="flex items-center gap-2 self-end sm:self-center">
+                {/* Recipe Button & Edit Button for Parents */}
+                <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
+                  {/* View & Edit Recipe Button */}
+                  <button
+                    id="btn-view-recipe-day"
+                    onClick={() => {
+                      sound.playTap();
+                      setIsRecipeModalOpen(true);
+                    }}
+                    className="px-3.5 py-2 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 border-2 border-amber-600/50 text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95 ring-1 ring-amber-300"
+                    title="View & Edit Comprehensible Recipe and Substitutions"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-amber-950" />
+                    <span>View & Edit Recipe</span>
+                  </button>
+
                   {!isEditingCurrentDay ? (
                     <button
                       id="btn-edit-dinner-plan"
@@ -1384,6 +1424,16 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* STEP-BY-STEP RECIPE & SUBSTITUTIONS MODAL */}
+      <MealRecipeModal
+        isOpen={isRecipeModalOpen}
+        onClose={() => setIsRecipeModalOpen(false)}
+        plan={currentPlan}
+        dayLabel={DAY_METADATA[selectedDay].label}
+        onSaveRecipe={handleSaveRecipe}
+        isParentMode={isParentMode}
+      />
     </div>
   );
 };

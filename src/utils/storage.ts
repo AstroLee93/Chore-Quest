@@ -753,3 +753,54 @@ export const getBountyChores = (database: FamilyDatabase): ChoreItem[] => {
   return (database.chores || []).filter((c) => c.isActive && c.isBounty);
 };
 
+/**
+ * Calculates the one and only MVP Kid.
+ * Rule: Highest star count.
+ * Tie-breaker: If there is a tie, the kid who reached the score first (earliest timestamp of their latest star-earning activity) is the ONLY MVP.
+ */
+export const getMvpKid = (kids: KidProfile[], logs: ChoreLog[] = []): KidProfile | null => {
+  if (!kids || kids.length === 0) return null;
+  const maxStars = Math.max(...kids.map((k) => k.stars));
+  if (maxStars <= 0) return null;
+
+  const topKids = kids.filter((k) => k.stars === maxStars);
+  if (topKids.length === 1) return topKids[0];
+
+  // Tie-breaker: find the latest star-earning log timestamp for each tied kid
+  // The kid with the EARLIEST timestamp earned the points FIRST!
+  const kidLatestTime = new Map<string, number>();
+
+  topKids.forEach((kid) => {
+    const kidLogs = (logs || []).filter(
+      (l) => l.kidId === kid.id && l.status === 'completed' && (l.starsAwarded || 0) > 0 && l.completedAt
+    );
+
+    if (kidLogs.length > 0) {
+      const sortedTimes = kidLogs
+        .map((l) => new Date(l.completedAt!).getTime())
+        .filter((t) => !isNaN(t))
+        .sort((a, b) => b - a); // latest first
+
+      kidLatestTime.set(kid.id, sortedTimes[0] || 0);
+    } else {
+      kidLatestTime.set(kid.id, 0);
+    }
+  });
+
+  const sorted = [...topKids].sort((a, b) => {
+    const timeA = kidLatestTime.get(a.id) ?? 0;
+    const timeB = kidLatestTime.get(b.id) ?? 0;
+
+    if (timeA > 0 && timeB > 0) {
+      if (timeA !== timeB) return timeA - timeB; // Earliest timestamp won first
+    } else if (timeA > 0) {
+      return -1;
+    } else if (timeB > 0) {
+      return 1;
+    }
+    return kids.indexOf(a) - kids.indexOf(b);
+  });
+
+  return sorted[0] || null;
+};
+

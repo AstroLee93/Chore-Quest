@@ -147,6 +147,8 @@ export interface AppSettings {
   streakBonusStars: number;
   requireParentApprovalForRewards: boolean;
   tempUnit?: 'F' | 'C';
+  savedCalendarIcsUrl?: string;
+  kioskTheme?: string;
 }
 
 export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
@@ -168,6 +170,17 @@ export interface MealSuggestion {
   createdAt: string;
 }
 
+export interface MealRecipe {
+  prepTime?: string; // e.g. "15 mins"
+  cookTime?: string; // e.g. "25 mins"
+  servings?: string; // e.g. "4-6 servings"
+  difficulty?: 'Easy' | 'Medium' | 'Quick';
+  ingredients: string[]; // e.g. ["1 lb Ground Beef", "1 packet Taco Seasoning", "8 Warm Tortillas"]
+  instructions: string[]; // step-by-step numbered steps
+  substitutions?: string[]; // notes on swaps (e.g. "Swap ground turkey or black beans for beef", "Gluten-free tortillas")
+  notes?: string;
+}
+
 export interface DailyDinnerPlan {
   dayOfWeek: DayOfWeekKey;
   theme?: string; // e.g. "Taco Tuesday 🌮", "Pizza Night 🍕", "Chef's Special"
@@ -183,6 +196,7 @@ export interface DailyDinnerPlan {
   suggestions?: MealSuggestion[];
   lockedByParent?: boolean;
   winningOptionId?: string;
+  recipe?: MealRecipe;
 }
 
 export interface WeeklyDinnerMenu {

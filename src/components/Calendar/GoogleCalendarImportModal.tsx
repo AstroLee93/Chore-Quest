@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Calendar as CalendarIcon,
   X,
@@ -16,17 +16,21 @@ import {
   CheckCircle2,
   Upload,
   FileText,
-  Info,
+  Link,
+  HelpCircle,
+  Copy,
   ExternalLink,
+  ChevronRight,
+  Save,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import {
   GoogleCalendarItem,
-  GoogleCalendarEventItem,
   fetchGoogleCalendars,
   fetchGoogleCalendarEvents,
   convertGoogleEventToCalendarEvent,
   parseIcsContent,
+  fetchIcsFeedFromUrl,
   googleSignIn,
   logoutGoogle,
   initAuth,
@@ -49,22 +53,25 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
   database,
   onUpdateDatabase,
 }) => {
-  const [activeTab, setActiveTab] = useState<'google' | 'ics'>('google');
+  // Tabs: 'url' (Secret iCal URL), 'google' (OAuth popup), 'ics' (File upload)
+  const [activeTab, setActiveTab] = useState<'url' | 'google' | 'ics'>('url');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authErrorCode, setAuthErrorCode] = useState<string | null>(null);
 
+  // URL Sync State
+  const [feedUrl, setFeedUrl] = useState<string>(database.settings?.savedCalendarIcsUrl || '');
+  const [isSavingUrl, setIsSavingUrl] = useState<boolean>(false);
+  const [showUrlGuide, setShowUrlGuide] = useState<boolean>(false);
+  const [copiedDomain, setCopiedDomain] = useState<boolean>(false);
+
   // Calendars & events state
   const [calendars, setCalendars] = useState<GoogleCalendarItem[]>([]);
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('primary');
   const [isLoadingCalendars, setIsLoadingCalendars] = useState<boolean>(false);
-
-  // Date range filter
   const [rangeOption, setRangeOption] = useState<'30days' | '90days' | 'year' | 'month'>('30days');
-
-  // Fetched events & staged import events
   const [isLoadingEvents, setIsLoadingEvents] = useState<boolean>(false);
   const [fetchedEvents, setFetchedEvents] = useState<CalendarEvent[]>([]);
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
@@ -75,9 +82,12 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
   const [icsFileName, setIcsFileName] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
+  // Current domain for troubleshooting
+  const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+
   // Initialize auth listener
   useEffect(() => {
-    const unsubscribe = initAuth(
+    return initAuth(
       (user, token) => {
         setCurrentUser(user);
         setAccessToken(token);
@@ -87,64 +97,98 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
         setAccessToken(null);
       }
     );
-    return () => unsubscribe();
   }, []);
 
-  // When token is available, load user's Google Calendars
+  // Sync saved URL if it exists
   useEffect(() => {
-    if (accessToken) {
-      loadCalendars(accessToken);
+    if (database.settings?.savedCalendarIcsUrl) {
+      setFeedUrl(database.settings.savedCalendarIcsUrl);
     }
-  }, [accessToken]);
+  }, [database.settings?.savedCalendarIcsUrl]);
 
-  // Load calendars helper
-  const loadCalendars = async (token: string) => {
+  // Handle URL fetch
+  const handleFetchUrlFeed = async () => {
+    if (!feedUrl.trim()) {
+      setAuthError('Please paste your Google Calendar Secret iCal URL or webcal link.');
+      return;
+    }
+
+    setIsLoadingEvents(true);
+    setAuthError(null);
+    setImportSuccessCount(null);
+    sound.playTap();
+
+    try {
+      const events = await fetchIcsFeedFromUrl(feedUrl, database.kids || []);
+      setFetchedEvents(events);
+
+      // Default select non-duplicate events
+      const existingKeys = new Set(
+        (database.events || []).map((e) => `${e.date}__${e.title.toLowerCase().trim()}`)
+      );
+      const newIds = new Set<string>();
+      events.forEach((evt) => {
+        if (!existingKeys.has(`${evt.date}__${evt.title.toLowerCase().trim()}`)) {
+          newIds.add(evt.id);
+        }
+      });
+      setSelectedEventIds(newIds.size > 0 ? newIds : new Set(events.map((e) => e.id)));
+      sound.playStarEarned();
+
+      // Automatically save URL to database settings if changed
+      if (feedUrl !== database.settings?.savedCalendarIcsUrl) {
+        onUpdateDatabase({
+          ...database,
+          settings: {
+            ...database.settings,
+            savedCalendarIcsUrl: feedUrl.trim(),
+          },
+        });
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Could not fetch events from the provided calendar URL.');
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  };
+
+  const loadCalendars = useCallback(async (token: string) => {
     setIsLoadingCalendars(true);
     setAuthError(null);
     try {
       const list = await fetchGoogleCalendars(token);
       setCalendars(list);
       const primary = list.find((c) => c.primary) || list[0];
-      if (primary) {
-        setSelectedCalendarId(primary.id);
-      }
+      if (primary) setSelectedCalendarId(primary.id);
     } catch (err: any) {
-      console.error('Error loading Google Calendars:', err);
-      setAuthError(err.message || 'Could not load your Google Calendars. Please re-authenticate.');
+      setAuthError(err.message || 'Could not load Google Calendars. Please try again.');
     } finally {
       setIsLoadingCalendars(false);
     }
-  };
+  }, []);
 
-  // Fetch events whenever calendar or date range changes
   useEffect(() => {
-    if (accessToken && selectedCalendarId && activeTab === 'google') {
-      loadEvents(accessToken, selectedCalendarId, rangeOption);
-    }
-  }, [accessToken, selectedCalendarId, rangeOption, activeTab]);
+    if (accessToken) loadCalendars(accessToken);
+  }, [accessToken, loadCalendars]);
 
-  const loadEvents = async (token: string, calId: string, range: string) => {
+  const loadEvents = useCallback(async (token: string, calId: string, range: string) => {
     setIsLoadingEvents(true);
     setAuthError(null);
     setImportSuccessCount(null);
 
     try {
       const now = new Date();
-      let timeMin = new Date().toISOString();
-      let timeMax = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      let timeMin = now.toISOString();
+      let timeMax = new Date(now.getTime() + 30 * 86400000).toISOString();
 
       if (range === 'month') {
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-        timeMin = startOfMonth.toISOString();
-        timeMax = endOfMonth.toISOString();
+        timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
       } else if (range === '90days') {
-        timeMax = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString();
+        timeMax = new Date(now.getTime() + 90 * 86400000).toISOString();
       } else if (range === 'year') {
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-        timeMin = startOfYear.toISOString();
-        timeMax = endOfYear.toISOString();
+        timeMin = new Date(now.getFullYear(), 0, 1).toISOString();
+        timeMax = new Date(now.getFullYear(), 11, 31, 23, 59, 59).toISOString();
       }
 
       const items = await fetchGoogleCalendarEvents(token, calId, timeMin, timeMax, 150);
@@ -154,26 +198,29 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
 
       setFetchedEvents(converted);
 
-      // By default, select non-duplicate events
-      const existingTitlesAndDates = new Set(
+      // Default select non-duplicate events
+      const existingKeys = new Set(
         (database.events || []).map((e) => `${e.date}__${e.title.toLowerCase().trim()}`)
       );
-
       const newIds = new Set<string>();
       converted.forEach((evt) => {
-        const key = `${evt.date}__${evt.title.toLowerCase().trim()}`;
-        if (!existingTitlesAndDates.has(key)) {
+        if (!existingKeys.has(`${evt.date}__${evt.title.toLowerCase().trim()}`)) {
           newIds.add(evt.id);
         }
       });
-      setSelectedEventIds(newIds);
+      setSelectedEventIds(newIds.size > 0 ? newIds : new Set(converted.map((e) => e.id)));
     } catch (err: any) {
-      console.error('Error fetching calendar events:', err);
       setAuthError(err.message || 'Failed to load events from Google Calendar.');
     } finally {
       setIsLoadingEvents(false);
     }
-  };
+  }, [database.kids, database.events]);
+
+  useEffect(() => {
+    if (accessToken && selectedCalendarId && activeTab === 'google') {
+      loadEvents(accessToken, selectedCalendarId, rangeOption);
+    }
+  }, [accessToken, selectedCalendarId, rangeOption, activeTab, loadEvents]);
 
   const handleSignIn = async () => {
     setIsAuthenticating(true);
@@ -187,8 +234,7 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
         setAccessToken(res.accessToken);
       }
     } catch (err: any) {
-      console.error('Sign-in failed:', err);
-      const code = err.code || (err.message && err.message.includes('auth/unauthorized-domain') ? 'auth/unauthorized-domain' : null);
+      const code = err.code || (err.message?.includes('auth/unauthorized-domain') ? 'auth/unauthorized-domain' : null);
       setAuthErrorCode(code);
       setAuthError(err.message || 'Sign in failed. Please try again.');
     } finally {
@@ -206,7 +252,6 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
     setSelectedEventIds(new Set());
   };
 
-  // Handle ICS file selection
   const handleIcsFile = (file: File) => {
     if (!file) return;
     setIcsFileName(file.name);
@@ -229,8 +274,7 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
           sound.playStarEarned();
         }
       } catch (err: any) {
-        console.error('Failed to parse ICS:', err);
-        setAuthError('Could not read calendar file. Please ensure it is a standard .ics format.');
+        setAuthError('Could not parse .ics file. Please verify it is a valid calendar export.');
       } finally {
         setIsLoadingEvents(false);
       }
@@ -242,15 +286,6 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
     reader.readAsText(file);
   };
 
-  const handleDropIcs = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleIcsFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  // Load sample school & sports calendar
   const handleLoadSampleSchedule = () => {
     sound.playTap();
     const today = new Date();
@@ -325,13 +360,12 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
 
   const toggleSelectEvent = (id: string) => {
     sound.playTap();
-    const next = new Set(selectedEventIds);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setSelectedEventIds(next);
+    setSelectedEventIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleSelectAll = () => {
@@ -354,37 +388,28 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
     if (toImport.length === 0) return;
 
     sound.playLevelUp();
-    confetti({
-      particleCount: 75,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
+    confetti({ particleCount: 75, spread: 70, origin: { y: 0.6 } });
 
-    const existing = database.events || [];
-    // Merge, replacing any existing events that have the same generated id
-    const existingMap = new Map<string, CalendarEvent>(existing.map((e) => [e.id, e]));
+    const existingMap = new Map<string, CalendarEvent>((database.events || []).map((e) => [e.id, e]));
+    toImport.forEach((evt) => existingMap.set(evt.id, evt));
 
-    toImport.forEach((evt) => {
-      existingMap.set(evt.id, evt);
-    });
-
-    const updatedEvents = Array.from(existingMap.values()).sort((a, b) =>
-      a.date.localeCompare(b.date)
-    );
-
-    onUpdateDatabase({
-      ...database,
-      events: updatedEvents,
-    });
-
+    const updatedEvents = Array.from(existingMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+    onUpdateDatabase({ ...database, events: updatedEvents });
     setImportSuccessCount(toImport.length);
+  };
+
+  const handleCopyDomain = () => {
+    sound.playTap();
+    navigator.clipboard?.writeText(currentHostname);
+    setCopiedDomain(true);
+    setTimeout(() => setCopiedDomain(false), 2500);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
-      <div className="bg-slate-900 text-white rounded-[2.5rem] border-4 border-indigo-500 max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-950/80 animate-fade-in">
+      <div className="bg-slate-900 text-white rounded-[2.5rem] border-4 border-indigo-500 max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-b border-indigo-500/40 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -398,9 +423,7 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                 </span>
                 <span className="text-xs font-bold text-slate-400">ChoreQuest Sync Hub</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white">
-                Import Calendar Events
-              </h2>
+              <h2 className="text-xl sm:text-2xl font-black text-white">Import Calendar Events</h2>
             </div>
           </div>
 
@@ -416,20 +439,34 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
         </div>
 
         {/* Sync Method Tabs */}
-        <div className="px-6 pt-4 pb-1 bg-slate-900/90 border-b border-slate-800 flex items-center gap-3">
+        <div className="px-6 pt-4 pb-1 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playTap();
+              setActiveTab('url');
+              setAuthError(null);
+            }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'url' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white'
+            }`}
+          >
+            <Link className="w-3.5 h-3.5 text-yellow-300" />
+            <span>🔗 Secret iCal URL (Fastest / Local / Pi)</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
               sound.playTap();
               setActiveTab('google');
+              setAuthError(null);
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer ${
-              activeTab === 'google'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+            className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'google' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            <span>🔐 Google Account Sync</span>
+            <span>🔐 Google Account Popup</span>
           </button>
 
           <button
@@ -437,21 +474,110 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
             onClick={() => {
               sound.playTap();
               setActiveTab('ics');
+              setAuthError(null);
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer ${
-              activeTab === 'ics'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+            className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'ics' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
             <Upload className="w-3.5 h-3.5" />
-            <span>📁 Import .ICS File / Schedule</span>
+            <span>📁 .ICS File / Sample</span>
           </button>
         </div>
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 flex-1 overflow-y-auto space-y-5">
-          {/* TAB 1: GOOGLE ACCOUNT SYNC */}
+          {/* TAB 1: GOOGLE CALENDAR SECRET ICAL URL (RECOMMENDED FOR LOCAL / PI / ZERO-AUTH) */}
+          {activeTab === 'url' && (
+            <div className="space-y-4">
+              <div className="p-5 rounded-3xl bg-slate-800/80 border border-slate-700 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                      <span>Sync via Google Calendar Secret iCal Address</span>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                        100% Reliable & No Auth Needed
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                      Paste your Google Calendar private iCal link. ChoreQuest fetches and categorizes your sports games, practices, appointments, and family events seamlessly!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="url"
+                      placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
+                      value={feedUrl}
+                      onChange={(e) => setFeedUrl(e.target.value)}
+                      className="flex-1 px-4 py-3 rounded-2xl bg-slate-900 border border-slate-600 text-white text-xs font-mono placeholder:text-slate-500 focus:outline-indigo-500 focus:border-indigo-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleFetchUrlFeed}
+                      disabled={isLoadingEvents || !feedUrl.trim()}
+                      className="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isLoadingEvents ? 'animate-spin' : ''}`} />
+                      <span>{isLoadingEvents ? 'Fetching Events...' : 'Sync Calendar'}</span>
+                    </button>
+                  </div>
+
+                  {database.settings?.savedCalendarIcsUrl && (
+                    <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-bold">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Calendar URL saved. You can refresh anytime with one click!</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* How to find Google Calendar URL Guide */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playTap();
+                      setShowUrlGuide(!showUrlGuide);
+                    }}
+                    className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    <span>How to get your Google Calendar secret iCal URL (15 seconds)</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showUrlGuide ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showUrlGuide && (
+                    <div className="mt-3 p-4 rounded-2xl bg-slate-900/90 border border-indigo-500/30 text-xs text-slate-300 space-y-2.5 animate-fade-in font-medium">
+                      <div className="font-black text-yellow-300 flex items-center gap-1.5">
+                        <span>📋 4 Simple Steps to get your link:</span>
+                      </div>
+                      <ol className="list-decimal list-inside space-y-1.5 text-slate-300 pl-1 text-[11px]">
+                        <li>
+                          Open <strong className="text-white">calendar.google.com</strong> on your computer or phone browser.
+                        </li>
+                        <li>
+                          Click the <strong className="text-white">⚙️ Gear icon (Settings)</strong> in the top right &rarr; <strong className="text-white">Settings</strong>.
+                        </li>
+                        <li>
+                          In the left sidebar, click on your <strong className="text-white">Family or Personal calendar name</strong> under <em>"Settings for my calendars"</em>.
+                        </li>
+                        <li>
+                          Scroll down to <strong className="text-white">"Integrate calendar"</strong> and copy the <strong className="text-yellow-300">"Secret address in iCal format"</strong> link.
+                        </li>
+                      </ol>
+                      <p className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-800">
+                        💡 Also works with Apple Calendar iCloud public/shared links, Outlook webcal links, TeamSnap, SportsEngine, and school district iCal feeds!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: GOOGLE ACCOUNT OAUTH POPUP */}
           {activeTab === 'google' && (
             <>
               {!currentUser || !accessToken ? (
@@ -460,41 +586,45 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                     🔐
                   </div>
                   <div className="max-w-md mx-auto">
-                    <h3 className="text-lg font-black text-white mb-1">
-                      Connect Your Google Account
-                    </h3>
+                    <h3 className="text-lg font-black text-white mb-1">Direct Google Account Sign-In</h3>
                     <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                      Connect your Google Calendar to seamlessly import sports practices, school field trips, doctor appointments, and family events directly into your family schedule.
+                      Sign in directly with your Google Account to automatically browse and import from your Google Calendar list.
                     </p>
                   </div>
 
-                  {/* Auth Error Notification with Domain Guidance */}
                   {authError && (
-                    <div className="p-4 rounded-2xl bg-rose-950/80 border border-rose-600 text-rose-200 text-xs font-bold space-y-2 text-left">
+                    <div className="p-4 rounded-2xl bg-rose-950/90 border border-rose-600 text-rose-200 text-xs font-bold space-y-3 text-left">
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
-                        <div>
-                          <div className="font-black text-rose-300">{authError}</div>
+                        <AlertCircle className="w-5 h-5 shrink-0 text-rose-400 mt-0.5" />
+                        <div className="space-y-2">
+                          <div className="font-black text-rose-300 text-sm">{authError}</div>
+                          
                           {authErrorCode === 'auth/unauthorized-domain' && (
-                            <div className="text-[11px] text-rose-200/90 mt-1.5 space-y-1.5 font-normal">
+                            <div className="text-xs text-rose-200/90 space-y-2 font-normal">
                               <p>
-                                🔒 <strong>Firebase Domain Authorization:</strong> The current preview domain{' '}
-                                <code className="bg-rose-900/60 px-1.5 py-0.5 rounded font-mono font-bold text-rose-100">
-                                  {typeof window !== 'undefined' ? window.location.hostname : ''}
-                                </code>{' '}
-                                requires OAuth authorization in the platform setup.
+                                🔒 <strong>Firebase Domain Restriction:</strong> Google OAuth popups require your current domain/IP (<strong>{currentHostname}</strong>) to be listed in Authorized Domains.
                               </p>
-                              <div className="pt-2">
+                              
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={handleCopyDomain}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-rose-500/50 text-white font-bold text-xs cursor-pointer transition-colors"
+                                >
+                                  {copiedDomain ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                                  <span>{copiedDomain ? 'Copied Domain!' : `Copy "${currentHostname}"`}</span>
+                                </button>
+
                                 <button
                                   type="button"
                                   onClick={() => {
                                     sound.playTap();
-                                    setActiveTab('ics');
+                                    setActiveTab('url');
                                   }}
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md cursor-pointer transition-colors"
                                 >
-                                  <Upload className="w-3.5 h-3.5" />
-                                  <span>Use .ICS File Import (Instant & No Login Required)</span>
+                                  <Link className="w-3.5 h-3.5 text-yellow-300" />
+                                  <span>Use Secret iCal URL (Recommended & Works Instantly)</span>
                                 </button>
                               </div>
                             </div>
@@ -504,7 +634,6 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                     </div>
                   )}
 
-                  {/* Official Google Sign-In Button */}
                   <div className="flex justify-center pt-2">
                     <button
                       type="button"
@@ -513,22 +642,10 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                       className="flex items-center gap-3 px-6 py-3.5 bg-white text-slate-700 hover:bg-slate-50 font-bold rounded-2xl shadow-lg border border-slate-300 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
                     >
                       <svg className="w-5 h-5" viewBox="0 0 48 48">
-                        <path
-                          fill="#EA4335"
-                          d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-                        />
-                        <path
-                          fill="#4285F4"
-                          d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-                        />
-                        <path
-                          fill="#FBBC05"
-                          d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-                        />
-                        <path
-                          fill="#34A853"
-                          d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-                        />
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
                       </svg>
                       <span className="text-sm font-black text-slate-800">
                         {isAuthenticating ? 'Connecting to Google...' : 'Sign in with Google'}
@@ -538,7 +655,7 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                 </div>
               ) : (
                 <>
-                  {/* Connected User Bar */}
+                  {/* Connected Account Bar */}
                   <div className="p-3.5 rounded-2xl bg-slate-800/90 border border-slate-700 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       {currentUser.photoURL ? (
@@ -572,7 +689,6 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                         onClick={() => loadEvents(accessToken, selectedCalendarId, rangeOption)}
                         disabled={isLoadingEvents}
                         className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-black flex items-center gap-1 cursor-pointer transition-colors"
-                        title="Refresh Events"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${isLoadingEvents ? 'animate-spin' : ''}`} />
                         <span>Refresh</span>
@@ -588,9 +704,8 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                     </div>
                   </div>
 
-                  {/* Filters Bar: Select Calendar & Date Range */}
+                  {/* Filters: Calendar Dropdown & Date Range */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-800/60 border border-slate-700">
-                    {/* Calendar Selector */}
                     <div>
                       <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1">
                         Select Google Calendar:
@@ -613,7 +728,6 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                       </select>
                     </div>
 
-                    {/* Date Range Selector */}
                     <div>
                       <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1">
                         Date Range:
@@ -649,17 +763,20 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
             </>
           )}
 
-          {/* TAB 2: DIRECT .ICS FILE & SCHEDULE IMPORTER */}
+          {/* TAB 3: DIRECT .ICS FILE & SCHEDULE IMPORTER */}
           {activeTab === 'ics' && (
             <div className="space-y-4">
-              {/* Drag & Drop Box */}
               <div
                 onDragOver={(e) => {
                   e.preventDefault();
                   setIsDragging(true);
                 }}
                 onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDropIcs}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer.files?.length) handleIcsFile(e.dataTransfer.files[0]);
+                }}
                 onClick={() => fileInputRef.current?.click()}
                 className={`p-6 rounded-3xl border-2 border-dashed transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-3 ${
                   isDragging
@@ -672,9 +789,7 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                   type="file"
                   accept=".ics,text/calendar"
                   onChange={(e) => {
-                    if (e.target.files && e.target.files.length > 0) {
-                      handleIcsFile(e.target.files[0]);
-                    }
+                    if (e.target.files?.length) handleIcsFile(e.target.files[0]);
                   }}
                   className="hidden"
                 />
@@ -734,14 +849,12 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
             </div>
           )}
 
-          {/* Events Staging Area */}
+          {/* Staged Events Preview List */}
           {fetchedEvents.length > 0 && (
             <div>
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-white">
-                    Events Found ({fetchedEvents.length})
-                  </span>
+                  <span className="text-sm font-black text-white">Events Found ({fetchedEvents.length})</span>
                   <span className="text-xs font-bold text-yellow-400">
                     • {selectedEventIds.size} Selected for Import
                   </span>
@@ -765,7 +878,9 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                   {fetchedEvents.map((evt) => {
                     const isSelected = selectedEventIds.has(evt.id);
                     const isAlreadyImported = (database.events || []).some(
-                      (existing) => existing.id === evt.id || (existing.date === evt.date && existing.title.toLowerCase() === evt.title.toLowerCase())
+                      (existing) =>
+                        existing.id === evt.id ||
+                        (existing.date === evt.date && existing.title.toLowerCase() === evt.title.toLowerCase())
                     );
 
                     return (
@@ -777,7 +892,6 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                             : 'bg-slate-800/60 border-slate-700 opacity-75'
                         }`}
                       >
-                        {/* Checkbox & Basic Info */}
                         <div className="flex items-start gap-3 flex-1 min-w-0">
                           <button
                             type="button"
@@ -794,9 +908,7 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-lg">{evt.icon || '📌'}</span>
-                              <span className="text-sm font-black text-white truncate max-w-xs">
-                                {evt.title}
-                              </span>
+                              <span className="text-sm font-black text-white truncate max-w-xs">{evt.title}</span>
                               {isAlreadyImported && (
                                 <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-950 border border-amber-600 text-amber-300">
                                   Already in ChoreQuest
@@ -812,17 +924,14 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                                 </span>
                               )}
                               {evt.location && (
-                                <span className="text-slate-400 truncate max-w-[200px]">
-                                  📍 {evt.location}
-                                </span>
+                                <span className="text-slate-400 truncate max-w-[200px]">📍 {evt.location}</span>
                               )}
                             </div>
                           </div>
                         </div>
 
-                        {/* Quick Mapping: Category & Kid Assignment */}
+                        {/* Category and Kid Assignment Dropdowns */}
                         <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                          {/* Category Select */}
                           <select
                             value={evt.category}
                             onChange={(e) =>
@@ -840,14 +949,9 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                             ))}
                           </select>
 
-                          {/* Kid Assignment Select */}
                           <select
                             value={evt.assignedKidIds[0] || 'all'}
-                            onChange={(e) =>
-                              updateStagedEvent(evt.id, {
-                                assignedKidIds: [e.target.value],
-                              })
-                            }
+                            onChange={(e) => updateStagedEvent(evt.id, { assignedKidIds: [e.target.value] })}
                             className="px-2 py-1 rounded-xl bg-slate-900 border border-slate-700 text-[11px] font-black text-yellow-300 focus:outline-indigo-500"
                           >
                             <option value="all">👥 Whole Family</option>
@@ -896,4 +1000,3 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
     </div>
   );
 };
-

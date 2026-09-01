@@ -57,6 +57,7 @@ interface WeeklyMenuModalProps {
   onUpdateDatabase: (updated: FamilyDatabase) => void;
   activeKid?: KidProfile | null;
   isParentMode?: boolean;
+  onOpenGroceryList?: () => void;
 }
 
 export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
@@ -66,6 +67,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
   onUpdateDatabase,
   activeKid = null,
   isParentMode = false,
+  onOpenGroceryList,
 }) => {
   const todayKey = getCurrentDayOfWeekKey();
   const [selectedDay, setSelectedDay] = useState<DayOfWeekKey>(todayKey);
@@ -598,6 +600,23 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
               <span className="hidden md:inline">Presets</span>
             </button>
+
+            {/* Grocery List Shortcut */}
+            {onOpenGroceryList && (
+              <button
+                id="btn-menu-to-grocery"
+                onClick={() => {
+                  sound.playTap();
+                  onClose();
+                  onOpenGroceryList();
+                }}
+                className="px-3 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-2 border-emerald-300 text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                title="Open Automated Grocery List"
+              >
+                <span>🛒</span>
+                <span className="hidden md:inline">Grocery List</span>
+              </button>
+            )}
 
             {/* Boxed in Red X - Clear/Delete Entire Week Dinner Menu */}
             <button

@@ -34,6 +34,7 @@ export interface AppNavMenuProps {
   events?: CalendarEvent[];
   isCalendarOpen?: boolean;
   isMenuOpen?: boolean;
+  isGroceryOpen?: boolean;
   currentTheme?: AppThemeId;
   onThemeChange?: (theme: AppThemeId) => void;
   onOpenParentPin: () => void;
@@ -44,6 +45,7 @@ export interface AppNavMenuProps {
   onOpenRewardStore?: () => void;
   onToggleCalendar: () => void;
   onToggleMenu?: () => void;
+  onToggleGrocery?: () => void;
   onToggleKiosk?: () => void;
 }
 
@@ -56,6 +58,7 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
   events = [],
   isCalendarOpen = false,
   isMenuOpen = false,
+  isGroceryOpen = false,
   currentTheme = 'coastal-horizon',
   onThemeChange,
   onOpenParentPin,
@@ -66,6 +69,7 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
   onOpenRewardStore,
   onToggleCalendar,
   onToggleMenu,
+  onToggleGrocery,
   onToggleKiosk,
 }) => {
   const [isThemeSectionExpanded, setIsThemeSectionExpanded] = useState<boolean>(false);
@@ -263,7 +267,35 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
                 </button>
               )}
 
-              {/* 2. Calendar Button */}
+              {/* 2. Automated Weekly Grocery List Button */}
+              {onToggleGrocery && (
+                <button
+                  id="btn-menu-grocery"
+                  onClick={() => handleAction(onToggleGrocery)}
+                  className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer active:scale-95 shadow-xs flex items-center justify-between gap-3 ${
+                    isGroceryOpen
+                      ? 'bg-emerald-950 text-emerald-300 border-emerald-950 ring-2 ring-emerald-400/50'
+                      : 'bg-emerald-50/80 hover:bg-emerald-100/90 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 border-emerald-200 dark:border-emerald-900/40 text-emerald-950 dark:text-emerald-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-200 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 flex items-center justify-center text-xl shadow-2xs shrink-0">
+                      🛒
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-black truncate">Grocery List</div>
+                      <div className="text-[11px] font-semibold opacity-80 truncate">
+                        Automated weekly shopping
+                      </div>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-200 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 text-xs font-black shrink-0">
+                    Open
+                  </span>
+                </button>
+              )}
+
+              {/* 3. Calendar Button */}
               <button
                 id="btn-menu-calendar"
                 onClick={() => handleAction(onToggleCalendar)}
@@ -295,7 +327,7 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
                 )}
               </button>
 
-              {/* 3. Kiosk Mode Button */}
+              {/* 4. Kiosk Mode Button */}
               {onToggleKiosk && (
                 <button
                   id="btn-menu-kiosk"
@@ -321,7 +353,7 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
                 </button>
               )}
 
-              {/* 4. Host Guide / Raspberry Pi Button */}
+              {/* 5. Host Guide / Raspberry Pi Button */}
               <button
                 id="btn-menu-pi-guide"
                 onClick={() => handleAction(onOpenPiGuide)}

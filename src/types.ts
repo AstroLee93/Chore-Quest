@@ -206,6 +206,54 @@ export interface WeeklyDinnerMenu {
   lastUpdated?: string;
 }
 
+export type GroceryCategory =
+  | 'produce'
+  | 'dairy_eggs'
+  | 'meat_seafood'
+  | 'bakery'
+  | 'pantry'
+  | 'frozen'
+  | 'snacks'
+  | 'beverages'
+  | 'household'
+  | 'other';
+
+export interface GroceryItem {
+  id: string;
+  name: string;
+  category: GroceryCategory;
+  quantity?: string; // e.g. "2 bags", "1 gallon", "3 lbs"
+  acquired: boolean;
+  acquiredAt?: string;
+  addedBy?: string; // e.g. "Mom", "Leo 🦁", "Auto from Dinner Menu", "Replenished from Pantry"
+  notes?: string;
+  isReplenishItem?: boolean;
+  sourceMealDay?: DayOfWeekKey; // If imported from weekly dinner menu
+  sourceRecipe?: string;
+  createdAt: string;
+}
+
+export interface PantryStapleItem {
+  id: string;
+  name: string;
+  category: GroceryCategory;
+  defaultQuantity?: string;
+  icon?: string;
+  isDepleted: boolean; // True if "Used Up / Needs Replenish"
+  depletedAt?: string;
+  depletedBy?: string; // Who marked it as used up (e.g. kid or parent)
+  lastRestockedAt?: string;
+  notes?: string;
+}
+
+export interface WeeklyGroceryList {
+  title?: string;
+  weekStartDate?: string;
+  items: GroceryItem[];
+  pantryStaples?: PantryStapleItem[];
+  lastUpdated?: string;
+}
+
 export interface FamilyDatabase {
   version: number;
   settings: AppSettings;
@@ -220,6 +268,7 @@ export interface FamilyDatabase {
   familyGoal?: FamilyGoal;
   savedFamilyGoals?: FamilyGoal[];
   weeklyMenu?: WeeklyDinnerMenu;
+  weeklyGroceryList?: WeeklyGroceryList;
   lastBackupDate?: string;
 }
 

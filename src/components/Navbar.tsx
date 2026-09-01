@@ -25,6 +25,7 @@ interface NavbarProps {
   events?: CalendarEvent[];
   isCalendarOpen?: boolean;
   isMenuOpen?: boolean;
+  isGroceryOpen?: boolean;
   currentTheme?: AppThemeId;
   onThemeChange?: (theme: AppThemeId) => void;
   onOpenParentPin: () => void;
@@ -35,6 +36,7 @@ interface NavbarProps {
   onOpenRewardStore?: () => void;
   onToggleCalendar: () => void;
   onToggleMenu?: () => void;
+  onToggleGrocery?: () => void;
   onToggleKiosk?: () => void;
 }
 
@@ -45,6 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   events = [],
   isCalendarOpen = false,
   isMenuOpen = false,
+  isGroceryOpen = false,
   currentTheme = 'coastal-horizon',
   onThemeChange,
   onOpenParentPin,
@@ -55,6 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenRewardStore,
   onToggleCalendar,
   onToggleMenu,
+  onToggleGrocery,
   onToggleKiosk,
 }) => {
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
@@ -183,6 +187,26 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
+            {/* Quick Action: Grocery List */}
+            {onToggleGrocery && (
+              <button
+                id="btn-nav-grocery"
+                onClick={() => {
+                  sound.playTap();
+                  onToggleGrocery();
+                }}
+                className={`p-2 sm:px-3 sm:py-2 rounded-xl border-2 flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 ${
+                  isGroceryOpen
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-950 shadow-md ring-2 ring-emerald-400/50'
+                    : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-950 border-emerald-300'
+                }`}
+                title="Automated Weekly Grocery List"
+              >
+                <span className="text-base leading-none">🛒</span>
+                <span className="hidden md:inline text-xs font-black">Groceries</span>
+              </button>
+            )}
+
             {/* Quick Action: Calendar */}
             <button
               id="btn-nav-calendar"
@@ -243,6 +267,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         events={events}
         isCalendarOpen={isCalendarOpen}
         isMenuOpen={isMenuOpen}
+        isGroceryOpen={isGroceryOpen}
         currentTheme={currentTheme}
         onThemeChange={onThemeChange}
         onOpenParentPin={onOpenParentPin}
@@ -253,6 +278,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         onOpenRewardStore={onOpenRewardStore}
         onToggleCalendar={onToggleCalendar}
         onToggleMenu={onToggleMenu}
+        onToggleGrocery={onToggleGrocery}
         onToggleKiosk={onToggleKiosk}
       />
     </>

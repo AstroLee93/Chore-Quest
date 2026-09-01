@@ -15,6 +15,7 @@ import { CalendarView } from './components/Calendar/CalendarView';
 import { KioskDashboard } from './components/KioskDashboard';
 import { FamilyGoalModal } from './components/FamilyGoalModal';
 import { WeeklyMenuModal } from './components/WeeklyMenuModal';
+import { WeeklyGroceryModal } from './components/WeeklyGroceryModal';
 
 export default function App() {
   const [database, setDatabase] = useState<FamilyDatabase>(() => loadDatabase());
@@ -26,6 +27,7 @@ export default function App() {
   const [isPiGuideOpen, setIsPiGuideOpen] = useState<boolean>(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const [isGroceryOpen, setIsGroceryOpen] = useState<boolean>(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [isSyncConnected, setIsSyncConnected] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<AppThemeId>(() => getSavedThemeId());
@@ -270,6 +272,7 @@ export default function App() {
         events={database.events || []}
         isCalendarOpen={isCalendarOpen}
         isMenuOpen={isMenuOpen}
+        isGroceryOpen={isGroceryOpen}
         currentTheme={currentTheme}
         onThemeChange={handleThemeChange}
         onOpenParentPin={() => setIsPinModalOpen(true)}
@@ -277,6 +280,7 @@ export default function App() {
           setIsParentMode(false);
           setIsCalendarOpen(false);
           setIsMenuOpen(false);
+          setIsGroceryOpen(false);
         }}
         onSelectKid={(kid) => setActiveKidId(kid ? kid.id : null)}
         onToggleSound={handleToggleSound}
@@ -284,6 +288,7 @@ export default function App() {
         onOpenRewardStore={() => setIsRewardStoreOpen(true)}
         onToggleCalendar={() => setIsCalendarOpen((prev) => !prev)}
         onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
+        onToggleGrocery={() => setIsGroceryOpen((prev) => !prev)}
         onToggleKiosk={() => setIsKioskMode(true)}
       />
 
@@ -341,6 +346,18 @@ export default function App() {
         <WeeklyMenuModal
           isOpen={isMenuOpen}
           onClose={() => setIsMenuOpen(false)}
+          database={database}
+          onUpdateDatabase={handleUpdateDatabase}
+          activeKid={activeKid}
+          isParentMode={isParentMode}
+          onOpenGroceryList={() => setIsGroceryOpen(true)}
+        />
+      )}
+
+      {isGroceryOpen && (
+        <WeeklyGroceryModal
+          isOpen={isGroceryOpen}
+          onClose={() => setIsGroceryOpen(false)}
           database={database}
           onUpdateDatabase={handleUpdateDatabase}
           activeKid={activeKid}

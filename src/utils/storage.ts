@@ -1,6 +1,7 @@
 import { FamilyDatabase, KidProfile, ChoreCategory, ChoreItem, ChoreLog, RewardItem, RewardRedemption, AppSettings, CalendarEvent, DayWeather, FamilyGoal } from '../types';
 import { getInitialSeedEvents } from './calendar';
 import { DEFAULT_WEEKLY_MENU } from './menu';
+import { DEFAULT_WEEKLY_GROCERY_LIST } from './grocery';
 
 const STORAGE_KEY = 'chorequest_family_db_v1';
 
@@ -562,6 +563,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     },
   ],
   weeklyMenu: DEFAULT_WEEKLY_MENU,
+  weeklyGroceryList: DEFAULT_WEEKLY_GROCERY_LIST,
 };
 
 // Storage operations
@@ -593,6 +595,9 @@ export const loadDatabase = (): FamilyDatabase => {
     }
     if (!parsed.weeklyMenu || !parsed.weeklyMenu.days) {
       parsed.weeklyMenu = DEFAULT_WEEKLY_MENU;
+    }
+    if (!parsed.weeklyGroceryList || !parsed.weeklyGroceryList.items) {
+      parsed.weeklyGroceryList = DEFAULT_WEEKLY_GROCERY_LIST;
     }
     return parsed;
   } catch (err) {
@@ -645,6 +650,7 @@ export const importDatabaseJSON = (jsonString: string): FamilyDatabase => {
     familyGoal: parsed.familyGoal || DEFAULT_SEED_DATA.familyGoal,
     savedFamilyGoals: parsed.savedFamilyGoals || DEFAULT_SEED_DATA.savedFamilyGoals,
     weeklyMenu: parsed.weeklyMenu || DEFAULT_WEEKLY_MENU,
+    weeklyGroceryList: parsed.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST,
     lastBackupDate: new Date().toISOString(),
   };
 };

@@ -67,6 +67,207 @@ export const DAY_METADATA: Record<
 };
 
 export const RECIPE_PRESETS_DATABASE: Record<string, MealRecipe> = {
+  'Peanut Butter and Jelly Sandwich (PB&J)': {
+    prepTime: '3 mins',
+    cookTime: '0 mins',
+    servings: '2-4 sandwiches',
+    difficulty: 'Quick',
+    ingredients: [
+      '4-8 slices Soft sandwich bread (white, whole wheat, or sourdough)',
+      '4-6 tbsp Creamy or crunchy peanut butter (or sunflower seed / almond butter)',
+      '4-6 tbsp Strawberry, grape, or raspberry fruit jelly or jam',
+      'Optional: 1 sliced fresh banana, drizzle of honey, or pinch of cinnamon',
+      'Sides: Cold milk, crisp baby carrots, or fresh apple slices',
+    ],
+    instructions: [
+      'Lay bread slices out in pairs on a clean cutting board or plate.',
+      'Spread peanut butter evenly from edge to edge on one slice of each pair (spreading to the edges prevents the jelly from making the bread soggy!).',
+      'Spread fruit jelly or jam generously across the opposing bread slice.',
+      'Optional: Layer sliced bananas or a light drizzle of honey over the peanut butter.',
+      'Gently press the two bread slices together.',
+      'Cut diagonally into triangles or fun sandwich shapes, and serve with cold milk and crisp fruit!',
+    ],
+    substitutions: [
+      'Nut-Free / School Safe: Use sunflower seed butter (SunButter), soy nut butter, or cookie butter.',
+      'Gluten-Free: Use your favorite certified gluten-free sandwich bread.',
+      'Triple Decker: Add a third toasted bread slice in the center!',
+    ],
+    notes: 'A timeless family classic! Spreading peanut butter on both bread slices before adding jelly prevents sogginess if packing for later.',
+  },
+  'Deli Turkey, Ham & Cheddar Club Sandwiches': {
+    prepTime: '5 mins',
+    cookTime: '0 mins',
+    servings: '4 sandwiches',
+    difficulty: 'Quick',
+    ingredients: [
+      '8 slices Fresh bakery sandwich bread or hoagie rolls',
+      '1/2 lb Sliced deli roasted turkey breast or honey ham',
+      '8 slices Mild or sharp Cheddar cheese',
+      '4 crisp Romaine lettuce leaves & 1 large ripe tomato, sliced',
+      '3 tbsp Mayonnaise & 1 tbsp yellow or Dijon mustard',
+      'Dill pickle spears & crunchy kettle potato chips for serving',
+    ],
+    instructions: [
+      'Lay bread slices out on a clean board and spread mayonnaise and mustard across each slice.',
+      'Layer sliced turkey or ham, cheddar cheese, crisp lettuce, and seasoned tomato slices.',
+      'Top with matching bread slice, press gently, and slice diagonally into triangles.',
+      'Serve fresh with crunchy potato chips and crisp dill pickle spears!',
+    ],
+    substitutions: [
+      'Tortilla Wrap: Roll ingredients tightly inside a large flour or spinach tortilla and slice into pinwheels.',
+      'Vegetarian: Swap deli meat with sliced avocado, cucumber ribbons, and hummus.',
+    ],
+    notes: 'Easy 5-minute lunch or quick dinner with zero cooking required.',
+  },
+  'Homestyle Sloppy Joes on Toasted Buns': {
+    prepTime: '10 mins',
+    cookTime: '15 mins',
+    servings: '4-6 servings',
+    difficulty: 'Easy',
+    ingredients: [
+      '1.5 lbs Lean ground beef or ground turkey',
+      '1 small Yellow onion & 1/2 green bell pepper, finely minced',
+      '2 cloves Garlic, minced',
+      '1 cup Tomato sauce or ketchup',
+      '2 tbsp Brown sugar, 1 tbsp Worcestershire sauce, 1 tbsp yellow mustard',
+      '1 tsp Chili powder, sea salt, and cracked black pepper',
+      '6 Soft brioche hamburger buns, lightly toasted',
+    ],
+    instructions: [
+      'In a large skillet over medium-high heat, brown ground beef with minced onion and bell pepper for 6-8 minutes; drain excess fat.',
+      'Stir in garlic, tomato sauce/ketchup, brown sugar, Worcestershire sauce, mustard, and chili powder.',
+      'Simmer on medium-low heat for 8-10 minutes, stirring occasionally, until sauce is thick, rich, and glossy.',
+      'Spoon hearty scoops of warm Sloppy Joe mixture onto toasted buns and serve immediately with fries or coleslaw!',
+    ],
+    substitutions: [
+      'Plant-Based: Use canned brown lentils or plant-based ground meat.',
+      'Gluten-Free: Serve over baked potatoes or with gluten-free burger buns.',
+    ],
+    notes: 'Sweet, tangy, and beloved by kids of all ages!',
+  },
+  'Fluffy Buttermilk Pancakes (Breakfast-for-Dinner)': {
+    prepTime: '10 mins',
+    cookTime: '10 mins',
+    servings: '4 servings (8-12 pancakes)',
+    difficulty: 'Easy',
+    ingredients: [
+      '2 cups All-purpose flour',
+      '2 tbsp Sugar, 2 tsp baking powder, 1/2 tsp baking soda, 1/2 tsp salt',
+      '2 cups Buttermilk (or whole milk + 2 tbsp lemon juice)',
+      '2 large Eggs, beaten',
+      '4 tbsp Melted unsalted butter & 1 tsp pure vanilla extract',
+      'Toppings: Warm pure maple syrup, butter, fresh strawberries or blueberries, whipped cream',
+    ],
+    instructions: [
+      'In a large bowl, whisk flour, sugar, baking powder, baking soda, and salt.',
+      'In a separate bowl, whisk buttermilk, eggs, melted butter, and vanilla extract.',
+      'Pour wet ingredients into dry ingredients and gently fold together until just combined (small lumps are fine; do not overmix!).',
+      'Heat a lightly buttered nonstick skillet or griddle over medium heat (350°F).',
+      'Pour 1/4 cup batter per pancake. Cook for 2-3 minutes until bubbles pop on top and edges look set. Flip and cook 1-2 minutes until golden.',
+      'Stack high and serve hot with butter, warm maple syrup, and fresh berries!',
+    ],
+    substitutions: [
+      'Fun Mix-ins: Fold in 1/2 cup chocolate chips or fresh blueberries into the batter.',
+      'Gluten-Free: Use 1-to-1 gluten-free baking flour.',
+    ],
+    notes: 'Breakfast-for-dinner is always a top-voted family favorite on Friday or weekend nights!',
+  },
+  'Classic Hot Dogs & Crispy French Fries': {
+    prepTime: '5 mins',
+    cookTime: '10 mins',
+    servings: '4 servings',
+    difficulty: 'Quick',
+    ingredients: [
+      '8 Quality all-beef hot dogs or veggie dogs',
+      '8 Soft hot dog buns',
+      '1 bag Frozen french fries or tater tots',
+      'Toppings: Ketchup, yellow mustard, sweet pickle relish, diced onions, shredded cheddar cheese',
+    ],
+    instructions: [
+      'Bake or air-fry french fries at 425°F for 15-18 minutes until golden and crispy.',
+      'Grill, pan-sear in a skillet, or boil hot dogs for 5-7 minutes until plump and lightly charred.',
+      'Lightly warm or toast hot dog buns in a dry skillet or toaster.',
+      'Nest hot dogs into buns, load with your favorite condiments, and serve alongside hot crispy fries!',
+    ],
+    substitutions: [
+      'Veggie Dogs: Swap with plant-based jumbo veggie franks.',
+      'Chili Dogs: Top with a scoop of warm bean chili and melted cheddar cheese.',
+    ],
+    notes: 'Quick 15-minute dinner perfect for busy sports nights!',
+  },
+  'Cheesy Crispy Quesadillas with Salsa & Guac': {
+    prepTime: '5 mins',
+    cookTime: '10 mins',
+    servings: '4 servings',
+    difficulty: 'Quick',
+    ingredients: [
+      '8 Large flour tortillas',
+      '3 cups Shredded Monterey Jack and Cheddar cheese blend',
+      '1.5 cups Cooked shredded chicken, seasoned black beans, or carnitas (optional)',
+      '2 tbsp Butter for crisping',
+      'For dipping: Fresh salsa, cool sour cream, and guacamole',
+    ],
+    instructions: [
+      'Heat a large skillet or griddle over medium heat and melt 1/2 tsp butter.',
+      'Place a tortilla flat in the skillet, sprinkle cheese and optional chicken/black beans over one half.',
+      'Fold tortilla over into a half-moon shape.',
+      'Cook for 3-4 minutes per side, pressing gently with a spatula, until golden brown, crispy, and cheese is completely melted.',
+      'Slice into wedges with a pizza cutter and serve with salsa, sour cream, and guacamole!',
+    ],
+    substitutions: [
+      'Corn Tortillas: Use small corn tortillas for gluten-free mini quesadillas.',
+      'Extra Veggies: Add sautéed bell peppers and sweet corn inside.',
+    ],
+    notes: 'Super speedy dinner using leftover rotisserie chicken or pantry black beans.',
+  },
+  'Classic BLT (Bacon, Lettuce & Tomato) Sandwiches': {
+    prepTime: '5 mins',
+    cookTime: '10 mins',
+    servings: '4 servings',
+    difficulty: 'Quick',
+    ingredients: [
+      '8 slices Thick-cut smoked bacon, cooked crispy',
+      '8 slices Sourdough or country white sandwich bread, toasted',
+      '4-6 large Ripe tomato slices, seasoned with sea salt and black pepper',
+      'Crisp romaine or butterhead lettuce leaves',
+      '4 tbsp Real mayonnaise',
+      'Kettle potato chips & dill pickle spears',
+    ],
+    instructions: [
+      'Cook bacon in a skillet or 400°F oven until crispy; drain on paper towels.',
+      'Toast bread slices until golden brown.',
+      'Spread mayonnaise generously over toasted bread slices.',
+      'Layer crispy bacon strips, seasoned ripe tomato slices, and fresh lettuce leaves.',
+      'Top with second bread slice, cut in half diagonally with a serrated knife, and serve with chips and pickles!',
+    ],
+    substitutions: [
+      'Turkey Bacon: Use crispy turkey bacon for a leaner sandwich.',
+      'BLAT: Add ripe sliced avocado for a delicious twist!',
+    ],
+    notes: 'Crisp, smoky, and refreshing summer classic.',
+  },
+  'Crunchy Breakfast Cereal & Fresh Berries': {
+    prepTime: '2 mins',
+    cookTime: '0 mins',
+    servings: '2-4 servings',
+    difficulty: 'Quick',
+    ingredients: [
+      '2-4 cups Favorite cereal (Toasted oat loops, flakes, or granola)',
+      '2-4 cups Cold whole milk, oat milk, or almond milk',
+      '1 cup Fresh sliced strawberries, bananas, or blueberries',
+      'Optional: Slices of warm buttered toast or hard-boiled eggs',
+    ],
+    instructions: [
+      'Pour favorite cereal into family bowls.',
+      'Top with fresh sliced strawberries, bananas, or blueberries.',
+      'Pour ice-cold milk over the cereal right before eating for maximum crunch!',
+      'Enjoy with warm buttered toast or fresh fruit on the side.',
+    ],
+    substitutions: [
+      'Warm Oatmeal: Cook 1 cup rolled oats in 2 cups milk for 3 minutes for a hot cereal option.',
+    ],
+    notes: 'Quick, zero-fuss family comfort food for low-energy open nights.',
+  },
   'Creamy Garlic Chicken Alfredo Pasta': {
     prepTime: '15 mins',
     cookTime: '20 mins',
@@ -400,90 +601,689 @@ export const RECIPE_PRESETS_DATABASE: Record<string, MealRecipe> = {
     ],
     notes: 'Ready in under 20 minutes from start to finish!',
   },
+  'Gourmet 3-Cheese Grilled Cheese & Tomato Basil Soup': {
+    prepTime: '10 mins',
+    cookTime: '10 mins',
+    servings: '4 servings',
+    difficulty: 'Quick',
+    ingredients: [
+      '8 slices Sourdough or thick Texas toast bread',
+      '8 slices Sharp Cheddar, Gruyère or Fontina, and Provolone cheese',
+      '4 tbsp Salted butter, softened (or mayo for extra-crisp crust)',
+      '1/2 tsp Garlic powder',
+      'Tomato Soup: 1 can (28 oz) San Marzano crushed tomatoes, 1 cup vegetable broth, 1/3 cup heavy cream, 2 tbsp butter, fresh basil leaves, salt & pepper',
+    ],
+    instructions: [
+      'For the soup: In a medium pot, combine crushed tomatoes and broth. Simmer for 10 minutes. Stir in butter and heavy cream. Season with salt, pepper, and torn fresh basil. Blend with immersion blender until smooth.',
+      'For the grilled cheese: Butter one side of each bread slice generously and sprinkle lightly with garlic powder.',
+      'Place bread buttered-side-down in a skillet over medium-low heat.',
+      'Layer with sharp cheddar, fontina/gruyere, and provolone. Top with second bread slice, buttered-side-up.',
+      'Grill for 3-4 minutes per side, gently pressing with a spatula, until the bread is deeply golden, crispy, and the cheese is fully melted and stretchy.',
+      'Cut diagonally into triangles and serve hot for dipping into the velvety tomato basil soup!',
+    ],
+    substitutions: [
+      'Add-ins: Crisp bacon strips, sliced ripe tomatoes, or caramelized onions.',
+      'Gluten-Free: Use certified gluten-free sandwich bread.',
+      'Dairy-Free: Use plant-based butter and vegan cheddar shreds.',
+    ],
+    notes: 'A timeless family comfort hit! Mayo on the outside crust gives a magical golden crunch.',
+  },
+  'Crispy Baked Chicken Tenders & Sweet Potato Fries': {
+    prepTime: '15 mins',
+    cookTime: '18 mins',
+    servings: '4 servings',
+    difficulty: 'Easy',
+    ingredients: [
+      '1.5 lbs Chicken tenderloins',
+      '1.5 cups Panko breadcrumbs + 1/2 cup grated parmesan',
+      '2 Eggs, beaten with 2 tbsp milk',
+      '1/2 cup Flour seasoned with paprika, garlic powder, salt & pepper',
+      '1 bag Frozen sweet potato waffle fries or 2 fresh sweet potatoes, cut into wedges',
+      'Dipping Sauces: Honey mustard, ranch, and BBQ sauce',
+    ],
+    instructions: [
+      'Preheat oven or air-fryer to 425°F (220°C). Line baking sheet with parchment.',
+      'Set up 3 shallow bowls: 1) Flour & seasoning, 2) Beaten eggs, 3) Panko & parmesan.',
+      'Dredge chicken tenders in flour, dip into egg wash, then press firmly into panko crumbs.',
+      'Arrange tenders and sweet potato fries on the baking sheet in a single layer. Spray lightly with olive oil.',
+      'Bake for 16-18 minutes (flipping halfway) until chicken is 165°F and crust is crunchy golden brown.',
+      'Serve hot with a trio of honey mustard, ranch, and BBQ dipping sauces!',
+    ],
+    substitutions: [
+      'Gluten-Free: Use GF flour and gluten-free panko breadcrumbs.',
+    ],
+    notes: 'Kids can help with the 3-step dredging station as junior sous chefs!',
+  },
+  'Baja Fish or Black Bean Tacos': {
+    prepTime: '15 mins',
+    cookTime: '10 mins',
+    servings: '4-6 servings',
+    difficulty: 'Easy',
+    ingredients: [
+      '1.5 lbs White fish fillets (Cod, Halibut, or Tilapia) or 2 cans Black Beans',
+      '10-12 Small corn or flour tortillas',
+      'Baja Slaw: 2 cups shredded cabbage, 2 tbsp mayo, 1 tbsp lime juice, pinch of sugar and salt',
+      'Avocado Crema: 1 avocado blended with 1/3 cup sour cream, lime juice, and cilantro',
+      'Seasoning: 1 tsp cumin, 1 tsp chili powder, garlic powder, salt & lime wedges',
+    ],
+    instructions: [
+      'Season fish with cumin, chili powder, garlic powder, and salt.',
+      'Pan-sear fish in 1 tbsp olive oil over medium-high heat for 3-4 minutes per side until flaky and slightly charred.',
+      'Toss shredded cabbage with mayo, lime juice, and salt for the crunchy Baja slaw.',
+      'Warm tortillas on a dry skillet or over an open flame for 30 seconds.',
+      'Flake fish into tender chunks. Assemble tacos with fish, crunchy slaw, a drizzle of avocado crema, and fresh lime!',
+    ],
+    substitutions: [
+      'Vegetarian: Warm seasoned black beans and roasted sweet corn instead of fish.',
+    ],
+    notes: 'Crisp, light, and zesty summer favorite for Taco Tuesday!',
+  },
+  'One-Pot Creamy Pesto Tortellini': {
+    prepTime: '5 mins',
+    cookTime: '15 mins',
+    servings: '4-6 servings',
+    difficulty: 'Quick',
+    ingredients: [
+      '1 lb Refrigerated three-cheese tortellini',
+      '1/2 cup Basil pesto (jarred or fresh)',
+      '1 cup Heavy cream or half-and-half',
+      '1.5 cups Cherry tomatoes, halved',
+      '2 cups Fresh baby spinach',
+      '1/2 cup Freshly grated parmesan cheese',
+      '1 tbsp Olive oil & 2 cloves minced garlic',
+    ],
+    instructions: [
+      'Boil cheese tortellini in salted water for 3-4 minutes until tender; drain.',
+      'In the same warm pot, heat 1 tbsp olive oil and sauté minced garlic for 30 seconds.',
+      'Pour in heavy cream and basil pesto, whisking over low heat until smooth and warmed through.',
+      'Fold in cooked tortellini, halved cherry tomatoes, and fresh baby spinach. Stir until spinach wilts (about 2 minutes).',
+      'Stir in grated parmesan cheese and season with cracked black pepper. Serve with warm crusty garlic bread!',
+    ],
+    substitutions: [
+      'Add-in: Sliced grilled chicken or sautéed shrimp.',
+      'Nut-Free: Use nut-free pumpkin seed pesto.',
+    ],
+    notes: 'One single pot to wash and ready in only 15 minutes!',
+  },
+};
+
+export interface RecipeSearchResult {
+  recipe: MealRecipe;
+  matchedTitle: string;
+  suggestedSides?: string;
+  suggestedDessert?: string;
+  suggestedTheme?: string;
+  suggestedIcon?: string;
+  matchType: 'exact' | 'fuzzy' | 'custom';
+}
+
+/**
+ * High-precision recipe search engine.
+ * Takes user input query (e.g. "Grilled Cheese", "Tacos", "Chicken Alfredo") and
+ * searches the catalog or dynamically synthesizes a complete, detailed recipe.
+ */
+export const searchRecipeForDish = (query: string, currentTheme?: string): RecipeSearchResult => {
+  const trimmed = (query || '').trim();
+  if (!trimmed) {
+    return {
+      recipe: {
+        prepTime: '15 mins',
+        cookTime: '20 mins',
+        servings: '4-6 servings',
+        difficulty: 'Easy',
+        ingredients: ['1.5 lbs Main protein or pasta base', '2 cups Garden vegetables', '2 tbsp Butter or olive oil', 'Seasonings to taste'],
+        instructions: ['Preheat cooking surface.', 'Cook protein and veggies until tender.', 'Season and serve warm!'],
+      },
+      matchedTitle: 'Quick Family Dinner',
+      matchType: 'custom',
+    };
+  }
+
+  const lower = trimmed.toLowerCase();
+
+  // 1. Exact Match
+  for (const [key, recipe] of Object.entries(RECIPE_PRESETS_DATABASE)) {
+    if (key.toLowerCase() === lower) {
+      return {
+        recipe,
+        matchedTitle: key,
+        matchType: 'exact',
+      };
+    }
+  }
+
+  // 2. Specific keyword matches
+  // Peanut Butter and Jelly / PB&J / Nut Butters
+  if (
+    lower.includes('peanut butter') ||
+    lower.includes('pb&j') ||
+    lower.includes('pb & j') ||
+    lower.includes('pbj') ||
+    (lower.includes('jelly') && (lower.includes('bread') || lower.includes('sandwich'))) ||
+    lower === 'peanut butter' ||
+    lower === 'pb and j' ||
+    lower === 'peanut butter and jelly'
+  ) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Peanut Butter and Jelly Sandwich (PB&J)'],
+      matchedTitle: 'Peanut Butter and Jelly Sandwich (PB&J)',
+      suggestedSides: 'Crisp Baby Carrots, Sliced Apples & Cold Milk',
+      suggestedDessert: 'Chocolate Chip Cookie',
+      suggestedTheme: 'Casual Sandwich Night 🥪',
+      suggestedIcon: '🥪',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Pancakes & Breakfast-for-Dinner
+  if (lower.includes('pancake') || lower.includes('waffle') || lower.includes('french toast') || lower.includes('breakfast for dinner')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Fluffy Buttermilk Pancakes (Breakfast-for-Dinner)'],
+      matchedTitle: 'Fluffy Buttermilk Pancakes (Breakfast-for-Dinner)',
+      suggestedSides: 'Crispy Bacon Strips & Sliced Fresh Strawberries',
+      suggestedDessert: 'Warm Maple Doughnut Bites',
+      suggestedTheme: 'Breakfast-for-Dinner Night! 🥞',
+      suggestedIcon: '🥞',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Hot Dogs
+  if (lower.includes('hot dog') || lower.includes('hotdog') || lower.includes('corn dog') || lower.includes('frankfurter') || lower.includes('bratwurst')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Classic Hot Dogs & Crispy French Fries'],
+      matchedTitle: 'Classic Hot Dogs & Crispy French Fries',
+      suggestedSides: 'Crispy French Fries & Sweet Corn on the Cob',
+      suggestedDessert: 'Ice Cream Sandwiches',
+      suggestedTheme: 'Boardwalk Hot Dog Night 🌭',
+      suggestedIcon: '🌭',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Sloppy Joes
+  if (lower.includes('sloppy') || lower.includes('manwich')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Homestyle Sloppy Joes on Toasted Buns'],
+      matchedTitle: 'Homestyle Sloppy Joes on Toasted Buns',
+      suggestedSides: 'Crispy Tater Tots & Creamy Coleslaw',
+      suggestedDessert: 'Fudgy Brownie Bites',
+      suggestedTheme: 'Homestyle Sloppy Joe Night 🥪',
+      suggestedIcon: '🥪',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Quesadillas
+  if (lower.includes('quesadilla')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Cheesy Crispy Quesadillas with Salsa & Guac'],
+      matchedTitle: 'Cheesy Crispy Quesadillas with Salsa & Guac',
+      suggestedSides: 'Tortilla Chips, Salsa & Sweet Corn Salad',
+      suggestedDessert: 'Cinnamon Churro Sticks',
+      suggestedTheme: 'Cheesy Quesadilla Fiesta! 🧀',
+      suggestedIcon: '🧀',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // BLT Sandwiches
+  if (lower.includes('blt')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Classic BLT (Bacon, Lettuce & Tomato) Sandwiches'],
+      matchedTitle: 'Classic BLT (Bacon, Lettuce & Tomato) Sandwiches',
+      suggestedSides: 'Crunchy Kettle Potato Chips & Dill Pickles',
+      suggestedDessert: 'Fresh Watermelon Wedges',
+      suggestedTheme: 'Crispy BLT Sandwich Night 🥪',
+      suggestedIcon: '🥪',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Cold Deli Sandwiches & Clubs
+  if (lower.includes('deli') || lower.includes('turkey sandwich') || lower.includes('ham sandwich') || lower.includes('club sandwich') || lower.includes('sub sandwich') || lower.includes('hoagie')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Deli Turkey, Ham & Cheddar Club Sandwiches'],
+      matchedTitle: 'Deli Turkey, Ham & Cheddar Club Sandwiches',
+      suggestedSides: 'Crunchy Potato Chips & Crisp Pickle Spears',
+      suggestedDessert: 'Oatmeal Raisin Cookie',
+      suggestedTheme: 'Deli Club Sandwich Night 🥪',
+      suggestedIcon: '🥪',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Breakfast Cereal & Oatmeal
+  if (lower.includes('cereal') || lower.includes('oatmeal')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Crunchy Breakfast Cereal & Fresh Berries'],
+      matchedTitle: 'Crunchy Breakfast Cereal & Fresh Berries',
+      suggestedSides: 'Warm Buttered Toast & Sliced Bananas',
+      suggestedDessert: 'Fresh Berry Yogurt Parfait',
+      suggestedTheme: 'Cozy Cereal Bowl Night 🥣',
+      suggestedIcon: '🥣',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Grilled Cheese
+  if (lower.includes('grilled cheese') || (lower.includes('cheese') && lower.includes('sandwich'))) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Gourmet 3-Cheese Grilled Cheese & Tomato Basil Soup'],
+      matchedTitle: 'Gourmet 3-Cheese Grilled Cheese & Tomato Basil Soup',
+      suggestedSides: 'Creamy Tomato Basil Soup & Crispy Kettle Chips',
+      suggestedDessert: 'Chocolate Chip Cookie Bites',
+      suggestedTheme: 'Comfort Sandwich Night 🥪',
+      suggestedIcon: '🥪',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Chicken Tenders & Nuggets
+  if (lower.includes('tender') || lower.includes('nugget') || (lower.includes('chicken') && lower.includes('finger'))) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Crispy Baked Chicken Tenders & Sweet Potato Fries'],
+      matchedTitle: 'Crispy Baked Chicken Tenders & Sweet Potato Fries',
+      suggestedSides: 'Crispy Sweet Potato Fries & Fresh Cucumber Slices',
+      suggestedDessert: 'Fruit Popsicles',
+      suggestedTheme: 'Kids\' Choice Crispy Night 🍗',
+      suggestedIcon: '🍗',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Tortellini & Pesto
+  if (lower.includes('tortellini') || lower.includes('pesto')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['One-Pot Creamy Pesto Tortellini'],
+      matchedTitle: 'One-Pot Creamy Pesto Tortellini',
+      suggestedSides: 'Warm Garlic Bread & Blistered Cherry Tomatoes',
+      suggestedDessert: 'Lemon Sorbet',
+      suggestedTheme: 'Italian Quick Pasta Night 🥟',
+      suggestedIcon: '🥟',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Fish Tacos
+  if (lower.includes('fish taco') || lower.includes('baja') || lower.includes('shrimp taco')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Baja Fish or Black Bean Tacos'],
+      matchedTitle: 'Baja Fish or Black Bean Tacos',
+      suggestedSides: 'Crunchy Baja Lime Slaw, Cilantro Rice & Black Beans',
+      suggestedDessert: 'Cinnamon Sugar Churros',
+      suggestedTheme: 'Baja Taco Fiesta! 🌮',
+      suggestedIcon: '🌮',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Tacos, Fajitas & Burritos
+  if (lower.includes('taco') || lower.includes('fajita') || lower.includes('burrito') || lower.includes('enchilada') || lower.includes('mexican')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Loaded Build-Your-Own Taco Bar'],
+      matchedTitle: 'Loaded Build-Your-Own Taco Bar',
+      suggestedSides: 'Cilantro Lime Rice, Black Beans & Fresh Guacamole',
+      suggestedDessert: 'Warm Cinnamon Sugar Churro Bites',
+      suggestedTheme: 'Taco Tuesday Fiesta! 🌮',
+      suggestedIcon: '🌮',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Pizza & Flatbreads
+  if (lower.includes('pizza') || lower.includes('flatbread') || lower.includes('calzone')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Brick-Oven Style Pepperoni & Cheese Pizzas'],
+      matchedTitle: 'Brick-Oven Style Pepperoni & Cheese Pizzas',
+      suggestedSides: 'Crispy Veggie Sticks with Ranch & Garlic Breadsticks',
+      suggestedDessert: 'Ice Cream Sundaes with Sprinkles',
+      suggestedTheme: 'Pizza & Movie Night! 🍕🎬',
+      suggestedIcon: '🍕',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Burgers & Sliders
+  if (lower.includes('burger') || lower.includes('slider') || lower.includes('smashburger')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Gourmet Cheddar Smash Burgers'],
+      matchedTitle: 'Gourmet Cheddar Smash Burgers',
+      suggestedSides: 'Crispy Sweet Potato Fries & Sweet Corn on the Cob',
+      suggestedDessert: 'All-Natural Fruit Pops',
+      suggestedTheme: 'Grill & Chill Smashburgers 🍔',
+      suggestedIcon: '🍔',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Alfredo & Pasta
+  if (lower.includes('alfredo') || lower.includes('pasta') || lower.includes('spaghetti') || lower.includes('lasagna') || lower.includes('carbonara') || lower.includes('ziti')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Creamy Garlic Chicken Alfredo Pasta'],
+      matchedTitle: 'Creamy Garlic Chicken Alfredo Pasta',
+      suggestedSides: 'Toasted Garlic Bread & Garden Caesar Salad',
+      suggestedDessert: 'Fresh Strawberry Bowl',
+      suggestedTheme: 'Italian Comfort Night 🍝',
+      suggestedIcon: '🍝',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Mac & Cheese
+  if (lower.includes('mac') || lower.includes('macaroni') || (lower.includes('cheese') && lower.includes('pasta'))) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Macaroni & Cheese with Crispy Panko'],
+      matchedTitle: 'Macaroni & Cheese with Crispy Panko',
+      suggestedSides: 'Steamed Broccoli Florets & Cinnamon Applesauce',
+      suggestedDessert: 'Warm Chocolate Chip Cookies',
+      suggestedTheme: 'Comfort Cheese Feast 🧀',
+      suggestedIcon: '🧀',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // BBQ & Pulled Pork
+  if (lower.includes('bbq') || lower.includes('pulled pork') || lower.includes('ribs') || lower.includes('brisket')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Tender Pulled Pork / BBQ Jackfruit Sandwiches'],
+      matchedTitle: 'Tender Pulled Pork / BBQ Jackfruit Sandwiches',
+      suggestedSides: 'Creamy Homestyle Coleslaw & Baked Brown Sugar Beans',
+      suggestedDessert: 'Warm Dutch Apple Pie Slice',
+      suggestedTheme: 'Weekend Slow-Cooker BBQ 🥪',
+      suggestedIcon: '🥪',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Salmon & Teriyaki
+  if (lower.includes('salmon') || lower.includes('teriyaki') || lower.includes('tofu') || lower.includes('stir-fry') || lower.includes('rice bowl') || lower.includes('poke')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Teriyaki Salmon & Crispy Tofu Bowls'],
+      matchedTitle: 'Teriyaki Salmon & Crispy Tofu Bowls',
+      suggestedSides: 'Steamed Jasmine Rice & Garlic Butter Edamame',
+      suggestedDessert: 'Mini Mochi Ice Cream Treats',
+      suggestedTheme: 'Stir-Fry & Noodle Bowls 🥢',
+      suggestedIcon: '🍣',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Shepherd's Pie / Stews / Pot Roast
+  if (lower.includes('pot roast') || lower.includes('shepherd') || lower.includes('stew') || lower.includes('pot pie') || lower.includes('beef stew')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Classic Shepherd\'s Pie with Creamy Potato Crust'],
+      matchedTitle: 'Classic Shepherd\'s Pie with Creamy Potato Crust',
+      suggestedSides: 'Honey Glazed Baby Carrots & Buttered Sweet Peas',
+      suggestedDessert: 'Warm Berry Crumble',
+      suggestedTheme: 'Sunday Comfort Food Feast 🍲',
+      suggestedIcon: '🥧',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Roast Chicken
+  if (lower.includes('chicken') || lower.includes('roast') || lower.includes('drumstick') || lower.includes('thigh')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Herb Roasted Chicken & Golden Crispy Potatoes'],
+      matchedTitle: 'Herb Roasted Chicken & Golden Crispy Potatoes',
+      suggestedSides: 'Buttery Golden Mashed Potatoes & Honey Glazed Carrots',
+      suggestedDessert: 'Warm Chocolate Chip Cookies',
+      suggestedTheme: 'Sunday Homestyle Roast 🍗',
+      suggestedIcon: '🍗',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // 3. Smart Category-Based Dynamic Generator for Any Custom Dish
+  // A. Cold Sandwiches, Wraps, Spreads & No-Cook Meals
+  if (
+    lower.includes('sandwich') ||
+    lower.includes('wrap') ||
+    lower.includes('spread') ||
+    lower.includes('roll-up') ||
+    lower.includes('toast') ||
+    lower.includes('bagel') ||
+    lower.includes('sub') ||
+    lower.includes('hoagie') ||
+    lower.includes('pita') ||
+    lower.includes('butter') ||
+    lower.includes('jam') ||
+    lower.includes('jelly') ||
+    lower.includes('nutella')
+  ) {
+    const coldSandwichRecipe: MealRecipe = {
+      prepTime: '5 mins',
+      cookTime: '0 mins',
+      servings: '2-4 servings',
+      difficulty: 'Quick',
+      ingredients: [
+        `4-8 slices Fresh sandwich bread, rolls, or wraps for ${trimmed}`,
+        `1-2 cups Main filling, spread, or deli protein for ${trimmed}`,
+        'Fresh crisp lettuce, sliced ripe tomatoes, or fruit slices (as appropriate)',
+        '2-4 tbsp Condiments or sweet spreads (mayo, mustard, butter, or jelly)',
+        'Sides: Crunchy kettle chips, baby carrots, or fresh fruit slices',
+      ],
+      instructions: [
+        `Lay bread slices, rolls, or tortillas out flat on a clean cutting board or plate.`,
+        'Spread condiments or spreads evenly across bread surfaces from edge to edge.',
+        `Layer the main filling for ${trimmed} and fresh toppings evenly across the base slice.`,
+        'Close with the top bread slice, press gently, and slice diagonally into triangles or halves.',
+        'Serve fresh and cool with crisp family sides and refreshing drinks!',
+      ],
+      substitutions: [
+        'Gluten-Free: Use certified gluten-free sandwich bread or large lettuce wraps.',
+        'Plant-Based: Use dairy-free spreads and plant-based protein or nut/seed butters.',
+      ],
+      notes: `Quick no-cook preparation tailored for ${trimmed}. Perfect for easy weeknights and lunches!`,
+    };
+
+    return {
+      recipe: coldSandwichRecipe,
+      matchedTitle: trimmed,
+      suggestedSides: 'Crunchy Potato Chips, Crisp Baby Carrots & Fresh Fruit',
+      suggestedDessert: 'Soft-Baked Chocolate Chip Cookies',
+      suggestedTheme: currentTheme || `${trimmed} Sandwich Night 🥪`,
+      suggestedIcon: '🥪',
+      matchType: 'custom',
+    };
+  }
+
+  // B. Fresh Salads & Cold Bowls
+  if (lower.includes('salad') || lower.includes('greens') || lower.includes('cobb') || lower.includes('caesar') || lower.includes('coleslaw')) {
+    const saladRecipe: MealRecipe = {
+      prepTime: '10 mins',
+      cookTime: '0 mins',
+      servings: '4 servings',
+      difficulty: 'Quick',
+      ingredients: [
+        '6 cups Fresh crisp greens (romaine, baby spinach, or mixed spring greens)',
+        `1.5 cups Prepared protein or topping for ${trimmed}`,
+        '1 cup Cherry tomatoes, cucumbers, bell peppers, or shredded carrots',
+        '1/2 cup Shredded cheese, nuts, seeds, or seasoned croutons',
+        '1/3 cup Family favorite dressing (ranch, vinaigrette, or Caesar)',
+      ],
+      instructions: [
+        'Wash and dry salad greens thoroughly; chop into bite-sized pieces.',
+        'In a large salad bowl, layer greens with fresh vegetables and toppings.',
+        `Add the main protein/toppings for ${trimmed}.`,
+        'Drizzle lightly with dressing just before serving, or serve dressing on the side.',
+        'Toss gently with salad tongs and garnish with croutons and freshly cracked pepper!',
+      ],
+      substitutions: [
+        'Dairy-Free: Use an olive oil & lemon vinaigrette and omit cheese.',
+      ],
+      notes: `Crisp, vibrant, and refreshing ${trimmed} salad ready in 10 minutes.`,
+    };
+
+    return {
+      recipe: saladRecipe,
+      matchedTitle: trimmed,
+      suggestedSides: 'Warm Garlic Breadsticks or Sourdough Rolls',
+      suggestedDessert: 'Fresh Seasonal Fruit Bowl',
+      suggestedTheme: currentTheme || `${trimmed} Salad Night 🥗`,
+      suggestedIcon: '🥗',
+      matchType: 'custom',
+    };
+  }
+
+  // C. Soups, Chilis & Stews
+  if (lower.includes('soup') || lower.includes('chili') || lower.includes('chowder') || lower.includes('stew') || lower.includes('bisque') || lower.includes('broth')) {
+    const soupRecipe: MealRecipe = {
+      prepTime: '10 mins',
+      cookTime: '25 mins',
+      servings: '4-6 servings',
+      difficulty: 'Easy',
+      ingredients: [
+        `1.5 lbs Base ingredients or protein for ${trimmed}`,
+        '4 cups Savory broth (vegetable, chicken, or beef stock)',
+        '1 diced onion, 2 cloves garlic & 1 cup diced celery and carrots',
+        '2 tbsp Butter or olive oil & 1 tsp herbs (thyme, oregano, bay leaf)',
+        'Salt and cracked black pepper to taste',
+        'Crusty artisan bread or oyster crackers for dipping',
+      ],
+      instructions: [
+        'Melt butter or warm olive oil in a large heavy soup pot over medium heat.',
+        'Add diced onions, garlic, celery, and carrots; sauté for 5 minutes until soft and fragrant.',
+        `Add main ingredients for ${trimmed}, pour in broth, and stir in herbs, salt, and pepper.`,
+        'Bring to a boil, then reduce heat to low, cover with lid, and simmer gently for 20 minutes.',
+        'Ladle piping hot into soup bowls and serve with warm crusty bread for dipping!',
+      ],
+      substitutions: [
+        'Gluten-Free: Ensure broth is certified gluten-free and serve with GF crackers.',
+      ],
+      notes: `Cozy, warming, and comforting one-pot ${trimmed}!`,
+    };
+
+    return {
+      recipe: soupRecipe,
+      matchedTitle: trimmed,
+      suggestedSides: 'Warm Crusty Sourdough Bread & Buttered Sweet Corn',
+      suggestedDessert: 'Cinnamon Apple Crisp',
+      suggestedTheme: currentTheme || `Cozy ${trimmed} Soup Night 🍲`,
+      suggestedIcon: '🍲',
+      matchType: 'custom',
+    };
+  }
+
+  // D. Pasta, Macaroni & Noodles
+  if (lower.includes('pasta') || lower.includes('noodle') || lower.includes('penne') || lower.includes('linguine') || lower.includes('spaghetti') || lower.includes('ravioli') || lower.includes('ramen')) {
+    const pastaRecipe: MealRecipe = {
+      prepTime: '10 mins',
+      cookTime: '15 mins',
+      servings: '4-6 servings',
+      difficulty: 'Easy',
+      ingredients: [
+        '1 lb Quality pasta or noodles',
+        `2 cups Savory sauce or protein base for ${trimmed}`,
+        '2 tbsp Olive oil or butter & 2 cloves minced garlic',
+        '1/2 cup Freshly grated Parmesan cheese',
+        'Fresh herbs (basil or parsley), sea salt & black pepper',
+      ],
+      instructions: [
+        'Bring a large pot of salted water to a rolling boil. Cook pasta al dente according to package instructions; reserve 1/2 cup pasta water, then drain.',
+        `In a large warm skillet, prepare and heat the sauce/protein for ${trimmed} with garlic and olive oil.`,
+        'Toss the drained pasta directly into the sauce, splashing in reserved pasta water as needed for a glossy coating.',
+        'Simmer together for 1-2 minutes so pasta absorbs flavor.',
+        'Garnish with freshly grated Parmesan and chopped herbs; serve warm with garlic bread!',
+      ],
+      substitutions: [
+        'Gluten-Free: Swap with 1-to-1 certified gluten-free pasta.',
+      ],
+      notes: `Delicious Italian-style ${trimmed} loved by the entire family!`,
+    };
+
+    return {
+      recipe: pastaRecipe,
+      matchedTitle: trimmed,
+      suggestedSides: 'Toasted Garlic Bread & Crisp Caesar Salad',
+      suggestedDessert: 'Italian Gelato or Strawberry Bites',
+      suggestedTheme: currentTheme || `${trimmed} Pasta Night 🍝`,
+      suggestedIcon: '🍝',
+      matchType: 'custom',
+    };
+  }
+
+  // E. Mexican, Tacos & Bowls
+  if (lower.includes('taco') || lower.includes('burrito') || lower.includes('fajita') || lower.includes('enchilada') || lower.includes('mexican') || lower.includes('nacho')) {
+    const mexicanRecipe: MealRecipe = {
+      prepTime: '10 mins',
+      cookTime: '12 mins',
+      servings: '4-6 servings',
+      difficulty: 'Easy',
+      ingredients: [
+        `1.5 lbs Seasoned protein, beans, or filling for ${trimmed}`,
+        '8-10 Warm tortillas or crispy corn shells',
+        '1.5 cups Shredded Mexican blend or Cheddar cheese',
+        'Fresh toppings: Shredded lettuce, diced ripe tomatoes, sour cream & salsa',
+        'Fresh lime wedges & chopped cilantro',
+      ],
+      instructions: [
+        `Cook and season the main filling for ${trimmed} in a skillet over medium heat until savory and heated through.`,
+        'Warm tortillas or taco shells in a dry skillet or low oven for 2 minutes.',
+        'Set out all toppings in small colorful family bowls.',
+        'Assemble tacos/burritos with filling, cheese, crisp vegetables, and a spoonful of salsa.',
+        'Squeeze fresh lime on top and enjoy warm with family sides!',
+      ],
+      substitutions: [
+        'Vegetarian: Use seasoned black beans, pinto beans, or roasted sweet potatoes.',
+      ],
+      notes: `Festive and customizable ${trimmed} where everyone builds their own plate!`,
+    };
+
+    return {
+      recipe: mexicanRecipe,
+      matchedTitle: trimmed,
+      suggestedSides: 'Cilantro Lime Rice, Black Beans & Tortilla Chips with Guacamole',
+      suggestedDessert: 'Cinnamon Sugar Churro Bites',
+      suggestedTheme: currentTheme || `${trimmed} Fiesta! 🌮`,
+      suggestedIcon: '🌮',
+      matchType: 'custom',
+    };
+  }
+
+  // F. General Hot Skillet / Oven Dinner
+  const dynamicRecipe: MealRecipe = {
+    prepTime: '12 mins',
+    cookTime: '18 mins',
+    servings: '4-6 servings',
+    difficulty: 'Easy',
+    ingredients: [
+      `1.5 lbs Main ingredients or protein for ${trimmed}`,
+      '2 cups Choice of fresh vegetables (broccoli, carrots, green beans, or sweet peas)',
+      '2 tbsp Butter or olive oil',
+      'Seasoning blend: 1 tsp garlic powder, sea salt, black pepper, and herbs to taste',
+      'Complimentary sauce, gravy, or pan juices to coat',
+    ],
+    instructions: [
+      `Prepare ingredients for ${trimmed}.`,
+      'Warm butter or olive oil in a skillet over medium heat or preheat oven to 400°F.',
+      `Cook the main dish for ${trimmed} with seasonings until tender, flavorful, and cooked through.`,
+      'Steam or roast side vegetables until tender-crisp.',
+      'Plate warm, drizzle with pan sauce, and serve with family favorite side dishes!',
+    ],
+    substitutions: [
+      'Dietary Adjustments: Check all seasonings and sauces for allergens as needed.',
+    ],
+    notes: `Custom recipe synthesized for ${trimmed}. Adjust seasonings to match your family\'s taste!`,
+  };
+
+  return {
+    recipe: dynamicRecipe,
+    matchedTitle: trimmed,
+    suggestedSides: 'Garden Green Salad & Buttery Dinner Rolls',
+    suggestedDessert: 'Fresh Seasonal Fruit & Warm Cookies',
+    suggestedTheme: currentTheme || `${trimmed} Family Night 🍽️`,
+    suggestedIcon: '🍲',
+    matchType: 'custom',
+  };
 };
 
 /**
  * Intelligent helper to provide a step-by-step comprehensible recipe for any dish title.
  */
 export const getRecipeForDish = (dishTitle: string, theme?: string): MealRecipe => {
-  if (!dishTitle) {
-    return {
-      prepTime: '15 mins',
-      cookTime: '20 mins',
-      servings: '4-6 servings',
-      difficulty: 'Easy',
-      ingredients: ['1 lb Main protein or pasta', '2 cups Garden vegetables', '2 tbsp Olive oil or butter', 'Seasonings to taste'],
-      instructions: ['Prep ingredients and preheat cooking surface.', 'Cook protein and veggies until tender.', 'Season and serve with favorite family sides!'],
-    };
-  }
-
-  // Exact match
-  if (RECIPE_PRESETS_DATABASE[dishTitle]) {
-    return RECIPE_PRESETS_DATABASE[dishTitle];
-  }
-
-  // Fuzzy match
-  const lower = dishTitle.toLowerCase();
-  for (const [key, recipe] of Object.entries(RECIPE_PRESETS_DATABASE)) {
-    if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) {
-      return recipe;
-    }
-  }
-
-  if (lower.includes('taco') || lower.includes('fajita') || lower.includes('quesadilla') || lower.includes('mexican')) {
-    return RECIPE_PRESETS_DATABASE['Loaded Build-Your-Own Taco Bar'];
-  }
-  if (lower.includes('pizza') || lower.includes('flatbread') || lower.includes('calzone')) {
-    return RECIPE_PRESETS_DATABASE['Brick-Oven Style Pepperoni & Cheese Pizzas'];
-  }
-  if (lower.includes('burger') || lower.includes('slider') || lower.includes('patty')) {
-    return RECIPE_PRESETS_DATABASE['Gourmet Cheddar Smash Burgers'];
-  }
-  if (lower.includes('pasta') || lower.includes('alfredo') || lower.includes('spaghetti') || lower.includes('lasagna')) {
-    return RECIPE_PRESETS_DATABASE['Creamy Garlic Chicken Alfredo Pasta'];
-  }
-  if (lower.includes('mac') || lower.includes('cheese')) {
-    return RECIPE_PRESETS_DATABASE['Macaroni & Cheese with Crispy Panko'];
-  }
-  if (lower.includes('bbq') || lower.includes('pork') || lower.includes('sandwich')) {
-    return RECIPE_PRESETS_DATABASE['Tender Pulled Pork / BBQ Jackfruit Sandwiches'];
-  }
-  if (lower.includes('salmon') || lower.includes('teriyaki') || lower.includes('stir-fry') || lower.includes('rice bowl')) {
-    return RECIPE_PRESETS_DATABASE['Teriyaki Salmon & Crispy Tofu Bowls'];
-  }
-  if (lower.includes('chicken') || lower.includes('roast') || lower.includes('poultry')) {
-    return RECIPE_PRESETS_DATABASE['Herb Roasted Chicken & Golden Crispy Potatoes'];
-  }
-  if (lower.includes('stew') || lower.includes('pot roast') || lower.includes('pie') || lower.includes('soup')) {
-    return RECIPE_PRESETS_DATABASE['Classic Shepherd\'s Pie with Creamy Potato Crust'];
-  }
-
-  // Default dynamic generated recipe
-  return {
-    prepTime: '15 mins',
-    cookTime: '25 mins',
-    servings: '4-6 servings',
-    difficulty: 'Easy',
-    ingredients: [
-      `1.5 lbs Main protein or base for ${dishTitle}`,
-      '2 cups Fresh vegetables (onions, bell peppers, broccoli, or carrots)',
-      '2 tbsp Olive oil or butter',
-      'Seasonings: 1 tsp garlic powder, sea salt, black pepper, and herbs to taste',
-      'Fresh garnishes (parsley, cheese, or lemon wedges)',
-    ],
-    instructions: [
-      `Preheat stove, oven, or grill to appropriate cooking temperature.`,
-      `Wash and slice vegetables; season protein with salt, pepper, and herbs.`,
-      `Cook protein and aromatics in a skillet or baking sheet until golden and thoroughly cooked.`,
-      `Incorporate sauces and sides, stirring well to combine flavors.`,
-      `Garnish with fresh herbs or cheese and serve warm at the family dinner table!`,
-    ],
-    substitutions: [
-      'Gluten-Free: Ensure all seasonings and grain sides are certified GF.',
-      'Vegetarian: Substitute protein with tofu, beans, or hearty mushrooms.',
-    ],
-    notes: `Custom recipe created for ${dishTitle}. Edit any ingredients or steps to match your family pantry!`,
-  };
+  return searchRecipeForDish(dishTitle, theme).recipe;
 };
 
 export const DEFAULT_WEEKLY_MENU: WeeklyDinnerMenu = {

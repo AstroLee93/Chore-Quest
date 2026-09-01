@@ -14,8 +14,8 @@ let lastKnownSignature = '';
 
 function computeDatabaseSignature(db: FamilyDatabase): string {
   if (!db) return '';
-  // Lightweight hash signature from kids, chores count, logs length, settings, and events
-  return `${db.kids?.map(k => `${k.id}_${k.stars}_${k.streakDays}`).join('|')}#${db.chores?.length}#${db.logs?.length}_${db.logs?.[db.logs.length - 1]?.id || ''}#${db.events?.length || 0}#${db.settings?.parentPin}_${db.settings?.soundEnabled}_${db.settings?.kioskTheme}`;
+  // Lightweight hash signature from kids, chores count, logs length, settings, events, and weeklyMenu
+  return `${db.kids?.map(k => `${k.id}_${k.stars}_${k.streakDays}`).join('|')}#${db.chores?.length}#${db.logs?.length}_${db.logs?.[db.logs.length - 1]?.id || ''}#${db.events?.length || 0}#${db.weeklyMenu?.lastUpdated || ''}#${db.settings?.parentPin}_${db.settings?.soundEnabled}_${db.settings?.kioskTheme}`;
 }
 
 // Fetch full database from backend server with signature verification

@@ -23,6 +23,8 @@ import {
   ChevronRight,
   Share2,
   Printer,
+  Search,
+  AlertTriangle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -40,6 +42,7 @@ import {
   DEFAULT_WEEKLY_MENU,
   getCurrentDayOfWeekKey,
   getMealPresets,
+  searchRecipeForDish,
 } from '../utils/menu';
 import { getTodayDateString, formatDateDisplay } from '../utils/storage';
 import { sound } from '../utils/sound';
@@ -84,8 +87,14 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
   const [suggestionDish, setSuggestionDish] = useState<string>('');
   const [suggestionIcon, setSuggestionIcon] = useState<string>('🍲');
 
-  // Recipe Modal State
+  // Recipe Modal State & Search Feedback
   const [isRecipeModalOpen, setIsRecipeModalOpen] = useState<boolean>(false);
+  const [importRecipeFeedback, setImportRecipeFeedback] = useState<string | null>(null);
+
+  // Delete / Clear Confirmation States
+  const [deleteConfirmDay, setDeleteConfirmDay] = useState<DayOfWeekKey | null>(null);
+  const [showDeleteWeekConfirm, setShowDeleteWeekConfirm] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const menu: WeeklyDinnerMenu = database.weeklyMenu || DEFAULT_WEEKLY_MENU;
   const currentPlan: DailyDinnerPlan =
@@ -345,6 +354,132 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
     });
   };
 
+  // --- Delete / Clear Specific Day Menu ---
+  const handleDeleteDay = (dayKey: DayOfWeekKey) => {
+    sound.playTap();
+    const emptyDay: DailyDinnerPlan = {
+      dayOfWeek: dayKey,
+      theme: 'Unplanned / Open Night 🍽️',
+      mainDish: 'Unplanned / Open Night',
+      sideDishes: '',
+      dessert: '',
+      preparedBy: 'Family Kitchen',
+      icon: '🍽️',
+      notes: '',
+      votingEnabled: false,
+      votingOptions: [],
+      suggestions: [],
+      recipe: undefined,
+      lockedByParent: false,
+    };
+
+    const updatedDays = {
+      ...menu.days,
+      [dayKey]: emptyDay,
+    };
+
+    onUpdateDatabase({
+      ...database,
+      weeklyMenu: {
+        ...menu,
+        days: updatedDays,
+        lastUpdated: new Date().toISOString(),
+      },
+    });
+
+    if (isEditingCurrentDay && selectedDay === dayKey) {
+      setParentEditForm(emptyDay);
+    }
+    setDeleteConfirmDay(null);
+    setToastMessage(`Cleared ${DAY_METADATA[dayKey].label}'s dinner menu 🗑️`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // --- Delete / Clear Full Week Menu ---
+  const handleClearFullWeek = () => {
+    sound.playTap();
+    const clearedDays = {} as Record<DayOfWeekKey, DailyDinnerPlan>;
+
+    DAYS_OF_WEEK_ORDER.forEach((dayKey) => {
+      clearedDays[dayKey] = {
+        dayOfWeek: dayKey,
+        theme: 'Unplanned / Open Night 🍽️',
+        mainDish: 'Unplanned / Open Night',
+        sideDishes: '',
+        dessert: '',
+        preparedBy: 'Family Kitchen',
+        icon: '🍽️',
+        notes: '',
+        votingEnabled: false,
+        votingOptions: [],
+        suggestions: [],
+        recipe: undefined,
+        lockedByParent: false,
+      };
+    });
+
+    onUpdateDatabase({
+      ...database,
+      weeklyMenu: {
+        ...menu,
+        days: clearedDays,
+        title: 'Family Dinner Menu',
+        lastUpdated: new Date().toISOString(),
+      },
+    });
+
+    if (isEditingCurrentDay) {
+      setParentEditForm(clearedDays[selectedDay]);
+    }
+
+    setShowDeleteWeekConfirm(false);
+    setToastMessage('Cleared full week dinner menu 🗑️');
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // --- Import Recipe from Dish Title Search ---
+  const handleImportRecipeFromDishTitle = () => {
+    if (!parentEditForm || !parentEditForm.mainDish.trim()) return;
+
+    sound.playStarEarned();
+    confetti({
+      particleCount: 40,
+      spread: 60,
+      origin: { y: 0.6 },
+      colors: ['#f59e0b', '#fbbf24', '#10b981', '#3b82f6'],
+    });
+
+    const searchResult = searchRecipeForDish(parentEditForm.mainDish, parentEditForm.theme);
+
+    const updatedForm: DailyDinnerPlan = {
+      ...parentEditForm,
+      recipe: searchResult.recipe,
+      sideDishes:
+        !parentEditForm.sideDishes || parentEditForm.sideDishes.trim() === ''
+          ? searchResult.suggestedSides || parentEditForm.sideDishes
+          : parentEditForm.sideDishes,
+      dessert:
+        !parentEditForm.dessert || parentEditForm.dessert.trim() === ''
+          ? searchResult.suggestedDessert || parentEditForm.dessert
+          : parentEditForm.dessert,
+      theme:
+        !parentEditForm.theme ||
+        parentEditForm.theme.includes('Unplanned') ||
+        parentEditForm.theme === DAY_METADATA[selectedDay].defaultTheme
+          ? searchResult.suggestedTheme || parentEditForm.theme
+          : parentEditForm.theme,
+      icon:
+        !parentEditForm.icon || parentEditForm.icon === '🍽️'
+          ? searchResult.suggestedIcon || parentEditForm.icon
+          : parentEditForm.icon,
+    };
+
+    setParentEditForm(updatedForm);
+    setImportRecipeFeedback(
+      `Recipe imported for "${searchResult.matchedTitle}"! (${searchResult.recipe.prepTime} prep, ${searchResult.recipe.ingredients.length} ingredients)`
+    );
+  };
+
   // --- Parent: Load Preset Menu ---
   const handleApplyPreset = (preset: ReturnType<typeof getMealPresets>[0]) => {
     sound.playChoreComplete();
@@ -462,6 +597,22 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
               <span className="hidden md:inline">Presets</span>
+            </button>
+
+            {/* Boxed in Red X - Clear/Delete Entire Week Dinner Menu */}
+            <button
+              id="btn-delete-full-week-menu"
+              onClick={() => {
+                sound.playTap();
+                setShowDeleteWeekConfirm(true);
+              }}
+              className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-rose-400 hover:border-rose-600 text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+              title="Delete / Clear entire week's dinner menu"
+            >
+              <div className="w-5 h-5 rounded-md border border-rose-600 bg-rose-600 text-white flex items-center justify-center shadow-xs">
+                <X className="w-3.5 h-3.5 stroke-[3]" />
+              </div>
+              <span className="hidden lg:inline">Clear Week</span>
             </button>
 
             {/* Close Button */}
@@ -597,8 +748,23 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                         </div>
                       )}
 
+                      {/* Boxed in Red X delete button for this day */}
+                      <button
+                        type="button"
+                        id={`btn-delete-grid-day-${dayKey}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          sound.playTap();
+                          setDeleteConfirmDay(dayKey);
+                        }}
+                        title={`Delete / Clear ${meta.label}'s dinner menu`}
+                        className={`absolute ${isToday ? 'top-3 right-20' : 'top-3 right-3'} w-7 h-7 rounded-lg border-2 border-rose-500 bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-90 z-10 group`}
+                      >
+                        <X className="w-4 h-4 stroke-[3] group-hover:scale-110 transition-transform" />
+                      </button>
+
                       <div>
-                        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                        <div className="flex items-center gap-2 pb-2 border-b border-slate-100 pr-8">
                           <span className="text-2xl">{plan.icon || meta.emoji}</span>
                           <div>
                             <h3 className="font-black text-sm text-slate-900">{meta.label}</h3>
@@ -673,7 +839,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                   </div>
                 </div>
 
-                {/* Recipe Button & Edit Button for Parents */}
+                {/* Recipe Button, Edit Button & Boxed in Red X Delete Button */}
                 <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
                   {/* View & Edit Recipe Button */}
                   <button
@@ -723,6 +889,22 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                       </button>
                     </div>
                   )}
+
+                  {/* Boxed in Red X Delete Button for Selected Day */}
+                  <button
+                    id="btn-delete-current-day-menu"
+                    onClick={() => {
+                      sound.playTap();
+                      setDeleteConfirmDay(selectedDay);
+                    }}
+                    className="p-2 sm:px-3 sm:py-2 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-rose-400 hover:border-rose-600 text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                    title={`Delete / Clear ${DAY_METADATA[selectedDay].label}'s dinner menu`}
+                  >
+                    <div className="w-5 h-5 rounded-md border border-rose-600 bg-rose-600 text-white flex items-center justify-center shadow-xs">
+                      <X className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                    <span className="hidden sm:inline">Delete Day</span>
+                  </button>
                 </div>
               </div>
 
@@ -737,20 +919,64 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Main Dish */}
-                    <div>
-                      <label className="block text-xs font-black text-slate-700 uppercase mb-1">
-                        Main Dish Title:
-                      </label>
-                      <input
-                        type="text"
-                        value={parentEditForm.mainDish}
-                        onChange={(e) =>
-                          setParentEditForm({ ...parentEditForm, mainDish: e.target.value })
-                        }
-                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-bold text-sm"
-                        placeholder="e.g. Loaded Build-Your-Own Taco Bar 🌮"
-                      />
+                    {/* Main Dish with Import Recipe Button */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <label className="block text-xs font-black text-slate-700 uppercase">
+                          Main Dish Title:
+                        </label>
+                        {parentEditForm.mainDish && parentEditForm.mainDish.trim().length > 0 && (
+                          <button
+                            type="button"
+                            id="btn-import-recipe-from-dish"
+                            onClick={handleImportRecipeFromDishTitle}
+                            className="px-2.5 py-0.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-600/40 text-[11px] font-black flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+                            title={`Search and import recipe for "${parentEditForm.mainDish}"`}
+                          >
+                            <Sparkles className="w-3 h-3 text-amber-950 animate-pulse" />
+                            <span>Import Recipe</span>
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative flex items-center">
+                        <input
+                          type="text"
+                          value={parentEditForm.mainDish}
+                          onChange={(e) => {
+                            setParentEditForm({ ...parentEditForm, mainDish: e.target.value });
+                            if (importRecipeFeedback) setImportRecipeFeedback(null);
+                          }}
+                          className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-bold text-sm pr-32 focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                          placeholder="e.g. Grilled Cheese, Tacos, Chicken Alfredo..."
+                        />
+                        {parentEditForm.mainDish && parentEditForm.mainDish.trim().length > 0 && (
+                          <button
+                            type="button"
+                            id="btn-inline-import-recipe"
+                            onClick={handleImportRecipeFromDishTitle}
+                            className="absolute right-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-xs flex items-center gap-1 shadow-sm cursor-pointer active:scale-95 border border-amber-600/30"
+                            title="Click to search and auto-populate recipe, sides & details"
+                          >
+                            <Search className="w-3.5 h-3.5 text-slate-950" />
+                            <span>Import Recipe</span>
+                          </button>
+                        )}
+                      </div>
+                      {importRecipeFeedback && (
+                        <div className="mt-1.5 text-xs font-black text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-xl p-2.5 flex items-center justify-between gap-2 animate-fade-in shadow-xs">
+                          <span className="flex items-center gap-1.5">
+                            <span>✅</span>
+                            <span>{importRecipeFeedback}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsRecipeModalOpen(true)}
+                            className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black cursor-pointer shrink-0 transition-colors shadow-2xs"
+                          >
+                            View Recipe Card →
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Meal Icon Emoji */}
@@ -1434,6 +1660,102 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
         onSaveRecipe={handleSaveRecipe}
         isParentMode={isParentMode}
       />
+
+      {/* CONFIRMATION MODAL: DELETE SPECIFIC DAY */}
+      {deleteConfirmDay && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl border-4 border-rose-400 p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-10 h-10 rounded-2xl bg-rose-100 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  Clear {DAY_METADATA[deleteConfirmDay].label}'s Dinner?
+                </h3>
+                <p className="text-xs font-bold text-slate-500">
+                  This will reset {DAY_METADATA[deleteConfirmDay].label}'s meal to an open unplanned night.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-rose-50 rounded-2xl border border-rose-200 text-xs font-semibold text-rose-900">
+              Current meal planned: <strong className="font-black text-rose-950">"{menu.days[deleteConfirmDay]?.mainDish || 'Dinner'}"</strong>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmDay(null)}
+                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-black cursor-pointer"
+              >
+                Keep Meal
+              </button>
+              <button
+                type="button"
+                id="btn-confirm-delete-day"
+                onClick={() => handleDeleteDay(deleteConfirmDay)}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear This Day</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION MODAL: DELETE FULL WEEK */}
+      {showDeleteWeekConfirm && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl border-4 border-rose-500 p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  Clear Full Week Menu?
+                </h3>
+                <p className="text-xs font-bold text-slate-500">
+                  This will reset all 7 days of the dinner menu to open / unplanned nights.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-rose-50 rounded-2xl border border-rose-200 text-xs font-bold text-rose-900 space-y-1">
+              <p>⚠️ All planned dishes, sides, notes, and recipes for Monday through Sunday will be cleared.</p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteWeekConfirm(false)}
+                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-black cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                id="btn-confirm-delete-full-week"
+                onClick={handleClearFullWeek}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Yes, Clear Full Week</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST FEEDBACK BANNER */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-80 px-5 py-3 rounded-2xl bg-slate-950 text-white border-2 border-amber-400 font-black text-xs shadow-2xl flex items-center gap-2 animate-bounce">
+          <span>✨</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 };

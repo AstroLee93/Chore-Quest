@@ -395,23 +395,23 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   }, [database.logs, activityDateFilter, activityKidFilter, activityStatusFilter]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Parent Header Banner */}
-      <div className="bg-indigo-900 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-xl border-4 border-yellow-300 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-yellow-400 text-slate-900 flex items-center justify-center text-3xl font-black shadow-lg transform -rotate-3 border-2 border-yellow-200">
+      <div className="bg-indigo-900 rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-8 text-white shadow-xl border-4 border-yellow-300 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-yellow-400 text-slate-900 flex items-center justify-center text-2xl sm:text-3xl font-black shadow-lg transform -rotate-3 border-2 border-yellow-200 shrink-0">
             🛡️
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider bg-pink-500/80 text-white px-3 py-0.5 rounded-full border border-pink-300">
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider bg-pink-500/80 text-white px-2.5 sm:px-3 py-0.5 rounded-full border border-pink-300">
                 Parent Admin Hub
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight mt-1 text-yellow-300 italic">
+            <h1 className="text-xl sm:text-3xl font-black tracking-tight mt-0.5 sm:mt-1 text-yellow-300 italic">
               Family Chore Management
             </h1>
-            <p className="text-xs sm:text-sm text-indigo-100 font-bold mt-0.5">
+            <p className="text-[11px] sm:text-sm text-indigo-100 font-bold mt-0.5 line-clamp-2 sm:line-clamp-none">
               Review completed & skipped tasks, configure chore schedules, manage reward store & kids.
             </p>
           </div>
@@ -424,7 +424,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               sound.playTap();
               onExitParentMode();
             }}
-            className="px-5 py-3 rounded-2xl bg-pink-500 hover:bg-pink-600 border-2 border-pink-300 text-xs sm:text-sm font-black text-white transition-all shadow-md active:scale-95 cursor-pointer"
+            className="w-full sm:w-auto px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-pink-500 hover:bg-pink-600 border-2 border-pink-300 text-xs sm:text-sm font-black text-white transition-all shadow-md active:scale-95 cursor-pointer text-center"
           >
             ← Return to Kid View
           </button>
@@ -442,7 +442,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       />
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 p-1.5 rounded-2xl bg-yellow-200/70 border-2 border-yellow-300 shadow-2xs">
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 p-1.5 rounded-2xl bg-yellow-200/70 border-2 border-yellow-300 shadow-2xs scrollbar-none">
         {[
           { id: 'activity', label: 'Daily Review & Audit', icon: CheckCircle, badge: database.logs.filter((l) => l.date === todayStr).length },
           { id: 'menu', label: 'Dinner Menu', icon: UtensilsCrossed },
@@ -462,7 +462,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 sound.playTap();
                 setActiveTab(tab.id as typeof activeTab);
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black whitespace-nowrap transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black whitespace-nowrap transition-all cursor-pointer ${
                 isActive
                   ? 'bg-indigo-900 text-white shadow-sm'
                   : 'text-slate-700 hover:text-slate-900 hover:bg-yellow-300/60'

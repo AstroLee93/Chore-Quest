@@ -396,7 +396,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                         type="text"
                         value={editForm.prepTime || ''}
                         onChange={(e) => setEditForm({ ...editForm, prepTime: e.target.value })}
-                        className="w-full text-xs font-black border border-amber-300 rounded px-1.5 py-0.5"
+                        className="w-full text-xs font-black border border-amber-300 rounded px-1.5 py-0.5 bg-white text-slate-900 placeholder:text-slate-400"
                         placeholder="e.g. 5 mins"
                       />
                     ) : (
@@ -420,7 +420,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                         type="text"
                         value={editForm.cookTime || ''}
                         onChange={(e) => setEditForm({ ...editForm, cookTime: e.target.value })}
-                        className="w-full text-xs font-black border border-amber-300 rounded px-1.5 py-0.5"
+                        className="w-full text-xs font-black border border-amber-300 rounded px-1.5 py-0.5 bg-white text-slate-900 placeholder:text-slate-400"
                         placeholder="e.g. 0 mins"
                       />
                     ) : (
@@ -444,7 +444,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                         type="text"
                         value={editForm.servings || ''}
                         onChange={(e) => setEditForm({ ...editForm, servings: e.target.value })}
-                        className="w-full text-xs font-black border border-amber-300 rounded px-1.5 py-0.5"
+                        className="w-full text-xs font-black border border-amber-300 rounded px-1.5 py-0.5 bg-white text-slate-900 placeholder:text-slate-400"
                         placeholder="e.g. 2-4 servings"
                       />
                     ) : (
@@ -550,7 +550,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                                 updated[idx] = e.target.value;
                                 setEditForm({ ...editForm, ingredients: updated });
                               }}
-                              className="flex-1 text-xs font-bold border-0 focus:ring-0 p-1"
+                              className="flex-1 text-xs font-bold border-0 focus:ring-0 p-1 bg-white rounded-lg text-slate-900 placeholder:text-slate-400"
                             />
                             <button
                               onClick={() => handleRemoveIngredient(idx)}
@@ -570,7 +570,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                             onChange={(e) => setNewIngredient(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddIngredient()}
                             placeholder="e.g. 2 tbsp Peanut Butter..."
-                            className="flex-1 px-3 py-2 text-xs font-bold border-2 border-dashed border-amber-300 rounded-xl bg-white"
+                            className="flex-1 px-3 py-2 text-xs font-bold border-2 border-dashed border-amber-300 rounded-xl bg-white text-slate-900 placeholder:text-slate-400"
                           />
                           <button
                             onClick={handleAddIngredient}
@@ -658,7 +658,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                                 updated[idx] = e.target.value;
                                 setEditForm({ ...editForm, instructions: updated });
                               }}
-                              className="flex-1 text-xs font-medium border-0 focus:ring-0 p-1 bg-white rounded-lg resize-none"
+                              className="flex-1 text-xs font-medium border-0 focus:ring-0 p-1 bg-white rounded-lg resize-none text-slate-900 placeholder:text-slate-400"
                             />
                             <button
                               onClick={() => handleRemoveStep(idx)}
@@ -677,7 +677,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                             value={newStep}
                             onChange={(e) => setNewStep(e.target.value)}
                             placeholder="Type next cooking instruction step..."
-                            className="flex-1 px-3 py-2 text-xs font-medium border-2 border-dashed border-amber-300 rounded-2xl bg-white resize-none"
+                            className="flex-1 px-3 py-2 text-xs font-medium border-2 border-dashed border-amber-300 rounded-2xl bg-white resize-none text-slate-900 placeholder:text-slate-400"
                           />
                           <button
                             onClick={handleAddStep}
@@ -741,7 +741,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                             updated[idx] = e.target.value;
                             setEditForm({ ...editForm, substitutions: updated });
                           }}
-                          className="flex-1 text-xs font-bold border-0 focus:ring-0 p-1"
+                          className="flex-1 text-xs font-bold border-0 focus:ring-0 p-1 text-slate-900 bg-white"
                         />
                         <button
                           onClick={() => handleRemoveSubstitution(idx)}
@@ -760,7 +760,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                         onChange={(e) => setNewSub(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddSubstitution()}
                         placeholder="e.g. Nut-Free: Use sunflower seed butter (SunButter)..."
-                        className="flex-1 px-3 py-1.5 text-xs font-bold border-2 border-dashed border-amber-300 rounded-xl bg-white"
+                        className="flex-1 px-3 py-1.5 text-xs font-bold border-2 border-dashed border-amber-300 rounded-xl bg-white text-slate-900 placeholder:text-slate-400"
                       />
                       <button
                         onClick={handleAddSubstitution}
@@ -780,7 +780,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                         value={editForm.notes || ''}
                         onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                         placeholder="e.g. Spread peanut butter on both slices before jelly to prevent sogginess..."
-                        className="w-full px-3 py-2 text-xs font-medium border-2 border-slate-200 rounded-xl bg-white resize-none"
+                        className="w-full px-3 py-2 text-xs font-medium border-2 border-slate-200 rounded-xl bg-white resize-none text-slate-900 placeholder:text-slate-400"
                       />
                     </div>
                   </div>

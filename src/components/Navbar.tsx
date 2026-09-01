@@ -153,9 +153,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
 
             {isParentMode && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-900 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-800 text-xs font-black">
-                <Shield className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>Parent Admin Active</span>
+              <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-900 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-800 text-[11px] sm:text-xs font-black shrink-0">
+                <Shield className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span className="hidden sm:inline">Parent Admin Active</span>
+                <span className="sm:hidden">Admin</span>
               </div>
             )}
           </div>

@@ -946,7 +946,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                             setParentEditForm({ ...parentEditForm, mainDish: e.target.value });
                             if (importRecipeFeedback) setImportRecipeFeedback(null);
                           }}
-                          className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-bold text-sm pr-32 focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                          className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-sm pr-32 focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
                           placeholder="e.g. Grilled Cheese, Tacos, Chicken Alfredo..."
                         />
                         {parentEditForm.mainDish && parentEditForm.mainDish.trim().length > 0 && (
@@ -1003,7 +1003,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                         onChange={(e) =>
                           setParentEditForm({ ...parentEditForm, theme: e.target.value })
                         }
-                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-bold text-sm"
+                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
                         placeholder="e.g. Taco Tuesday Fiesta! 🌮"
                       />
                     </div>
@@ -1019,7 +1019,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                         onChange={(e) =>
                           setParentEditForm({ ...parentEditForm, preparedBy: e.target.value })
                         }
-                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-bold text-sm"
+                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
                         placeholder="e.g. Dad & Maya 🦄"
                       />
                     </div>
@@ -1035,7 +1035,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                         onChange={(e) =>
                           setParentEditForm({ ...parentEditForm, sideDishes: e.target.value })
                         }
-                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-bold text-sm"
+                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
                         placeholder="e.g. Cilantro Lime Rice, Black Beans & Fresh Guacamole"
                       />
                     </div>
@@ -1051,7 +1051,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                         onChange={(e) =>
                           setParentEditForm({ ...parentEditForm, dessert: e.target.value })
                         }
-                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-bold text-sm"
+                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
                         placeholder="e.g. Warm Cinnamon Sugar Churro Bites"
                       />
                     </div>
@@ -1067,7 +1067,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                         onChange={(e) =>
                           setParentEditForm({ ...parentEditForm, notes: e.target.value })
                         }
-                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-bold text-sm"
+                        className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
                         placeholder="e.g. Early dinner at 5:30 PM before soccer game ⚽"
                       />
                     </div>
@@ -1109,7 +1109,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                                 votingQuestion: e.target.value,
                               })
                             }
-                            className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-bold text-xs"
+                            className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-xs focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
                             placeholder="e.g. Kids Vote: What should we cook for Friday Movie Night?"
                           />
                         </div>
@@ -1167,7 +1167,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                               value={newOptionTitle}
                               onChange={(e) => setNewOptionTitle(e.target.value)}
                               placeholder="e.g. Homemade Brick Oven Pizza 🍕"
-                              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-bold text-xs"
+                              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-xs focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
                             />
                           </div>
                           <div>
@@ -1485,7 +1485,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                               value={suggestionDish}
                               onChange={(e) => setSuggestionDish(e.target.value)}
                               placeholder="e.g. Cheesy Baked Macaroni with Bacon 🧀"
-                              className="w-full px-3 py-2 rounded-xl border border-pink-300 bg-white font-bold text-xs"
+                              className="w-full px-3 py-2 rounded-xl border border-pink-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-xs focus:ring-2 focus:ring-pink-300 focus:outline-hidden"
                               autoFocus
                             />
                           </div>

@@ -70,3 +70,17 @@
   scrollbar-width: none;
 }
 
+/* Ensure inputs always have high-contrast text and explicit colors across all mobile browsers */
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+textarea,
+select {
+  color: #0f172a !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+

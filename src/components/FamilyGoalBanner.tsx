@@ -39,96 +39,75 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
     <div
       id="family-goal-banner"
       onClick={onEditGoal ? () => { sound.playTap(); onEditGoal(); } : undefined}
-      className={`relative overflow-hidden rounded-3xl border transition-all p-4 sm:p-5 shadow-md ${
-        onEditGoal ? 'cursor-pointer hover:shadow-xl group' : ''
+      className={`relative overflow-hidden rounded-xl sm:rounded-2xl border transition-all p-2.5 sm:p-3.5 shadow-xs w-full ${
+        onEditGoal ? 'cursor-pointer hover:shadow-md group' : ''
       } ${
         isReached
-          ? 'bg-gradient-to-r from-amber-100/90 via-amber-50/90 to-emerald-100/90 dark:from-amber-950/80 dark:via-slate-900/90 dark:to-emerald-950/80 border-amber-400 ring-2 ring-amber-400/40'
+          ? 'bg-gradient-to-r from-amber-200 via-amber-100 to-emerald-200 dark:from-amber-950/90 dark:via-slate-900 dark:to-emerald-950/90 border-amber-400'
           : `${theme.goalBannerBg} ${theme.goalBannerBorder}`
       }`}
     >
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        {/* Left Side: Badge & Title */}
-        <div className="flex items-center gap-3.5 flex-1 min-w-0">
-          <div
-            onClick={isReached ? handleCelebrate : undefined}
-            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black text-xs sm:text-sm tracking-wider uppercase shrink-0 shadow-sm transition-transform ${
-              onEditGoal ? 'group-hover:scale-105' : ''
-            } ${
-              isReached
-                ? 'bg-amber-400 text-yellow-950 animate-bounce cursor-pointer'
-                : theme.goalBannerIconBg
-            }`}
-          >
-            Goal
-          </div>
+      <div className="flex flex-col gap-1.5 sm:gap-2">
+        {/* Top Row: Goal Title & Reward on Left, Change Goal Button on Right */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span
+              onClick={isReached ? handleCelebrate : undefined}
+              className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                isReached
+                  ? 'bg-emerald-500 text-white animate-pulse cursor-pointer'
+                  : theme.goalBadge
+              }`}
+            >
+              {isReached ? 'Goal Reached!' : 'Family Goal'}
+            </span>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${theme.goalBadge}`}>
-                <span>Weekly Family Teamwork Goal</span>
-              </span>
-              {isReached ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white animate-pulse">
-                  <span>Goal Achieved!</span>
-                </span>
-              ) : (
-                onEditGoal && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-black/10 dark:bg-white/15 text-current group-hover:bg-black/20 dark:group-hover:bg-white/25 transition-colors">
-                    <span>Options</span>
-                  </span>
-                )
-              )}
-            </div>
-
-            <h3 className={`text-base sm:text-lg font-black truncate mt-0.5 group-hover:opacity-80 transition-opacity ${theme.goalTitleColor}`}>
+            <h3 className={`text-xs sm:text-sm font-black truncate leading-none ${theme.goalTitleColor}`}>
               {goal.title}
             </h3>
 
-            <p className={`text-xs font-semibold truncate opacity-85 ${theme.goalTitleColor}`}>
-              Reward: <span className="text-pink-600 dark:text-pink-400 font-extrabold">{goal.reward}</span>
-            </p>
+            <span className="hidden xs:inline text-[11px] font-bold text-pink-600 dark:text-pink-400 truncate shrink-0">
+              Reward: {goal.reward}
+            </span>
           </div>
+
+          {/* Change Goal Button */}
+          {onEditGoal && (
+            <button
+              id="btn-change-goal"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                sound.playTap();
+                onEditGoal();
+              }}
+              className={`shrink-0 text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-lg ${theme.goalBadge} hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-2xs`}
+            >
+              {isParentMode ? 'Goal Settings' : 'Change Goal'}
+            </button>
+          )}
         </div>
 
-        {/* Right Side: Progress Meter & Stats */}
-        <div className="w-full md:w-72 shrink-0">
-          <div className={`flex items-center justify-between text-xs font-black mb-1.5 ${theme.goalTitleColor}`}>
-            <span className="opacity-80">
-              {isReached ? 'Target Reached!' : `${remaining} more chores to unlock`}
-            </span>
-            <span className="font-black">
-              {completedCount} / {target} ({percent}%)
-            </span>
-          </div>
+        {/* Progress Bar - Full Width & Sleek */}
+        <div className="w-full h-2.5 sm:h-3 bg-black/10 dark:bg-white/15 rounded-full overflow-hidden p-0.5 border border-black/10 dark:border-white/20 shadow-inner">
+          <div
+            className={`h-full rounded-full transition-all duration-700 ${
+              isReached
+                ? 'bg-gradient-to-r from-amber-400 via-pink-400 to-emerald-400'
+                : theme.goalBannerProgress
+            }`}
+            style={{ width: `${percent}%` }}
+          />
+        </div>
 
-          {/* Progress Bar */}
-          <div className="w-full h-4 bg-black/10 dark:bg-white/15 rounded-full overflow-hidden p-0.5 border border-black/10 dark:border-white/20 shadow-inner">
-            <div
-              className={`h-full rounded-full transition-all duration-700 ${
-                isReached
-                  ? 'bg-gradient-to-r from-amber-400 via-pink-400 to-emerald-400'
-                  : theme.goalBannerProgress
-              }`}
-              style={{ width: `${percent}%` }}
-            />
-          </div>
-
-          {onEditGoal && (
-            <div className="mt-2 flex items-center justify-end gap-1.5 text-right">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  sound.playTap();
-                  onEditGoal();
-                }}
-                className={`inline-flex items-center text-[11px] font-black hover:opacity-100 ${theme.goalBadge} px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs`}
-              >
-                <span>{isParentMode ? 'Admin Goal Settings' : 'View / Change Goal'}</span>
-              </button>
-            </div>
-          )}
+        {/* Bottom Row: Progress Text */}
+        <div className={`flex items-center justify-between text-[11px] sm:text-xs font-black ${theme.goalTitleColor} leading-none`}>
+          <span className="opacity-80 truncate mr-2">
+            {isReached ? 'Target Reached!' : `${remaining} more chores to unlock`}
+          </span>
+          <span className="font-black shrink-0">
+            {completedCount} / {target} ({percent}%)
+          </span>
         </div>
       </div>
     </div>

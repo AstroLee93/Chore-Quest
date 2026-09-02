@@ -120,9 +120,9 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const levelInfo = getKidLevelInfo(kid.lifetimeStars);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 animate-fade-in">
+    <div className="max-w-7xl mx-auto px-1 sm:px-8 py-1.5 sm:py-8 grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-6 animate-fade-in w-full">
       {/* Left / Main Column (col-span-8) */}
-      <div className="lg:col-span-8 flex flex-col gap-6">
+      <div className="lg:col-span-8 flex flex-col gap-2 sm:gap-6">
         {/* Family Goal Banner if database is provided */}
         {database && (
           <FamilyGoalBanner
@@ -137,7 +137,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           style={{
             borderColor: kid.color || '#3b82f6',
           }}
-          className={`${theme.kidCardBg} rounded-3xl p-6 sm:p-7 border-b-8 border-r-4 border-t-2 border-l-2 border-t-black/5 border-l-black/5 shadow-md relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6`}
+          className={`${theme.kidCardBg} rounded-2xl sm:rounded-3xl p-3.5 sm:p-7 border-b-4 sm:border-b-8 border-r-2 sm:border-r-4 border-t border-l border-t-black/5 border-l-black/5 shadow-xs relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6`}
         >
           <div className="flex items-center gap-4">
             <div

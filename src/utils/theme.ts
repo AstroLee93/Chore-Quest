@@ -111,18 +111,18 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     headerTextColor: 'text-[#143B47]',
 
     // Family Goal Banner
-    goalBannerBg: 'bg-gradient-to-r from-white/90 via-[#B3E0F4]/35 to-[#EED3CE]/35 backdrop-blur-md',
-    goalBannerBorder: 'border-[#77B7D0]/60',
-    goalBannerIconBg: 'bg-[#B3E0F4]/80 text-[#143B47] border border-[#77B7D0]',
+    goalBannerBg: 'bg-gradient-to-r from-[#B3E0F4]/70 via-[#77B7D0]/40 to-[#EED3CE]/60 backdrop-blur-md',
+    goalBannerBorder: 'border-[#77B7D0]/70',
+    goalBannerIconBg: 'bg-[#B3E0F4] text-[#143B47] border border-[#77B7D0]',
     goalBannerProgress: 'bg-gradient-to-r from-[#77B7D0] via-[#579FB6] to-[#E2BAB1]',
-    goalBadge: 'bg-[#EED3CE]/90 text-[#422923] border border-[#E2BAB1]',
+    goalBadge: 'bg-[#EED3CE] text-[#422923] border border-[#E2BAB1]',
     goalTitleColor: 'text-[#143B47]',
 
     // Kid Cards
-    kidCardBg: 'bg-gradient-to-b from-white/95 to-[#B3E0F4]/20 backdrop-blur-md',
+    kidCardBg: 'bg-gradient-to-b from-[#FCFDFE] via-[#B3E0F4]/25 to-[#EED3CE]/30 backdrop-blur-md',
     kidCardBorder: 'border-[#77B7D0]/50',
     kidCardHover: 'hover:border-[#579FB6] hover:shadow-[0_16px_36px_rgba(87,159,182,0.25)]',
-    kidCardStatsBg: 'bg-white/80 border border-[#77B7D0]/40',
+    kidCardStatsBg: 'bg-[#B3E0F4]/25 border border-[#77B7D0]/40',
     kidCardNameColor: 'text-[#143B47]',
     kidCardSubtextColor: 'text-[#3D6675]',
     kidCardProgress: 'bg-gradient-to-r from-[#77B7D0] via-[#579FB6] to-[#E2BAB1]',
@@ -188,7 +188,7 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     headerTextColor: 'text-[#12231D]',
 
     // Family Goal Banner
-    goalBannerBg: 'bg-gradient-to-r from-[#FCFDFD]/95 via-[#6B9E96]/25 to-[#E5EDE9]/90 backdrop-blur-md',
+    goalBannerBg: 'bg-gradient-to-r from-[#6B9E96]/35 via-[#E5EDE9] to-[#6B9E96]/30 backdrop-blur-md',
     goalBannerBorder: 'border-[#6B9E96]/60',
     goalBannerIconBg: 'bg-[#6B9E96]/30 text-[#12231D] border border-[#6B9E96]/60',
     goalBannerProgress: 'bg-gradient-to-r from-[#6B9E96] via-[#2C524C] to-[#192E26]',
@@ -196,10 +196,10 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     goalTitleColor: 'text-[#12231D]',
 
     // Kid Cards
-    kidCardBg: 'bg-gradient-to-b from-[#FCFDFD]/95 to-[#E5EDE9]/90 backdrop-blur-md',
+    kidCardBg: 'bg-gradient-to-b from-[#E5EDE9] to-[#9FA7A4]/25 backdrop-blur-md',
     kidCardBorder: 'border-[#6B9E96]/50',
     kidCardHover: 'hover:border-[#2C524C] hover:shadow-[0_16px_36px_rgba(44,82,76,0.25)]',
-    kidCardStatsBg: 'bg-white/80 border border-[#9FA7A4]/50',
+    kidCardStatsBg: 'bg-[#6B9E96]/20 border border-[#9FA7A4]/50',
     kidCardNameColor: 'text-[#12231D]',
     kidCardSubtextColor: 'text-[#35524B]',
     kidCardProgress: 'bg-gradient-to-r from-[#6B9E96] via-[#2C524C] to-[#192E26]',
@@ -342,18 +342,18 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     headerTextColor: 'text-slate-900',
 
     // Family Goal Banner
-    goalBannerBg: 'bg-gradient-to-r from-white/90 via-sky-50/80 to-blue-50/80 backdrop-blur-md',
-    goalBannerBorder: 'border-sky-200',
+    goalBannerBg: 'bg-gradient-to-r from-sky-100/90 via-blue-100/75 to-indigo-100/80 backdrop-blur-md',
+    goalBannerBorder: 'border-sky-300',
     goalBannerIconBg: 'bg-sky-100 text-sky-800 border border-sky-200',
     goalBannerProgress: 'bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600',
     goalBadge: 'bg-sky-100 text-sky-900 border border-sky-200',
     goalTitleColor: 'text-slate-900',
 
     // Kid Cards
-    kidCardBg: 'bg-gradient-to-b from-white/95 to-sky-50/50 backdrop-blur-md',
+    kidCardBg: 'bg-gradient-to-b from-sky-50 via-sky-50/70 to-indigo-50/60 backdrop-blur-md',
     kidCardBorder: 'border-sky-200',
     kidCardHover: 'hover:border-sky-400 hover:shadow-[0_16px_36px_rgba(2,132,199,0.2)]',
-    kidCardStatsBg: 'bg-sky-50/60 border border-sky-100',
+    kidCardStatsBg: 'bg-sky-100/70 border border-sky-200',
     kidCardNameColor: 'text-slate-900',
     kidCardSubtextColor: 'text-slate-500',
     kidCardProgress: 'bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600',
@@ -419,18 +419,18 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     headerTextColor: 'text-stone-900',
 
     // Family Goal Banner
-    goalBannerBg: 'bg-gradient-to-r from-stone-50/90 via-amber-50 to-orange-50/60 backdrop-blur-md',
-    goalBannerBorder: 'border-amber-200',
+    goalBannerBg: 'bg-gradient-to-r from-amber-100/90 via-orange-100/75 to-amber-100/80 backdrop-blur-md',
+    goalBannerBorder: 'border-amber-300',
     goalBannerIconBg: 'bg-amber-100 text-amber-900 border border-amber-200',
     goalBannerProgress: 'bg-gradient-to-r from-amber-400 via-amber-600 to-orange-600',
     goalBadge: 'bg-amber-100 text-amber-900 border border-amber-200',
     goalTitleColor: 'text-stone-900',
 
     // Kid Cards
-    kidCardBg: 'bg-gradient-to-b from-stone-50/95 to-amber-50/40 backdrop-blur-md',
+    kidCardBg: 'bg-gradient-to-b from-stone-100 via-stone-100/80 to-amber-50/70 backdrop-blur-md',
     kidCardBorder: 'border-stone-300',
     kidCardHover: 'hover:border-amber-500 hover:shadow-[0_16px_36px_rgba(217,119,6,0.2)]',
-    kidCardStatsBg: 'bg-stone-100/70 border border-stone-200',
+    kidCardStatsBg: 'bg-amber-100/60 border border-amber-200',
     kidCardNameColor: 'text-stone-900',
     kidCardSubtextColor: 'text-stone-500',
     kidCardProgress: 'bg-gradient-to-r from-amber-400 via-amber-600 to-orange-600',
@@ -496,18 +496,18 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     headerTextColor: 'text-white',
 
     // Family Goal Banner
-    goalBannerBg: 'bg-gradient-to-r from-yellow-50 via-amber-50 to-yellow-100/90 backdrop-blur-md',
-    goalBannerBorder: 'border-yellow-300',
+    goalBannerBg: 'bg-gradient-to-r from-yellow-100 via-amber-100 to-yellow-200/80 backdrop-blur-md',
+    goalBannerBorder: 'border-yellow-400',
     goalBannerIconBg: 'bg-yellow-200 text-yellow-950 border border-yellow-300',
     goalBannerProgress: 'bg-gradient-to-r from-yellow-400 via-orange-400 to-indigo-600',
     goalBadge: 'bg-yellow-200 text-slate-900 border border-yellow-300',
     goalTitleColor: 'text-slate-900',
 
     // Kid Cards
-    kidCardBg: 'bg-gradient-to-b from-white/95 to-yellow-50/70 backdrop-blur-md',
-    kidCardBorder: 'border-yellow-200',
+    kidCardBg: 'bg-gradient-to-b from-yellow-50 via-amber-50/60 to-yellow-100/50 backdrop-blur-md',
+    kidCardBorder: 'border-yellow-300',
     kidCardHover: 'hover:border-yellow-400 hover:shadow-[0_16px_36px_rgba(234,179,8,0.25)]',
-    kidCardStatsBg: 'bg-yellow-50/60 border border-yellow-200',
+    kidCardStatsBg: 'bg-yellow-100/70 border border-yellow-300',
     kidCardNameColor: 'text-slate-900',
     kidCardSubtextColor: 'text-slate-500',
     kidCardProgress: 'bg-gradient-to-r from-yellow-400 via-orange-400 to-indigo-600',

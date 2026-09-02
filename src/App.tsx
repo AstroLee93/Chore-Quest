@@ -351,7 +351,7 @@ export default function App() {
         onOpenGoalManager={() => setIsGoalModalOpen(true)}
       />
 
-      <main className="flex-1 pb-6 sm:pb-12 flex flex-col">
+      <main className="flex-1 p-0 sm:pb-6 flex flex-col">
         {isParentMode ? (
           <ParentDashboard
             database={database}
@@ -436,7 +436,7 @@ export default function App() {
         />
       )}
 
-      <footer className="bg-white p-4 px-6 sm:px-8 border-t-2 border-yellow-200/80 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-xs gap-3">
+      <footer className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 sm:p-3 px-3 sm:px-6 border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-[11px] sm:text-xs gap-1 sm:gap-3">
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
           <span className="flex items-center gap-1.5 text-slate-700">
             <span

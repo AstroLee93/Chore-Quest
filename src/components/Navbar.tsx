@@ -243,7 +243,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               id="nav-dropdown-menu"
               role="menu"
               aria-labelledby="btn-app-menu-toggle"
-              className="absolute right-0 top-full mt-2 w-72 sm:w-96 max-w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border-2 border-slate-200 dark:border-slate-800 p-3 sm:p-4 space-y-3 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150"
+              className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-h-[85vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border-2 border-slate-200 dark:border-slate-800 p-3 sm:p-4 space-y-3 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150"
             >
               {/* Active Profile Info (if kid selected) */}
               {activeKid && !isParentMode && (

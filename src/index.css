@@ -1,23 +1,5 @@
 @import "tailwindcss";
 
-/* Viewport containment: Prevents horizontal scrolling/white space on all devices */
-html,
-body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-  position: relative;
-}
-
-#root {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-  min-height: 100dvh;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -36,7 +18,6 @@ body {
 /* Tactile mobile tap highlights */
 * {
   -webkit-tap-highlight-color: transparent;
-  box-sizing: border-box;
 }
 
 /* Glassmorphism helpers */
@@ -54,7 +35,7 @@ body {
   border: 1px solid rgba(30, 41, 59, 0.8);
 }
 
-/* Shimmer animation for animated banner (clipped inside overflow-hidden) */
+/* Shimmer animation for animated banner */
 @keyframes shimmerSweep {
   0% {
     transform: translateX(-150%) skewX(-15deg);
@@ -68,13 +49,12 @@ body {
   animation: shimmerSweep 4s ease-in-out infinite;
 }
 
-/* Safe Banner Pulse: Uses brightness & glow instead of scale to never blow past viewport */
 @keyframes bannerPulse {
   0%, 100% {
-    filter: brightness(1);
+    transform: scale(1);
   }
   50% {
-    filter: brightness(1.04);
+    transform: scale(1.008);
   }
 }
 
@@ -90,7 +70,7 @@ body {
   scrollbar-width: none;
 }
 
-/* Ensure inputs always have high-contrast text and explicit colors across mobile browsers */
+/* Ensure inputs always have high-contrast text and explicit colors across all mobile browsers */
 input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
 textarea,
 select {
@@ -102,3 +82,5 @@ textarea::placeholder {
   color: #94a3b8 !important;
   opacity: 1 !important;
 }
+
+

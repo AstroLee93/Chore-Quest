@@ -69,6 +69,7 @@ export default function App() {
   }, [database.kids, activeKidId]);
 
   // Inactivity Auto-Timeout (2 minutes / 120s)
+  // Automatically logs out active kid / closes overlays to revert to secure Kiosk Kid Selector
   useEffect(() => {
     const isAtSubScreen =
       activeKidId !== null ||
@@ -81,12 +82,13 @@ export default function App() {
 
     if (!isAtSubScreen) return;
 
-    const INACTIVITY_LIMIT_MS = 120000;
+    const INACTIVITY_LIMIT_MS = 120000; // 2 minutes
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const resetTimer = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
+        // Auto return to home/kiosk selector
         setActiveKidId(null);
         setIsParentMode(false);
         setIsRewardStoreOpen(false);
@@ -137,144 +139,132 @@ export default function App() {
   );
 
   // Complete a chore
-  const handleToggleCompleteChore = useCallback(
-    (chore: ChoreItem) => {
-      if (!activeKid) return;
+  const handleToggleCompleteChore = useCallback((chore: ChoreItem) => {
+    if (!activeKid) return;
 
-      const existingLog = database.logs.find(
-        (l) => l.choreId === chore.id && l.kidId === activeKid.id && l.date === todayStr
-      );
+    const existingLog = database.logs.find(
+      (l) => l.choreId === chore.id && l.kidId === activeKid.id && l.date === todayStr
+    );
 
-      if (existingLog?.status === 'completed') return;
+    if (existingLog?.status === 'completed') return;
 
-      const newLog: ChoreLog = {
-        id: existingLog?.id || `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        choreId: chore.id,
-        kidId: activeKid.id,
-        date: todayStr,
-        status: 'completed',
-        completedAt: new Date().toISOString(),
-        starsAwarded: chore.stars,
-        verifiedByParent: false,
-      };
+    const newLog: ChoreLog = {
+      id: existingLog?.id || `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      choreId: chore.id,
+      kidId: activeKid.id,
+      date: todayStr,
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      starsAwarded: chore.stars,
+      verifiedByParent: false,
+    };
 
-      const updatedLogs = [
-        ...database.logs.filter((l) => !(l.choreId === chore.id && l.kidId === activeKid.id && l.date === todayStr)),
-        newLog,
-      ];
+    const updatedLogs = [
+      ...database.logs.filter((l) => !(l.choreId === chore.id && l.kidId === activeKid.id && l.date === todayStr)),
+      newLog,
+    ];
 
-      const updatedKids = database.kids.map((k) => {
-        if (k.id === activeKid.id) {
-          const isNewActiveDay = k.lastActiveDate !== todayStr;
-          const newStreak = isNewActiveDay ? k.streakDays + 1 : Math.max(1, k.streakDays);
-          return {
-            ...k,
-            stars: k.stars + chore.stars,
-            lifetimeStars: k.lifetimeStars + chore.stars,
-            streakDays: newStreak,
-            lastActiveDate: todayStr,
-          };
-        }
-        return k;
-      });
+    const updatedKids = database.kids.map((k) => {
+      if (k.id === activeKid.id) {
+        const isNewActiveDay = k.lastActiveDate !== todayStr;
+        const newStreak = isNewActiveDay ? k.streakDays + 1 : Math.max(1, k.streakDays);
+        return {
+          ...k,
+          stars: k.stars + chore.stars,
+          lifetimeStars: k.lifetimeStars + chore.stars,
+          streakDays: newStreak,
+          lastActiveDate: todayStr,
+        };
+      }
+      return k;
+    });
 
-      handleUpdateDatabase({ ...database, logs: updatedLogs, kids: updatedKids });
-    },
-    [activeKid, database, todayStr, handleUpdateDatabase]
-  );
+    handleUpdateDatabase({ ...database, logs: updatedLogs, kids: updatedKids });
+  }, [activeKid, database, todayStr, handleUpdateDatabase]);
 
   // Skip a chore with reason
-  const handleSkipChoreWithReason = useCallback(
-    (
-      choreId: string,
-      category: 'sick' | 'supplies' | 'time' | 'already_done' | 'need_help' | 'other',
-      note: string
-    ) => {
-      if (!activeKid) return;
+  const handleSkipChoreWithReason = useCallback((
+    choreId: string,
+    category: 'sick' | 'supplies' | 'time' | 'already_done' | 'need_help' | 'other',
+    note: string
+  ) => {
+    if (!activeKid) return;
 
-      const newLog: ChoreLog = {
-        id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        choreId,
-        kidId: activeKid.id,
-        date: todayStr,
-        status: 'skipped',
-        skippedReasonCategory: category,
-        skippedReason: note,
-        starsAwarded: 0,
-        completedAt: new Date().toISOString(),
-      };
+    const newLog: ChoreLog = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      choreId,
+      kidId: activeKid.id,
+      date: todayStr,
+      status: 'skipped',
+      skippedReasonCategory: category,
+      skippedReason: note,
+      starsAwarded: 0,
+      completedAt: new Date().toISOString(),
+    };
 
-      const updatedLogs = [
-        ...database.logs.filter((l) => !(l.choreId === choreId && l.kidId === activeKid.id && l.date === todayStr)),
-        newLog,
-      ];
+    const updatedLogs = [
+      ...database.logs.filter((l) => !(l.choreId === choreId && l.kidId === activeKid.id && l.date === todayStr)),
+      newLog,
+    ];
 
-      handleUpdateDatabase({ ...database, logs: updatedLogs });
-    },
-    [activeKid, database, todayStr, handleUpdateDatabase]
-  );
+    handleUpdateDatabase({ ...database, logs: updatedLogs });
+  }, [activeKid, database, todayStr, handleUpdateDatabase]);
 
   // Undo chore status
-  const handleUndoChoreStatus = useCallback(
-    (choreId: string) => {
-      if (!activeKid) return;
+  const handleUndoChoreStatus = useCallback((choreId: string) => {
+    if (!activeKid) return;
 
-      const existingLog = database.logs.find(
-        (l) => l.choreId === choreId && l.kidId === activeKid.id && l.date === todayStr
+    const existingLog = database.logs.find(
+      (l) => l.choreId === choreId && l.kidId === activeKid.id && l.date === todayStr
+    );
+    if (!existingLog) return;
+
+    let updatedKids = database.kids;
+    if (existingLog.status === 'completed' && existingLog.starsAwarded > 0) {
+      updatedKids = database.kids.map((k) =>
+        k.id === activeKid.id
+          ? {
+              ...k,
+              stars: Math.max(0, k.stars - existingLog.starsAwarded),
+              lifetimeStars: Math.max(0, k.lifetimeStars - existingLog.starsAwarded),
+            }
+          : k
       );
-      if (!existingLog) return;
+    }
 
-      let updatedKids = database.kids;
-      if (existingLog.status === 'completed' && existingLog.starsAwarded > 0) {
-        updatedKids = database.kids.map((k) =>
-          k.id === activeKid.id
-            ? {
-                ...k,
-                stars: Math.max(0, k.stars - existingLog.starsAwarded),
-                lifetimeStars: Math.max(0, k.lifetimeStars - existingLog.starsAwarded),
-              }
-            : k
-        );
-      }
+    const updatedLogs = database.logs.filter(
+      (l) => !(l.choreId === choreId && l.kidId === activeKid.id && l.date === todayStr)
+    );
 
-      const updatedLogs = database.logs.filter(
-        (l) => !(l.choreId === choreId && l.kidId === activeKid.id && l.date === todayStr)
-      );
-
-      handleUpdateDatabase({ ...database, logs: updatedLogs, kids: updatedKids });
-    },
-    [activeKid, database, todayStr, handleUpdateDatabase]
-  );
+    handleUpdateDatabase({ ...database, logs: updatedLogs, kids: updatedKids });
+  }, [activeKid, database, todayStr, handleUpdateDatabase]);
 
   // Redeem reward
-  const handleRedeemReward = useCallback(
-    (reward: RewardItem, note?: string) => {
-      if (!activeKid || activeKid.stars < reward.starCost) return;
+  const handleRedeemReward = useCallback((reward: RewardItem, note?: string) => {
+    if (!activeKid || activeKid.stars < reward.starCost) return;
 
-      const newRedemption: RewardRedemption = {
-        id: `red-${Date.now()}`,
-        rewardId: reward.id,
-        rewardTitle: reward.title,
-        rewardIcon: reward.icon,
-        kidId: activeKid.id,
-        starCost: reward.starCost,
-        date: new Date().toISOString(),
-        status: database.settings.requireParentApprovalForRewards ? 'pending' : 'fulfilled',
-        notes: note || undefined,
-      };
+    const newRedemption: RewardRedemption = {
+      id: `red-${Date.now()}`,
+      rewardId: reward.id,
+      rewardTitle: reward.title,
+      rewardIcon: reward.icon,
+      kidId: activeKid.id,
+      starCost: reward.starCost,
+      date: new Date().toISOString(),
+      status: database.settings.requireParentApprovalForRewards ? 'pending' : 'fulfilled',
+      notes: note || undefined,
+    };
 
-      const updatedKids = database.kids.map((k) =>
-        k.id === activeKid.id ? { ...k, stars: Math.max(0, k.stars - reward.starCost) } : k
-      );
+    const updatedKids = database.kids.map((k) =>
+      k.id === activeKid.id ? { ...k, stars: Math.max(0, k.stars - reward.starCost) } : k
+    );
 
-      handleUpdateDatabase({
-        ...database,
-        kids: updatedKids,
-        redemptions: [newRedemption, ...database.redemptions],
-      });
-    },
-    [activeKid, database, handleUpdateDatabase]
-  );
+    handleUpdateDatabase({
+      ...database,
+      kids: updatedKids,
+      redemptions: [newRedemption, ...database.redemptions],
+    });
+  }, [activeKid, database, handleUpdateDatabase]);
 
   // Toggle sound
   const handleToggleSound = useCallback(() => {
@@ -327,7 +317,7 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-[100dvh] w-full max-w-full overflow-x-hidden ${themeConfig.bgGradient} flex flex-col font-sans transition-colors duration-300 ${
+      className={`min-h-[100dvh] ${themeConfig.bgGradient} flex flex-col font-sans transition-colors duration-300 ${
         themeConfig.isDark
           ? 'dark text-slate-100 selection:bg-indigo-500 selection:text-white'
           : 'text-slate-800 selection:bg-sky-200 selection:text-slate-900'
@@ -443,43 +433,34 @@ export default function App() {
         />
       )}
 
-      <footer
-        className={`w-full max-w-full overflow-hidden p-4 px-4 sm:px-6 lg:px-8 border-t transition-colors duration-300 ${
-          themeConfig.isDark
-            ? 'bg-slate-950/80 border-slate-800/80 text-slate-400'
-            : 'bg-white/80 border-slate-200/80 text-slate-500'
-        } backdrop-blur-md flex flex-col sm:flex-row justify-between items-center font-bold text-xs gap-3 text-center sm:text-left`}
-      >
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center max-w-full">
-          <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+      <footer className="bg-white p-4 px-6 sm:px-8 border-t-2 border-yellow-200/80 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-xs gap-3">
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
+          <span className="flex items-center gap-1.5 text-slate-700">
             <span
-              className={`w-2 h-2 rounded-full shrink-0 ${
+              className={`w-2.5 h-2.5 rounded-full ${
                 isSyncConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
               }`}
             />
-            <span className="truncate">{isSyncConnected ? 'Live Sync Active' : 'Offline Mode (Local Cache)'}</span>
+            <span>{isSyncConnected ? 'Live Multi-Device Sync Active' : 'Offline Mode (Local Cache)'}</span>
           </span>
-          <span className="opacity-40 hidden sm:inline">•</span>
-          <span className="hidden sm:inline">Shared Family Hub</span>
+          <span className="opacity-40">•</span>
+          <span>Shared Family Hub</span>
           <span className="opacity-40">•</span>
           <button
             onClick={() => setIsPiGuideOpen(true)}
-            className="text-indigo-600 dark:text-indigo-400 hover:underline transition-colors cursor-pointer"
+            className="text-indigo-600 hover:text-indigo-800 underline transition-colors cursor-pointer"
           >
             Pi Host Setup
           </button>
         </div>
-
-        <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center max-w-full">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => setIsPinModalOpen(true)}
-            className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1"
+            className="text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
           >
-            <span>🔒</span>
-            <span>Parent PIN</span>
+            🔒 Parent PIN
           </button>
-          <span className="opacity-40">•</span>
-          <span>&copy; {new Date().getFullYear()} ChoreQuest</span>
+          <span>&copy; {new Date().getFullYear()} ChoreQuest Home Server</span>
         </div>
       </footer>
 

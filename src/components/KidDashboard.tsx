@@ -142,9 +142,13 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           <div className="flex items-center gap-4">
             <div
               style={{ backgroundColor: `${kid.color}20` }}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl shrink-0 shadow-inner"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl shrink-0 shadow-inner overflow-hidden"
             >
-              {kid.avatar || '⭐'}
+              {kid.avatar && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
+                <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="leading-none">{kid.avatar || '⭐'}</span>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -436,9 +440,13 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 </p>
               </div>
               <div
-                className="w-14 h-14 rounded-2xl bg-indigo-800/80 border-2 border-indigo-400/40 flex items-center justify-center text-3xl shadow-lg"
+                className="w-14 h-14 rounded-2xl bg-indigo-800/80 border-2 border-indigo-400/40 flex items-center justify-center text-3xl shadow-lg overflow-hidden"
               >
-                {kid.avatar || '⭐'}
+                {kid.avatar && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
+                  <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="leading-none">{kid.avatar || '⭐'}</span>
+                )}
               </div>
             </div>
 

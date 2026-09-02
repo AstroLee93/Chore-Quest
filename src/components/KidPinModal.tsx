@@ -58,13 +58,13 @@ export const KidPinModal: React.FC<KidPinModalProps> = ({
             }
             setTimeout(() => {
               onSuccess();
-            }, 250);
+            }, 100);
           } else {
             sound.playUndo();
             setError(true);
             setTimeout(() => {
               setPin('');
-            }, 600);
+            }, 400);
           }
         }
       }
@@ -139,9 +139,13 @@ export const KidPinModal: React.FC<KidPinModalProps> = ({
         <div className="relative mb-3">
           <div
             style={{ backgroundColor: `${kid.color || '#f59e0b'}30`, borderColor: kid.color || '#f59e0b' }}
-            className="w-20 h-20 rounded-3xl border-3 flex items-center justify-center text-4xl shadow-lg ring-4 ring-white/10 animate-bounce"
+            className="w-20 h-20 rounded-3xl border-3 flex items-center justify-center text-4xl shadow-lg ring-4 ring-white/10 overflow-hidden"
           >
-            {kid.avatar || '⭐'}
+            {kid.avatar && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
+              <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="leading-none">{kid.avatar || '⭐'}</span>
+            )}
           </div>
         </div>
 

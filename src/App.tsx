@@ -84,6 +84,7 @@ export default function App() {
 
     const INACTIVITY_LIMIT_MS = 120000; // 2 minutes
     let timeoutId: ReturnType<typeof setTimeout>;
+    let lastActivityTime = 0;
 
     const resetTimer = () => {
       clearTimeout(timeoutId);
@@ -103,9 +104,16 @@ export default function App() {
 
     resetTimer();
 
-    const activityEvents = ['mousedown', 'mousemove', 'touchstart', 'keydown', 'scroll', 'click'];
-    const handleActivity = () => resetTimer();
+    // High performance throttled listener for activity detection
+    const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityTime > 5000) {
+        lastActivityTime = now;
+        resetTimer();
+      }
+    };
 
+    const activityEvents = ['pointerdown', 'touchstart', 'keydown', 'click'];
     activityEvents.forEach((evt) => window.addEventListener(evt, handleActivity, { passive: true }));
 
     return () => {
@@ -390,6 +398,7 @@ export default function App() {
             onOpenGoalManager={() => setIsGoalModalOpen(true)}
             onOpenMenu={() => setIsMenuOpen(true)}
             onOpenRewardStore={() => setIsRewardStoreOpen(true)}
+            onUpdateDatabase={handleUpdateDatabase}
           />
         )}
       </main>

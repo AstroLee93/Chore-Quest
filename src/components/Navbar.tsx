@@ -148,7 +148,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-7 h-7 rounded-full border border-white dark:border-slate-700 overflow-hidden flex items-center justify-center text-white font-black text-xs shadow-2xs shrink-0"
                     style={{ backgroundColor: activeKid.color || '#3b82f6' }}
                   >
-                    {activeKid.avatar || activeKid.name.slice(0, 2).toUpperCase()}
+                    {activeKid.avatar && (activeKid.avatar.startsWith('http') || activeKid.avatar.startsWith('data:image') || activeKid.avatar.startsWith('/')) ? (
+                      <img src={activeKid.avatar} alt={activeKid.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm leading-none">{activeKid.avatar || activeKid.name.slice(0, 2).toUpperCase()}</span>
+                    )}
                   </div>
                   <span className="font-extrabold text-slate-800 dark:text-slate-200 text-xs">
                     {activeKid.name}

@@ -443,54 +443,53 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   }, [database.logs, activityDateFilter, activityKidFilter, activityStatusFilter]);
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-      {/* Parent Header Banner */}
-      <div className="bg-indigo-900 rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-8 text-white shadow-xl border-4 border-yellow-300 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-yellow-400 text-slate-900 flex items-center justify-center text-2xl sm:text-3xl font-black shadow-lg transform -rotate-3 border-2 border-yellow-200 shrink-0">
+    <div className="w-full max-w-6xl mx-auto p-0 sm:px-4 sm:py-4 space-y-1 sm:space-y-4">
+      {/* Parent Header Banner - Sleek, zero-padding edge-to-edge on mobile */}
+      <div className="bg-indigo-900 rounded-none sm:rounded-2xl p-2.5 sm:p-5 text-white shadow-none sm:shadow-lg border-x-0 border-t-0 sm:border-2 border-yellow-300 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
+          <div className="w-9 h-9 sm:w-14 sm:h-14 rounded-xl bg-yellow-400 text-slate-900 flex items-center justify-center text-xl sm:text-3xl font-black shadow-sm transform -rotate-2 border-2 border-yellow-200 shrink-0">
             🛡️
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider bg-pink-500/80 text-white px-2.5 sm:px-3 py-0.5 rounded-full border border-pink-300">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] sm:text-xs font-black uppercase tracking-wider bg-pink-500/90 text-white px-2 sm:px-2.5 py-0.2 sm:py-0.5 rounded-full border border-pink-300">
                 Parent Admin Hub
               </span>
             </div>
-            <h1 className="text-xl sm:text-3xl font-black tracking-tight mt-0.5 sm:mt-1 text-yellow-300 italic">
+            <h1 className="text-sm sm:text-2xl font-black tracking-tight mt-0.5 text-yellow-300 italic truncate">
               Family Chore Management
             </h1>
-            <p className="text-[11px] sm:text-sm text-indigo-100 font-bold mt-0.5 line-clamp-2 sm:line-clamp-none">
+            <p className="hidden sm:block text-xs sm:text-sm text-indigo-100 font-bold mt-0.5">
               Review completed & skipped tasks, configure chore schedules, manage reward store & kids.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            id="btn-parent-exit-top"
-            onClick={() => {
-              sound.playTap();
-              onExitParentMode();
-            }}
-            className="w-full sm:w-auto px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-pink-500 hover:bg-pink-600 border-2 border-pink-300 text-xs sm:text-sm font-black text-white transition-all shadow-md active:scale-95 cursor-pointer text-center"
-          >
-            ← Return to Kid View
-          </button>
-        </div>
+        <button
+          id="btn-parent-exit-top"
+          onClick={() => {
+            sound.playTap();
+            onExitParentMode();
+          }}
+          className="px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-pink-500 hover:bg-pink-600 border border-pink-300 text-xs sm:text-sm font-black text-white transition-transform active:scale-95 cursor-pointer shrink-0 whitespace-nowrap shadow-xs"
+        >
+          ← Return to Kid View
+        </button>
       </div>
 
       {/* Shared Family Goal Banner */}
       <FamilyGoalBanner
         database={database}
         isParentMode={true}
+        className="rounded-none sm:rounded-2xl border-x-0 sm:border-2 shadow-none sm:shadow-xs p-2 sm:p-3"
         onEditGoal={() => {
           sound.playTap();
           setIsGoalModalOpen(true);
         }}
       />
 
-      {/* Navigation Tabs */}
-      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 p-1.5 rounded-2xl bg-yellow-200/70 border-2 border-yellow-300 shadow-2xs scrollbar-none">
+      {/* Navigation Tabs - Edge-to-edge compact mobile strip */}
+      <div className="flex gap-1 sm:gap-1.5 overflow-x-auto p-1 sm:p-1.5 rounded-none sm:rounded-xl bg-yellow-200/80 border-x-0 border-y sm:border-2 border-yellow-300 shadow-none sm:shadow-2xs scrollbar-none">
         {[
           { id: 'activity', label: 'Daily Review & Audit', icon: CheckCircle, badge: database.logs.filter((l) => l.date === todayStr).length },
           { id: 'menu', label: 'Dinner Menu', icon: UtensilsCrossed },
@@ -510,17 +509,17 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 sound.playTap();
                 setActiveTab(tab.id as typeof activeTab);
               }}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black whitespace-nowrap transition-all cursor-pointer ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black whitespace-nowrap transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-indigo-900 text-white shadow-sm'
+                  ? 'bg-indigo-900 text-white shadow-xs'
                   : 'text-slate-700 hover:text-slate-900 hover:bg-yellow-300/60'
               }`}
             >
-              <Icon className="w-4 h-4 stroke-[2.5]" />
+              <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               <span>{tab.label}</span>
               {tab.badge !== undefined && (
                 <span
-                  className={`text-[11px] px-2 py-0.5 rounded-full font-black ${
+                  className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full font-black ${
                     isActive ? 'bg-pink-500 text-white' : 'bg-white text-slate-800 border border-yellow-300'
                   }`}
                 >
@@ -534,31 +533,31 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* TAB 1: DAILY REVIEW & AUDIT LOG */}
       {activeTab === 'activity' && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-1 sm:space-y-4 animate-fade-in">
           {/* Filter Bar */}
-          <div className="bg-white p-5 rounded-3xl border-b-6 border-r-4 border-indigo-400 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-2xs space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-white p-2 sm:p-4 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-indigo-300 sm:border-indigo-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3">
               <div>
-                <h3 className="font-black text-slate-800 text-base flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-indigo-600" />
+                <h3 className="font-black text-slate-800 text-xs sm:text-base flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-indigo-600" />
                   Chore Verification & Incomplete Reasons
                 </h3>
-                <p className="text-xs text-slate-500 font-bold">
+                <p className="hidden sm:block text-xs text-slate-500 font-bold">
                   Inspect task completions and reasons submitted by your kids when tasks couldn't be done.
                 </p>
               </div>
 
               {/* Date selector quick buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <input
                   type="date"
                   value={activityDateFilter}
                   onChange={(e) => setActivityDateFilter(e.target.value)}
-                  className="px-3 py-2 rounded-2xl border-2 border-yellow-300 text-xs font-black text-slate-700 focus:outline-indigo-500 bg-yellow-50"
+                  className="px-2 py-1 rounded-lg border border-yellow-300 text-xs font-black text-slate-700 focus:outline-indigo-500 bg-yellow-50"
                 />
                 <button
                   onClick={() => setActivityDateFilter(todayStr)}
-                  className={`px-3 py-2 rounded-2xl text-xs font-black border-2 transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black border transition-colors cursor-pointer ${
                     activityDateFilter === todayStr
                       ? 'bg-indigo-900 text-white border-indigo-900'
                       : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
@@ -570,11 +569,11 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             </div>
 
             {/* Sub-Filters */}
-            <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100 text-xs">
-              <span className="text-slate-400 font-black uppercase tracking-wider">Filter Kid:</span>
+            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 pt-1.5 border-t border-slate-100 text-[11px] sm:text-xs">
+              <span className="text-slate-400 font-black uppercase tracking-wider text-[10px] sm:text-xs">Kid:</span>
               <button
                 onClick={() => setActivityKidFilter('all')}
-                className={`px-3 py-1.5 rounded-xl font-black transition-colors cursor-pointer ${
+                className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black transition-colors cursor-pointer ${
                   activityKidFilter === 'all' ? 'bg-indigo-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
@@ -584,7 +583,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 <button
                   key={k.id}
                   onClick={() => setActivityKidFilter(k.id)}
-                  className={`px-3 py-1.5 rounded-xl font-black flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black flex items-center gap-1 transition-colors cursor-pointer ${
                     activityKidFilter === k.id ? 'bg-indigo-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
@@ -593,12 +592,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 </button>
               ))}
 
-              <span className="text-slate-400 font-black uppercase tracking-wider ml-auto">Status:</span>
+              <span className="text-slate-400 font-black uppercase tracking-wider text-[10px] sm:text-xs ml-auto">Status:</span>
               {(['all', 'completed', 'skipped'] as const).map((st) => (
                 <button
                   key={st}
                   onClick={() => setActivityStatusFilter(st)}
-                  className={`px-3 py-1.5 rounded-xl font-black capitalize transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black capitalize transition-colors cursor-pointer ${
                     activityStatusFilter === st ? 'bg-indigo-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
@@ -609,13 +608,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           </div>
 
           {/* Activity Logs Feed */}
-          <div className="space-y-3">
+          <div className="space-y-1 sm:space-y-2">
             {filteredLogs.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border-2 border-dashed border-slate-200">
-                <div className="text-4xl mb-2">📋</div>
-                <h4 className="font-black text-slate-800 text-base">No activity logged for this date</h4>
-                <p className="text-xs text-slate-500 font-bold mt-1 max-w-sm mx-auto">
-                  When your kids check off completed chores or submit reasons for skipped tasks, they will appear here for verification.
+              <div className="bg-white rounded-none sm:rounded-2xl p-6 sm:p-10 text-center border-x-0 border-y sm:border-2 border-dashed border-slate-200">
+                <div className="text-3xl mb-1">📋</div>
+                <h4 className="font-black text-slate-800 text-sm sm:text-base">No activity logged for this date</h4>
+                <p className="text-[11px] sm:text-xs text-slate-500 font-bold mt-0.5 max-w-sm mx-auto">
+                  When your kids check off completed chores or submit reasons for skipped tasks, they will appear here.
                 </p>
               </div>
             ) : (
@@ -628,44 +627,44 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 return (
                   <div
                     key={log.id}
-                    className={`p-4 sm:p-5 rounded-3xl border-b-6 border-r-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                    className={`p-2 sm:p-3.5 rounded-none sm:rounded-xl border-x-0 border-y sm:border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3 ${
                       isCompleted
-                        ? 'bg-white border-emerald-400 border-t-2 border-l-2 border-t-emerald-100 border-l-emerald-100'
+                        ? 'bg-white border-emerald-400 sm:border-t-2 sm:border-l-2 sm:border-t-emerald-100 sm:border-l-emerald-100'
                         : isSkipped
-                        ? 'bg-orange-50/70 border-orange-400 border-t-2 border-l-2 border-t-orange-100 border-l-orange-100'
-                        : 'bg-white border-slate-300 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100'
+                        ? 'bg-orange-50/70 border-orange-400 sm:border-t-2 sm:border-l-2 sm:border-t-orange-100 sm:border-l-orange-100'
+                        : 'bg-white border-slate-300 sm:border-t-2 sm:border-l-2 sm:border-t-slate-100 sm:border-l-slate-100'
                     }`}
                   >
                     {/* Left: Kid & Chore details */}
-                    <div className="flex items-start gap-3 flex-1">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                       <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-2xs border-2 border-white"
+                        className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center text-lg sm:text-2xl shrink-0 shadow-2xs border border-white"
                         style={{ backgroundColor: `${kid?.color || '#f59e0b'}30` }}
                       >
                         {kid?.avatar || '⭐'}
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-black text-slate-800 text-sm">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-black text-slate-800 text-xs sm:text-sm">
                             {kid?.name || 'Child'}
                           </span>
                           <span className="text-slate-400 text-xs">•</span>
-                          <span className="text-xs font-bold text-slate-600">
+                          <span className="text-xs font-bold text-slate-700 truncate max-w-[140px] sm:max-w-none">
                             {chore?.title || 'Chore'}
                           </span>
 
                           {/* Status Badge */}
                           {isCompleted && (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                              <Check className="w-3.5 h-3.5 stroke-[3]" />
-                              Completed (+{log.starsAwarded} ⭐)
+                            <span className="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-black px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                              +{log.starsAwarded} ⭐
                             </span>
                           )}
 
                           {isSkipped && (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-900 border border-orange-300">
-                              <AlertTriangle className="w-3.5 h-3.5 text-orange-600" />
+                            <span className="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-black px-2 py-0.2 rounded-full bg-orange-100 text-orange-900 border border-orange-300">
+                              <AlertTriangle className="w-3 h-3 text-orange-600" />
                               Skipped
                             </span>
                           )}
@@ -673,15 +672,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
                         {/* Skipped Reason Box */}
                         {isSkipped && (
-                          <div className="mt-2 p-3 rounded-2xl bg-orange-100/70 border border-orange-200 text-xs text-orange-900">
-                            <div className="font-black flex items-center gap-1.5">
+                          <div className="mt-1 p-1.5 sm:p-2 rounded-lg bg-orange-100/70 border border-orange-200 text-[11px] text-orange-900">
+                            <div className="font-black flex items-center gap-1">
                               <span>Reason:</span>
-                              <span className="uppercase text-[10px] font-black bg-orange-200 px-2 py-0.5 rounded-full">
+                              <span className="uppercase text-[9px] font-black bg-orange-200 px-1.5 py-0.2 rounded-full">
                                 {log.skippedReasonCategory?.replace('_', ' ')}
                               </span>
                             </div>
                             {log.skippedReason && (
-                              <p className="mt-1 text-orange-950 font-bold italic">
+                              <p className="mt-0.5 text-orange-950 font-bold italic">
                                 "{log.skippedReason}"
                               </p>
                             )}
@@ -690,8 +689,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
                         {/* Timestamp */}
                         {log.completedAt && (
-                          <p className="text-[11px] text-slate-400 font-bold mt-1">
-                            Logged at{' '}
+                          <p className="text-[10px] text-slate-400 font-bold mt-0.5">
                             {new Date(log.completedAt).toLocaleTimeString(undefined, {
                               hour: 'numeric',
                               minute: '2-digit',
@@ -702,10 +700,10 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     </div>
 
                     {/* Right: Parent Verification & Action buttons */}
-                    <div className="flex items-center gap-2 shrink-0 justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                    <div className="flex items-center gap-1.5 shrink-0 justify-end pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                       {isCompleted && (
                         <span
-                          className={`px-2.5 py-1 rounded-xl text-[11px] font-black border flex items-center gap-1 ${
+                          className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-black border flex items-center gap-0.5 ${
                             log.verifiedByParent
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                               : 'bg-slate-100 text-slate-600 border-slate-200'
@@ -787,15 +785,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* TAB 2: CHORES & CATEGORIES MANAGER */}
       {activeTab === 'chores' && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-1 sm:space-y-4 animate-fade-in">
           {/* Categories Management Section */}
-          <div className="bg-white p-6 rounded-3xl border-b-6 border-r-4 border-yellow-400 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-white p-2 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-yellow-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
+            <div className="flex items-center justify-between gap-1.5">
               <div>
-                <h3 className="font-black text-slate-800 text-base">
+                <h3 className="font-black text-slate-800 text-xs sm:text-base">
                   Chore Categories ({database.categories.length})
                 </h3>
-                <p className="text-xs text-slate-500 font-bold">
+                <p className="hidden sm:block text-xs text-slate-500 font-bold">
                   Organize daily missions by room, routine, or time of day.
                 </p>
               </div>
@@ -805,31 +803,31 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   sound.playTap();
                   setEditingCategory({});
                 }}
-                className="px-4 py-2.5 rounded-2xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                className="px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs flex items-center gap-1 transition-all shadow-xs active:scale-95 cursor-pointer"
               >
-                <Plus className="w-4 h-4 stroke-[3]" />
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
                 <span>Add Category</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2.5">
               {database.categories.map((cat) => (
                 <div
                   key={cat.id}
-                  className="p-3.5 rounded-2xl border-2 border-slate-200 flex items-center justify-between gap-2 hover:border-yellow-400 transition-colors bg-white shadow-2xs"
+                  className="p-2 sm:p-3 rounded-lg sm:rounded-xl border border-slate-200 flex items-center justify-between gap-2 hover:border-yellow-400 transition-colors bg-white shadow-none sm:shadow-2xs"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 border-2 border-white shadow-2xs"
+                      className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-sm sm:text-base shrink-0 border border-white shadow-2xs"
                       style={{ backgroundColor: `${cat.color}30` }}
                     >
                       {cat.color === '#f59e0b' ? '🌅' : cat.color === '#8b5cf6' ? '🛏️' : cat.color === '#3b82f6' ? '📚' : '🏠'}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-black text-sm text-slate-800 truncate">
+                      <div className="font-black text-xs sm:text-sm text-slate-800 truncate">
                         {cat.name}
                       </div>
-                      <div className="text-[11px] text-slate-400 font-bold truncate">
+                      <div className="text-[10px] sm:text-[11px] text-slate-400 font-bold truncate">
                         {database.chores.filter((c) => c.categoryId === cat.id).length} chores
                       </div>
                     </div>
@@ -862,13 +860,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           </div>
 
           {/* Chores Management Section */}
-          <div className="bg-white p-6 rounded-3xl border-b-6 border-r-4 border-indigo-400 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-white p-2 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-indigo-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
+            <div className="flex items-center justify-between gap-1.5">
               <div>
-                <h3 className="font-black text-slate-800 text-base">
+                <h3 className="font-black text-slate-800 text-xs sm:text-base">
                   Tasks & Chores List ({database.chores.length})
                 </h3>
-                <p className="text-xs text-slate-500 font-bold">
+                <p className="hidden sm:block text-xs text-slate-500 font-bold">
                   Assign chore frequencies, star point values, and assign to specific kids.
                 </p>
               </div>
@@ -885,53 +883,53 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     isActive: true,
                   });
                 }}
-                className="px-4 py-2.5 rounded-2xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                className="px-2.5 py-1 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs sm:text-sm flex items-center gap-1 transition-all shadow-xs active:scale-95 cursor-pointer"
               >
-                <Plus className="w-4 h-4 stroke-[3]" />
-                <span>Create New Chore</span>
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>Create Chore</span>
               </button>
             </div>
 
-            {/* Chore List Table / Cards */}
-            <div className="space-y-2.5">
+            {/* Chore List Cards */}
+            <div className="space-y-1 sm:space-y-2">
               {database.chores.map((chore) => {
                 const category = database.categories.find((c) => c.id === chore.categoryId);
                 return (
                   <div
                     key={chore.id}
-                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                    className={`p-2 sm:p-3 rounded-none sm:rounded-xl border-x-0 border-y sm:border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2.5 ${
                       chore.isActive
-                        ? 'bg-white border-slate-200 hover:border-yellow-400 shadow-2xs'
+                        ? 'bg-white border-slate-200 hover:border-yellow-400 shadow-none sm:shadow-2xs'
                         : 'bg-slate-50 border-slate-200 opacity-60'
                     }`}
                   >
-                    <div className="flex items-start gap-3 flex-1">
-                      <span className="text-2xl p-2 rounded-2xl bg-yellow-100 border-2 border-yellow-300 shadow-2xs">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                      <span className="text-lg sm:text-2xl p-1 sm:p-1.5 rounded-xl bg-yellow-100 border border-yellow-300 shadow-2xs shrink-0">
                         {chore.icon || '⭐'}
                       </span>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-black text-slate-800 text-sm sm:text-base">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-black text-slate-800 text-xs sm:text-sm truncate max-w-[180px] sm:max-w-none">
                             {chore.title}
                           </span>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-yellow-400 text-slate-900 border border-yellow-300">
-                            ⭐ {chore.stars} Stars
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.2 rounded-full text-[10px] sm:text-xs font-black bg-yellow-400 text-slate-900 border border-yellow-300">
+                            ⭐ {chore.stars}
                           </span>
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700">
+                          <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-700">
                             {category?.name || 'Uncategorized'}
                           </span>
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 capitalize">
+                          <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.2 rounded-md bg-indigo-50 text-indigo-700 capitalize">
                             {chore.frequency}
                           </span>
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-pink-50 text-pink-700 capitalize">
+                          <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.2 rounded-md bg-pink-50 text-pink-700 capitalize">
                             {chore.timeOfDay}
                           </span>
                         </div>
                         {chore.description && (
-                          <p className="text-xs text-slate-500 font-bold mt-1">{chore.description}</p>
+                          <p className="text-[11px] text-slate-500 font-bold mt-0.5 truncate">{chore.description}</p>
                         )}
-                        <div className="text-[11px] text-slate-400 font-bold mt-1">
-                          Assigned to:{' '}
+                        <div className="text-[10px] text-slate-400 font-bold mt-0.5 truncate">
+                          Assigned:{' '}
                           {chore.assignedKidIds?.includes('all')
                             ? 'All Kids'
                             : chore.assignedKidIds
@@ -942,9 +940,9 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 justify-end">
+                    <div className="flex items-center gap-1.5 justify-end shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                       <span
-                        className={`px-2.5 py-1 rounded-xl text-xs font-black ${
+                        className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-black ${
                           chore.isActive
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                             : 'bg-slate-200 text-slate-600'
@@ -990,47 +988,47 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* TAB 3: REWARDS & CLAIMS */}
       {activeTab === 'rewards' && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-1 sm:space-y-4 animate-fade-in">
           {/* Pending Kid Claims Queue */}
-          <div className="bg-white p-6 rounded-3xl border-b-6 border-r-4 border-pink-400 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-2xs space-y-4">
+          <div className="bg-white p-2 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-pink-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
             <div>
-              <h3 className="font-black text-slate-800 text-base flex items-center gap-2">
-                <Gift className="w-5 h-5 text-pink-500" />
+              <h3 className="font-black text-slate-800 text-xs sm:text-base flex items-center gap-1.5">
+                <Gift className="w-4 h-4 text-pink-500" />
                 Kid Reward Claims Queue ({database.redemptions.length})
               </h3>
-              <p className="text-xs text-slate-500 font-bold">
+              <p className="hidden sm:block text-xs text-slate-500 font-bold">
                 Approve, mark fulfilled, or refund star purchases from the Reward Store.
               </p>
             </div>
 
             {database.redemptions.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 bg-yellow-50/50 rounded-2xl border-2 border-dashed border-yellow-200">
-                <Gift className="w-8 h-8 mx-auto mb-1 opacity-40 text-pink-500" />
+              <div className="text-center py-4 sm:py-6 text-slate-400 bg-yellow-50/50 rounded-lg sm:rounded-xl border border-dashed border-yellow-200">
+                <Gift className="w-6 h-6 mx-auto mb-1 opacity-40 text-pink-500" />
                 <p className="text-xs font-bold text-slate-600">No reward claims submitted yet.</p>
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="space-y-1 sm:space-y-2">
                 {database.redemptions.map((redemption) => {
                   const kid = database.kids.find((k) => k.id === redemption.kidId);
                   return (
                     <div
                       key={redemption.id}
-                      className="p-4 rounded-2xl border-2 border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white shadow-2xs"
+                      className="p-2 sm:p-3 rounded-none sm:rounded-xl border-x-0 border-y sm:border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3 bg-white shadow-none sm:shadow-2xs"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl p-2 rounded-2xl bg-yellow-100 border-2 border-yellow-300">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <span className="text-xl sm:text-2xl p-1 sm:p-1.5 rounded-xl bg-yellow-100 border border-yellow-300 shrink-0">
                           {redemption.rewardIcon || '🎁'}
                         </span>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-sm text-slate-800">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-black text-xs sm:text-sm text-slate-800">
                               {redemption.rewardTitle}
                             </span>
-                            <span className="text-xs font-black text-slate-900 bg-yellow-400 px-2.5 py-0.5 rounded-full border border-yellow-300">
+                            <span className="text-[10px] sm:text-xs font-black text-slate-900 bg-yellow-400 px-2 py-0.2 rounded-full border border-yellow-300">
                               {redemption.starCost} ⭐
                             </span>
                           </div>
-                          <div className="text-xs text-slate-500 font-bold">
+                          <div className="text-[11px] text-slate-500 font-bold">
                             Claimed by <strong>{kid?.name}</strong> •{' '}
                             {new Date(redemption.date).toLocaleDateString(undefined, {
                               month: 'short',
@@ -1038,19 +1036,19 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             })}
                           </div>
                           {redemption.notes && (
-                            <div className="text-xs text-pink-700 font-bold italic mt-0.5">
+                            <div className="text-[11px] text-pink-700 font-bold italic mt-0.5">
                               "{redemption.notes}"
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 justify-end">
+                      <div className="flex items-center gap-1.5 justify-end shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                         {redemption.status === 'pending' ? (
                           <ActionMenu
                             id={`menu-redemption-${redemption.id}`}
                             label="Review"
-                            buttonClassName="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                            buttonClassName="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 shadow-xs cursor-pointer inline-flex items-center gap-1"
                             items={[
                               {
                                 id: 'fulfill',
@@ -1070,7 +1068,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                           />
                         ) : (
                           <span
-                            className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${
+                            className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider ${
                               redemption.status === 'fulfilled'
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                 : 'bg-rose-100 text-rose-800 border border-rose-300'
@@ -1088,13 +1086,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           </div>
 
           {/* Reward Catalog Management */}
-          <div className="bg-white p-6 rounded-3xl border-b-6 border-r-4 border-yellow-400 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-white p-2 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-yellow-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
+            <div className="flex items-center justify-between gap-1.5">
               <div>
-                <h3 className="font-black text-slate-800 text-base">
+                <h3 className="font-black text-slate-800 text-xs sm:text-base">
                   Reward Catalog Items ({database.rewards.length})
                 </h3>
-                <p className="text-xs text-slate-500 font-bold">
+                <p className="hidden sm:block text-xs text-slate-500 font-bold">
                   Set up motivating rewards, treats, screen time passes, or allowance bonuses.
                 </p>
               </div>
@@ -1109,34 +1107,34 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     isActive: true,
                   });
                 }}
-                className="px-4 py-2.5 rounded-2xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                className="px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs flex items-center gap-1 transition-all shadow-xs active:scale-95 cursor-pointer"
               >
-                <Plus className="w-4 h-4 stroke-[3]" />
-                <span>Add Reward Item</span>
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>Add Item</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 sm:gap-3">
               {database.rewards.map((reward) => (
                 <div
                   key={reward.id}
-                  className="p-4 rounded-3xl border-2 border-slate-200 flex flex-col justify-between hover:border-yellow-400 transition-all bg-white shadow-2xs"
+                  className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl border border-slate-200 flex flex-col justify-between hover:border-yellow-400 transition-all bg-white shadow-none sm:shadow-2xs"
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-3xl p-2 rounded-2xl bg-yellow-100 border-2 border-yellow-300 shadow-2xs">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-2xl p-1.5 rounded-xl bg-yellow-100 border border-yellow-300 shadow-2xs">
                         {reward.icon || '🎁'}
                       </span>
-                      <span className="font-black text-slate-900 bg-yellow-400 px-3 py-1 rounded-full text-xs border border-yellow-300">
+                      <span className="font-black text-slate-900 bg-yellow-400 px-2.5 py-0.5 rounded-full text-xs border border-yellow-300">
                         ⭐ {reward.starCost}
                       </span>
                     </div>
-                    <h4 className="font-black text-slate-800 text-sm mb-1">{reward.title}</h4>
-                    <p className="text-xs text-slate-500 font-bold mb-3">{reward.description}</p>
+                    <h4 className="font-black text-slate-800 text-xs sm:text-sm mb-0.5">{reward.title}</h4>
+                    <p className="text-[11px] text-slate-500 font-bold mb-2 line-clamp-2">{reward.description}</p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <span className="text-[11px] text-slate-400 capitalize font-bold">
+                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                    <span className="text-[10px] text-slate-400 capitalize font-bold">
                       {reward.category.replace('_', ' ')}
                     </span>
                     <div className="flex items-center gap-1">
@@ -1170,14 +1168,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* TAB 4: KIDS PROFILES */}
       {activeTab === 'kids' && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="bg-white p-6 rounded-3xl border-b-6 border-r-4 border-indigo-400 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between">
+        <div className="space-y-1 sm:space-y-4 animate-fade-in">
+          <div className="bg-white p-2 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-indigo-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
+            <div className="flex items-center justify-between gap-1.5">
               <div>
-                <h3 className="font-black text-slate-800 text-base">
+                <h3 className="font-black text-slate-800 text-xs sm:text-base">
                   Children Profiles ({database.kids.length})
                 </h3>
-                <p className="text-xs text-slate-500 font-bold">
+                <p className="hidden sm:block text-xs text-slate-500 font-bold">
                   Manage avatars, star banks, streak records, and level progression.
                 </p>
               </div>
@@ -1191,31 +1189,31 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     stars: 0,
                   });
                 }}
-                className="px-4 py-2.5 rounded-2xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                className="px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs flex items-center gap-1 transition-all shadow-xs active:scale-95 cursor-pointer"
               >
-                <Plus className="w-4 h-4 stroke-[3]" />
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
                 <span>Add Child</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 sm:gap-3">
               {database.kids.map((kid) => {
                 const levelInfo = getKidLevelInfo(kid.lifetimeStars);
                 return (
                   <div
                     key={kid.id}
-                    className="p-5 rounded-3xl border-2 border-slate-200 bg-white flex flex-col justify-between gap-4 hover:border-yellow-400 transition-all shadow-2xs"
+                    className="p-2.5 sm:p-4 rounded-lg sm:rounded-2xl border border-slate-200 bg-white flex flex-col justify-between gap-2 sm:gap-3 hover:border-yellow-400 transition-all shadow-none sm:shadow-2xs"
                   >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-2.5">
                       <div
-                        className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0 shadow-2xs border-2 border-white"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-xl sm:text-2xl shrink-0 shadow-2xs border border-white"
                         style={{ backgroundColor: `${kid.color}30` }}
                       >
                         {kid.avatar || '⭐'}
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-black text-lg text-slate-800">{kid.name}</h4>
+                          <h4 className="font-black text-sm sm:text-base text-slate-800 truncate">{kid.name}</h4>
                           <div className="flex items-center gap-1">
                             <ActionMenu
                               id={`menu-kid-${kid.id}`}
@@ -1267,12 +1265,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             />
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
-                            {levelInfo.icon} Level {levelInfo.level}: {levelInfo.title}
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span className="text-[10px] sm:text-xs font-black px-2 py-0.2 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                            {levelInfo.icon} Lvl {levelInfo.level}: {levelInfo.title}
                           </span>
-                          <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 flex items-center gap-1 border border-orange-200">
-                            <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
+                          <span className="text-[10px] sm:text-xs font-black px-2 py-0.2 rounded-full bg-orange-100 text-orange-800 flex items-center gap-0.5 border border-orange-200">
+                            <Flame className="w-3 h-3 text-orange-500 fill-orange-500" />
                             {kid.streakDays}d streak
                           </span>
                         </div>
@@ -1280,13 +1278,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     </div>
 
                     {/* PIN Protection & Reset Row */}
-                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">
-                          <Lock className="w-3.5 h-3.5" />
+                    <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-6 h-6 rounded-md bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">
+                          <Lock className="w-3 h-3" />
                         </div>
                         <div>
-                          <div className="text-[10px] font-black uppercase text-slate-400">Child Security PIN</div>
+                          <div className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400">Child Security PIN</div>
                           <div className="text-xs font-black font-mono text-slate-800 tracking-wider">
                             {kid.pin || '1234'}
                           </div>
@@ -1305,36 +1303,36 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             }
                           }
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs font-black cursor-pointer transition-colors"
+                        className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs font-black cursor-pointer transition-colors"
                       >
                         Reset PIN
                       </button>
                     </div>
 
                     {/* Star Balance & Quick Adjuster */}
-                    <div className="p-3.5 rounded-2xl bg-yellow-50/70 border-2 border-yellow-200 flex items-center justify-between">
+                    <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-yellow-50/70 border border-yellow-200 flex items-center justify-between">
                       <div>
-                        <div className="text-[11px] text-slate-500 font-black uppercase">Current Star Bank</div>
-                        <div className="text-xl font-black text-slate-900 flex items-center gap-1">
+                        <div className="text-[10px] sm:text-[11px] text-slate-500 font-black uppercase">Current Star Bank</div>
+                        <div className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-1">
                           <span>⭐</span>
                           <span>{kid.stars}</span>
-                          <span className="text-xs font-bold text-slate-400 ml-1">
-                            ({kid.lifetimeStars} lifetime)
+                          <span className="text-[10px] sm:text-xs font-bold text-slate-400 ml-0.5">
+                            ({kid.lifetimeStars} life)
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleAdjustKidStars(kid.id, -5)}
-                          className="px-2.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 text-xs font-black text-slate-700 hover:bg-slate-100 cursor-pointer"
+                          className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-xs font-black text-slate-700 hover:bg-slate-100 cursor-pointer"
                           title="Subtract 5 stars"
                         >
                           -5
                         </button>
                         <button
                           onClick={() => handleAdjustKidStars(kid.id, 5)}
-                          className="px-3 py-1.5 rounded-xl bg-yellow-400 text-slate-900 text-xs font-black hover:bg-yellow-500 shadow-2xs border border-yellow-300 cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-yellow-400 text-slate-900 text-xs font-black hover:bg-yellow-500 shadow-2xs border border-yellow-300 cursor-pointer"
                           title="Add 5 stars"
                         >
                           +5 ⭐
@@ -1351,17 +1349,17 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* TAB 5: SETTINGS & PI HOST GUIDE */}
       {activeTab === 'settings' && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-1 sm:space-y-4 animate-fade-in">
           {/* General App Settings */}
-          <form onSubmit={handleSaveSettings} className="bg-white p-6 sm:p-8 rounded-3xl border-b-6 border-r-4 border-indigo-400 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-2xs space-y-6">
+          <form onSubmit={handleSaveSettings} className="bg-white p-2.5 sm:p-6 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-indigo-400 shadow-none sm:shadow-2xs space-y-2.5 sm:space-y-4">
             <div>
-              <h3 className="font-black text-slate-800 text-lg">System & Security Settings</h3>
-              <p className="text-xs text-slate-500 font-bold">Configure parent passcodes, family title, and reward policies.</p>
+              <h3 className="font-black text-slate-800 text-xs sm:text-base">System & Security Settings</h3>
+              <p className="hidden sm:block text-xs text-slate-500 font-bold">Configure parent passcodes, family title, and reward policies.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
                   Parent 4-Digit Security PIN:
                 </label>
                 <input
@@ -1369,30 +1367,30 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   maxLength={4}
                   value={settingsForm.parentPin}
                   onChange={(e) => setSettingsForm({ ...settingsForm, parentPin: e.target.value })}
-                  className="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 font-mono text-base font-black text-slate-800 focus:outline-indigo-500 bg-yellow-50/50"
+                  className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-slate-200 font-mono text-sm font-black text-slate-800 focus:outline-indigo-500 bg-yellow-50/50"
                   required
                 />
-                <p className="text-[11px] text-slate-400 font-bold mt-1">Used to access this parent portal</p>
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5">Used to access this parent portal</p>
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
                   Family Hub Name:
                 </label>
                 <input
                   type="text"
                   value={settingsForm.familyName}
                   onChange={(e) => setSettingsForm({ ...settingsForm, familyName: e.target.value })}
-                  className="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 text-sm font-black text-slate-800 focus:outline-indigo-500 bg-yellow-50/50"
+                  className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-slate-200 text-xs sm:text-sm font-black text-slate-800 focus:outline-indigo-500 bg-yellow-50/50"
                 />
-                <p className="text-[11px] text-slate-400 font-bold mt-1">Shown in the header across mobile and desktop</p>
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5">Shown in the header across mobile and desktop</p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
               {settingsSaved ? (
-                <span className="text-xs font-black text-emerald-600 flex items-center gap-1">
-                  <Check className="w-4 h-4 stroke-[3]" /> Settings updated successfully!
+                <span className="text-[11px] sm:text-xs font-black text-emerald-600 flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5 stroke-[3]" /> Saved!
                 </span>
               ) : (
                 <span />
@@ -1400,7 +1398,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               <button
                 type="submit"
                 id="btn-save-settings"
-                className="px-6 py-3 rounded-2xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-sm shadow-md transition-all active:scale-95 cursor-pointer"
+                className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg sm:rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs sm:text-sm shadow-xs transition-all active:scale-95 cursor-pointer"
               >
                 Save Settings
               </button>
@@ -1408,23 +1406,23 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           </form>
 
           {/* Weekly Family Teamwork Goal Management Card */}
-          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-6 rounded-3xl border-b-6 border-r-4 border-amber-400 border-t-2 border-l-2 border-t-amber-100 border-l-amber-100 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-2.5 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-amber-400 shadow-none sm:shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
             <div>
-              <h4 className="font-black text-amber-950 text-base flex items-center gap-2">
-                🏆 Weekly Family Teamwork Goal & Alternative Options
+              <h4 className="font-black text-amber-950 text-xs sm:text-base flex items-center gap-1.5">
+                🏆 Weekly Family Teamwork Goal & Options
               </h4>
-              <p className="text-xs text-amber-900 font-bold mt-1 max-w-xl">
-                Choose or create custom family rewards (e.g. Pizza & Movie Night, Ice Cream Sundae Party, Laser Tag), adjust target chores, or add custom presets for kids and parents to select on the kiosk.
+              <p className="text-[11px] sm:text-xs text-amber-900 font-bold mt-0.5 max-w-xl">
+                Choose or create custom family rewards, adjust target chores, or add custom presets.
               </p>
-              <div className="mt-2 flex items-center gap-2 text-xs font-black text-slate-700 flex-wrap">
-                <span className="bg-amber-200 text-amber-950 px-2.5 py-0.5 rounded-full border border-amber-300">
-                  Current: {database.familyGoal?.title || 'Pizza & Movie Night'}
+              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] sm:text-xs font-black text-slate-700 flex-wrap">
+                <span className="bg-amber-200 text-amber-950 px-2 py-0.2 rounded-full border border-amber-300">
+                  {database.familyGoal?.title || 'Pizza & Movie Night'}
                 </span>
                 <span className="text-pink-600 font-extrabold">
                   🎁 {database.familyGoal?.reward || 'Family Movie & Pizza Night'}
                 </span>
                 <span className="text-slate-500">
-                  🎯 Target: {database.familyGoal?.targetChores || 30} chores
+                  🎯 {database.familyGoal?.targetChores || 30} chores
                 </span>
               </div>
             </div>
@@ -1435,37 +1433,37 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 sound.playTap();
                 setIsGoalModalOpen(true);
               }}
-              className="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 shadow-md active:scale-95 cursor-pointer border border-amber-400"
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 shadow-xs active:scale-95 cursor-pointer border border-amber-400"
             >
               Configure Goal & Presets ⚙️
             </button>
           </div>
 
           {/* Backup & Restore Section */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border-b-6 border-r-4 border-yellow-400 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-2xs space-y-4">
+          <div className="bg-white p-2.5 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-yellow-400 shadow-none sm:shadow-2xs space-y-2 sm:space-y-3">
             <div>
-              <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                <Download className="w-5 h-5 text-indigo-600" />
+              <h3 className="font-black text-slate-800 text-xs sm:text-base flex items-center gap-1.5">
+                <Download className="w-4 h-4 text-indigo-600" />
                 Data Backup & Migration (JSON)
               </h3>
-              <p className="text-xs text-slate-500 font-bold">
+              <p className="hidden sm:block text-xs text-slate-500 font-bold">
                 Keep offline JSON backups of your chores, reward store, logs, and kid balances.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
               <button
                 type="button"
                 id="btn-export-backup"
                 onClick={handleExportJSON}
-                className="flex-1 py-3 px-4 rounded-2xl bg-yellow-100 hover:bg-yellow-200 border-2 border-yellow-300 text-slate-900 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="flex-1 py-2 px-3 sm:py-2.5 sm:px-4 rounded-lg sm:rounded-xl bg-yellow-100 hover:bg-yellow-200 border border-yellow-300 text-slate-900 font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
-                <Download className="w-4 h-4 stroke-[3]" />
-                <span>Export Backup File (.json)</span>
+                <Download className="w-3.5 h-3.5 stroke-[3]" />
+                <span>Export Backup (.json)</span>
               </button>
 
-              <label className="flex-1 py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 text-slate-800 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer">
-                <Upload className="w-4 h-4 stroke-[3]" />
+              <label className="flex-1 py-2 px-3 sm:py-2.5 sm:px-4 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                <Upload className="w-3.5 h-3.5 stroke-[3]" />
                 <span>Import Backup (.json)</span>
                 <input
                   type="file"
@@ -1477,27 +1475,27 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             </div>
 
             {importSuccess && (
-              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-black flex items-center gap-1.5">
-                <Check className="w-4 h-4 stroke-[3]" />
+              <div className="p-2 sm:p-2.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-black flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
                 <span>Database restored successfully from backup!</span>
               </div>
             )}
 
             {importError && (
-              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-black flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4" />
+              <div className="p-2 sm:p-2.5 rounded-lg bg-rose-50 border border-rose-300 text-rose-800 text-xs font-black flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
                 <span>{importError}</span>
               </div>
             )}
           </div>
 
           {/* Raspberry Pi Hosting Help Card */}
-          <div className="bg-orange-50 border-b-6 border-r-4 border-orange-400 border-t-2 border-l-2 border-t-orange-100 border-l-orange-100 p-6 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="bg-orange-50 border-x-0 border-y sm:border-2 border-orange-400 p-2.5 sm:p-5 rounded-none sm:rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
             <div>
-              <h4 className="font-black text-orange-950 text-base flex items-center gap-2">
-                🍓 Raspberry Pi 5 Local Hosting Guide
+              <h4 className="font-black text-orange-950 text-xs sm:text-base flex items-center gap-1.5">
+                🍓 Raspberry Pi Local Hosting Guide
               </h4>
-              <p className="text-xs text-orange-900 font-bold mt-1">
+              <p className="text-[11px] sm:text-xs text-orange-900 font-bold mt-0.5">
                 View instructions for setting up 24/7 background running, home network Wi-Fi shortcuts, and mobile PWA install.
               </p>
             </div>
@@ -1506,7 +1504,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 sound.playTap();
                 onOpenPiGuide();
               }}
-              className="px-5 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs shrink-0 shadow-md active:scale-95 cursor-pointer"
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs shrink-0 shadow-xs active:scale-95 cursor-pointer"
             >
               Open Pi Guide
             </button>
@@ -1518,15 +1516,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* Chore Edit Modal */}
       {editingChore && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 rounded-[2.5rem] p-6 max-w-lg w-full shadow-2xl border-4 border-yellow-300 max-h-[90vh] overflow-y-auto">
-            <h3 className="font-black text-xl text-slate-800 mb-4 italic">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-lg w-full shadow-2xl border-2 sm:border-4 border-yellow-300 max-h-[92vh] overflow-y-auto">
+            <h3 className="font-black text-base sm:text-xl text-slate-800 mb-2.5 sm:mb-4 italic">
               {editingChore.id ? 'Edit Chore Task' : 'Create New Chore Mission'}
             </h3>
 
-            <div className="space-y-4 text-sm">
+            <div className="space-y-2.5 sm:space-y-4 text-sm">
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                   Chore Title:
                 </label>
                 <input
@@ -1534,19 +1532,19 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   placeholder="e.g. Empty Dishwasher & Put Away Cups"
                   value={editingChore.title || ''}
                   onChange={(e) => setEditingChore({ ...editingChore, title: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-2xl border-2 border-slate-200 bg-white focus:outline-indigo-500 font-black text-slate-800"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl border border-slate-200 bg-white focus:outline-indigo-500 font-black text-xs sm:text-sm text-slate-800"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                     Category:
                   </label>
                   <select
                     value={editingChore.categoryId || database.categories[0]?.id}
                     onChange={(e) => setEditingChore({ ...editingChore, categoryId: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-2xl border-2 border-slate-200 bg-white text-xs font-black text-slate-800"
+                    className="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 rounded-xl sm:rounded-2xl border border-slate-200 bg-white text-xs font-black text-slate-800"
                   >
                     {database.categories.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -1557,7 +1555,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                     Chore Icon (Emoji):
                   </label>
                   <EmojiPicker
@@ -1569,9 +1567,9 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                  <label className="block text-[10px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                     Star Reward:
                   </label>
                   <input
@@ -1580,18 +1578,18 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     max={100}
                     value={editingChore.stars || 3}
                     onChange={(e) => setEditingChore({ ...editingChore, stars: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-2xl border-2 border-slate-200 bg-white font-black text-slate-900"
+                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-slate-200 bg-white font-black text-xs sm:text-sm text-slate-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                  <label className="block text-[10px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                     Frequency:
                   </label>
                   <select
                     value={editingChore.frequency || 'daily'}
                     onChange={(e) => setEditingChore({ ...editingChore, frequency: e.target.value as FrequencyType })}
-                    className="w-full px-2 py-2 rounded-2xl border-2 border-slate-200 bg-white text-xs font-black text-slate-800"
+                    className="w-full px-1.5 py-1.5 sm:px-2 sm:py-2 rounded-xl sm:rounded-2xl border border-slate-200 bg-white text-[11px] sm:text-xs font-black text-slate-800"
                   >
                     <option value="daily">Daily</option>
                     <option value="weekdays">Weekdays</option>
@@ -1601,13 +1599,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                  <label className="block text-[10px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                     Time of Day:
                   </label>
                   <select
                     value={editingChore.timeOfDay || 'anytime'}
                     onChange={(e) => setEditingChore({ ...editingChore, timeOfDay: e.target.value as TimeOfDay })}
-                    className="w-full px-2 py-2 rounded-2xl border-2 border-slate-200 bg-white text-xs font-black text-slate-800"
+                    className="w-full px-1.5 py-1.5 sm:px-2 sm:py-2 rounded-xl sm:rounded-2xl border border-slate-200 bg-white text-[11px] sm:text-xs font-black text-slate-800"
                   >
                     <option value="morning">Morning</option>
                     <option value="afternoon">Afternoon</option>
@@ -1618,14 +1616,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                   Assign To Kids:
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
                     onClick={() => setEditingChore({ ...editingChore, assignedKidIds: ['all'] })}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black border-2 cursor-pointer ${
+                    className={`px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-black border cursor-pointer ${
                       editingChore.assignedKidIds?.includes('all')
                         ? 'bg-indigo-900 text-white border-indigo-900 shadow-xs'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
@@ -1652,7 +1650,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             assignedKidIds: next.length === 0 ? ['all'] : next,
                           });
                         }}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-black border-2 flex items-center gap-1 cursor-pointer ${
+                        className={`px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-black border flex items-center gap-1 cursor-pointer ${
                           isAssigned
                             ? 'bg-indigo-900 text-white border-indigo-900 shadow-xs'
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
@@ -1667,7 +1665,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                   Helpful Description / Instructions:
                 </label>
                 <textarea
@@ -1675,17 +1673,17 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   value={editingChore.description || ''}
                   onChange={(e) => setEditingChore({ ...editingChore, description: e.target.value })}
                   placeholder="e.g. Rinse plates, scrape food, and place utensils in the cutlery basket."
-                  className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-indigo-500 resize-none"
+                  className="w-full px-3 py-2 rounded-xl sm:rounded-2xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-indigo-500 resize-none"
                 />
               </div>
 
               {/* Subtask Checklists */}
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                   Step-by-Step Checklist (One step per line):
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={editingChore.subtasks ? editingChore.subtasks.join('\n') : ''}
                   onChange={(e) => {
                     const lines = e.target.value.split('\n');
@@ -1695,14 +1693,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     });
                   }}
                   placeholder="1. Pick up stuffed animals&#10;2. Fold clean blankets&#10;3. Put dirty clothes in the laundry hamper"
-                  className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-indigo-500 resize-none"
+                  className="w-full px-3 py-2 rounded-xl sm:rounded-2xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-indigo-500 resize-none"
                 />
               </div>
 
               {/* Focus Timer & Bounty Extras */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="p-3 bg-white rounded-2xl border-2 border-slate-200">
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                <div className="p-2 sm:p-2.5 bg-white rounded-xl border border-slate-200">
+                  <label className="block text-[10px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                     ⏱️ Focus Timer (Minutes)
                   </label>
                   <input
@@ -1717,15 +1715,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       })
                     }
                     placeholder="e.g. 5 or 10 min"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-900 bg-slate-50"
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-black text-slate-900 bg-slate-50"
                   />
-                  <span className="text-[10px] text-slate-400 font-bold block mt-1">
+                  <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold block mt-0.5">
                     Shows countdown & speed bonus
                   </span>
                 </div>
 
-                <div className="p-3 bg-white rounded-2xl border-2 border-slate-200 flex flex-col justify-between">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                <div className="p-2 sm:p-2.5 bg-white rounded-xl border border-slate-200 flex flex-col justify-between">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={!!editingChore.isBounty}
@@ -1743,8 +1741,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     </span>
                   </label>
                   {editingChore.isBounty && (
-                    <div className="mt-2">
-                      <label className="text-[10px] font-black uppercase text-amber-800 block mb-0.5">
+                    <div className="mt-1">
+                      <label className="text-[9px] font-black uppercase text-amber-800 block mb-0.5">
                         Bonus Stars (+⭐):
                       </label>
                       <input
@@ -1762,25 +1760,25 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       />
                     </div>
                   )}
-                  <span className="text-[10px] text-slate-400 font-bold block mt-1">
+                  <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold block mt-0.5">
                     Appears on the Bounty Board
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6">
               <button
                 type="button"
                 onClick={() => setEditingChore(null)}
-                className="flex-1 py-3 rounded-2xl border-2 border-slate-200 bg-white font-black text-xs text-slate-700 hover:bg-slate-50 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white font-black text-xs text-slate-700 hover:bg-slate-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => handleSaveChore(editingChore)}
-                className="flex-1 py-3 rounded-2xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs shadow-md active:scale-95 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs shadow-xs active:scale-95 cursor-pointer"
               >
                 Save Chore
               </button>
@@ -1791,15 +1789,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* Category Edit Modal */}
       {editingCategory && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 rounded-[2.5rem] p-6 max-w-md w-full shadow-2xl border-4 border-yellow-300">
-            <h3 className="font-black text-xl text-slate-800 mb-4 italic">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300">
+            <h3 className="font-black text-base sm:text-xl text-slate-800 mb-3 italic">
               {editingCategory.id ? 'Edit Category' : 'New Category'}
             </h3>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
                   Category Name:
                 </label>
                 <input
@@ -1807,12 +1805,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   placeholder="e.g. Garden & Yard"
                   value={editingCategory.name || ''}
                   onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-black text-sm text-slate-800 focus:outline-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-black text-xs sm:text-sm text-slate-800 focus:outline-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
                   Accent Color:
                 </label>
                 <div className="flex gap-2">
@@ -1821,8 +1819,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       key={c}
                       type="button"
                       onClick={() => setEditingCategory({ ...editingCategory, color: c })}
-                      className={`w-9 h-9 rounded-full border-2 transition-transform cursor-pointer ${
-                        editingCategory.color === c ? 'scale-125 border-slate-900 ring-2 ring-yellow-400 shadow-md' : 'border-white'
+                      className={`w-8 h-8 rounded-full border-2 transition-transform cursor-pointer ${
+                        editingCategory.color === c ? 'scale-110 border-slate-900 ring-2 ring-yellow-400 shadow-xs' : 'border-white'
                       }`}
                       style={{ backgroundColor: c }}
                     />
@@ -1831,18 +1829,18 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2 sm:gap-3 mt-5">
               <button
                 type="button"
                 onClick={() => setEditingCategory(null)}
-                className="flex-1 py-3 rounded-2xl border-2 border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => handleSaveCategory(editingCategory)}
-                className="flex-1 py-3 rounded-2xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs shadow-md active:scale-95 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs shadow-xs active:scale-95 cursor-pointer"
               >
                 Save Category
               </button>
@@ -1853,15 +1851,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* Reward Edit Modal */}
       {editingReward && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 rounded-[2.5rem] p-6 max-w-md w-full shadow-2xl border-4 border-yellow-300">
-            <h3 className="font-black text-xl text-slate-800 mb-4 italic">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300">
+            <h3 className="font-black text-base sm:text-xl text-slate-800 mb-3 italic">
               {editingReward.id ? 'Edit Reward Item' : 'New Reward Item'}
             </h3>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
                   Reward Title:
                 </label>
                 <input
@@ -1869,13 +1867,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   placeholder="e.g. 45 Mins Roblox or Fortnite"
                   value={editingReward.title || ''}
                   onChange={(e) => setEditingReward({ ...editingReward, title: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-black text-sm text-slate-800 focus:outline-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-black text-xs sm:text-sm text-slate-800 focus:outline-indigo-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
                     Star Cost:
                   </label>
                   <input
@@ -1883,12 +1881,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     min={1}
                     value={editingReward.starCost || 20}
                     onChange={(e) => setEditingReward({ ...editingReward, starCost: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-2xl border-2 border-slate-200 bg-white font-black text-slate-900"
+                    className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white font-black text-xs sm:text-sm text-slate-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
                     Reward Icon (Emoji):
                   </label>
                   <EmojiPicker
@@ -1901,7 +1899,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
                   Description:
                 </label>
                 <textarea
@@ -1909,23 +1907,23 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   value={editingReward.description || ''}
                   onChange={(e) => setEditingReward({ ...editingReward, description: e.target.value })}
                   placeholder="How does this reward work?"
-                  className="w-full px-3.5 py-2 rounded-2xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-800 resize-none focus:outline-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 resize-none focus:outline-indigo-500"
                 />
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2 sm:gap-3 mt-5">
               <button
                 type="button"
                 onClick={() => setEditingReward(null)}
-                className="flex-1 py-3 rounded-2xl border-2 border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => handleSaveReward(editingReward)}
-                className="flex-1 py-3 rounded-2xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs shadow-md active:scale-95 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs shadow-xs active:scale-95 cursor-pointer"
               >
                 Save Reward
               </button>
@@ -1936,15 +1934,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* Kid Edit Modal */}
       {editingKid && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 rounded-[2.5rem] p-6 max-w-md w-full shadow-2xl border-4 border-yellow-300">
-            <h3 className="font-black text-xl text-slate-800 mb-4 italic">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300">
+            <h3 className="font-black text-base sm:text-xl text-slate-800 mb-3 italic">
               {editingKid.id ? 'Edit Child Profile' : 'Add Child'}
             </h3>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
                   Child's Name:
                 </label>
                 <input
@@ -1952,13 +1950,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   placeholder="e.g. Leo"
                   value={editingKid.name || ''}
                   onChange={(e) => setEditingKid({ ...editingKid, name: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-black text-sm text-slate-800 focus:outline-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-black text-xs sm:text-sm text-slate-800 focus:outline-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
-                  Choose Fun Character Avatar:
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
+                  Avatar Character:
                 </label>
                 <EmojiPicker
                   value={editingKid.avatar || '🦁'}
@@ -1969,7 +1967,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
                   Profile Color:
                 </label>
                 <div className="flex gap-2">
@@ -1978,8 +1976,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       key={c}
                       type="button"
                       onClick={() => setEditingKid({ ...editingKid, color: c })}
-                      className={`w-9 h-9 rounded-full border-2 cursor-pointer ${
-                        editingKid.color === c ? 'scale-125 border-slate-900 ring-2 ring-yellow-400 shadow-md' : 'border-white'
+                      className={`w-8 h-8 rounded-full border-2 cursor-pointer ${
+                        editingKid.color === c ? 'scale-110 border-slate-900 ring-2 ring-yellow-400 shadow-xs' : 'border-white'
                       }`}
                       style={{ backgroundColor: c }}
                     />
@@ -1988,14 +1986,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-black text-slate-700 uppercase">
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase">
                     Child 4-Digit Security PIN:
                   </label>
                   <button
                     type="button"
                     onClick={() => setEditingKid({ ...editingKid, pin: '1234' })}
-                    className="text-[11px] font-black text-indigo-600 hover:text-indigo-800 cursor-pointer underline"
+                    className="text-[10px] sm:text-[11px] font-black text-indigo-600 hover:text-indigo-800 cursor-pointer underline"
                   >
                     Reset to 1234
                   </button>
@@ -2011,26 +2009,26 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     const val = e.target.value.replace(/\D/g, '').slice(0, 4);
                     setEditingKid({ ...editingKid, pin: val });
                   }}
-                  className="w-full px-4 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-mono font-black text-base text-slate-800 focus:outline-indigo-500 tracking-widest"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-mono font-black text-sm text-slate-800 focus:outline-indigo-500 tracking-widest"
                 />
-                <p className="text-[11px] text-slate-400 font-bold mt-1">
-                  Used by {editingKid.name || 'this child'} to unlock their missions and star rewards.
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                  Used by {editingKid.name || 'this child'} to unlock missions and rewards.
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2 sm:gap-3 mt-5">
               <button
                 type="button"
                 onClick={() => setEditingKid(null)}
-                className="flex-1 py-3 rounded-2xl border-2 border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => handleSaveKid(editingKid)}
-                className="flex-1 py-3 rounded-2xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs shadow-md active:scale-95 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs shadow-xs active:scale-95 cursor-pointer"
               >
                 Save Profile
               </button>
@@ -2041,25 +2039,25 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* Bonus Star Award Modal */}
       {bonusStarModalKid && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 rounded-[2.5rem] p-6 max-w-sm w-full shadow-2xl border-4 border-yellow-300 text-center">
-            <div className="text-4xl mb-2">⭐</div>
-            <h3 className="font-black text-xl text-slate-800 mb-1 italic">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-sm w-full shadow-2xl border-2 sm:border-4 border-yellow-300 text-center">
+            <div className="text-3xl mb-1">⭐</div>
+            <h3 className="font-black text-base sm:text-xl text-slate-800 mb-0.5 italic">
               Award Bonus Stars to {bonusStarModalKid.name}!
             </h3>
-            <p className="text-xs text-slate-500 font-bold mb-4">
+            <p className="text-[11px] sm:text-xs text-slate-500 font-bold mb-3">
               Reward extra effort, good behavior, or helping without being asked.
             </p>
 
-            <div className="flex justify-center gap-2 mb-4">
+            <div className="flex justify-center gap-1.5 mb-3">
               {[2, 5, 10, 15].map((amt) => (
                 <button
                   key={amt}
                   type="button"
                   onClick={() => setBonusStarsAmount(amt)}
-                  className={`px-3 py-1.5 rounded-xl font-black text-sm border-2 cursor-pointer transition-all ${
+                  className={`px-2.5 py-1 rounded-lg font-black text-xs sm:text-sm border cursor-pointer transition-all ${
                     bonusStarsAmount === amt
-                      ? 'bg-yellow-400 text-slate-900 border-yellow-500 shadow-sm scale-105'
+                      ? 'bg-yellow-400 text-slate-900 border-yellow-500 shadow-xs scale-105'
                       : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -2068,30 +2066,30 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               ))}
             </div>
 
-            <div className="text-left mb-5">
-              <label className="block text-xs font-black text-slate-700 uppercase mb-1">
+            <div className="text-left mb-4">
+              <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
                 Reason / Compliment:
               </label>
               <input
                 type="text"
                 value={bonusStarReason}
                 onChange={(e) => setBonusStarReason(e.target.value)}
-                className="w-full px-4 py-2 rounded-2xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-indigo-500"
+                className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-indigo-500"
               />
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setBonusStarModalKid(null)}
-                className="flex-1 py-3 rounded-2xl border-2 border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleAwardBonusStars}
-                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-orange-500 text-slate-900 font-black text-xs shadow-md active:scale-95 cursor-pointer border border-yellow-300"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 text-slate-900 font-black text-xs shadow-xs active:scale-95 cursor-pointer border border-yellow-300"
               >
                 Award +{bonusStarsAmount} Stars!
               </button>

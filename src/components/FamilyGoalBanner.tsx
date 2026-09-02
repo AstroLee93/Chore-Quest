@@ -10,6 +10,7 @@ interface FamilyGoalBannerProps {
   isParentMode?: boolean;
   currentTheme?: AppThemeId;
   onEditGoal?: () => void;
+  className?: string;
 }
 
 export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
@@ -17,6 +18,7 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
   isParentMode = false,
   currentTheme = 'coastal-horizon',
   onEditGoal,
+  className = '',
 }) => {
   const { goal, completedCount, target, percent, isReached, remaining } =
     getFamilyWeeklyGoalProgress(database);
@@ -39,7 +41,7 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
     <div
       id="family-goal-banner"
       onClick={onEditGoal ? () => { sound.playTap(); onEditGoal(); } : undefined}
-      className={`relative overflow-hidden rounded-xl sm:rounded-2xl border transition-transform transition-shadow duration-150 p-2.5 sm:p-3 shadow-xs w-full select-none ${
+      className={`relative overflow-hidden rounded-xl sm:rounded-2xl border transition-transform transition-shadow duration-150 p-2.5 sm:p-3 shadow-xs w-full select-none ${className} ${
         onEditGoal ? 'cursor-pointer hover:shadow-md active:scale-[0.99] group' : ''
       } ${
         isReached

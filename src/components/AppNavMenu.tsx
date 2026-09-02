@@ -47,6 +47,7 @@ export interface AppNavMenuProps {
   onToggleMenu?: () => void;
   onToggleGrocery?: () => void;
   onToggleKiosk?: () => void;
+  onOpenGoalManager?: () => void;
 }
 
 export const AppNavMenu: React.FC<AppNavMenuProps> = ({
@@ -71,6 +72,7 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
   onToggleMenu,
   onToggleGrocery,
   onToggleKiosk,
+  onOpenGoalManager,
 }) => {
   const [isThemeSectionExpanded, setIsThemeSectionExpanded] = useState<boolean>(false);
   const todayStr = getTodayDateString();
@@ -353,7 +355,33 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
                 </button>
               )}
 
-              {/* 5. Host Guide / Raspberry Pi Button */}
+              {/* 5. Family Team Goal */}
+              {onOpenGoalManager && (
+                <button
+                  id="btn-menu-family-goal"
+                  onClick={() => handleAction(onOpenGoalManager)}
+                  className="p-3.5 rounded-2xl bg-purple-50/80 hover:bg-purple-100/90 dark:bg-purple-950/30 dark:hover:bg-purple-950/50 border border-purple-200 dark:border-purple-900/40 flex items-center justify-between gap-3 text-left transition-all cursor-pointer active:scale-95 shadow-xs"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-purple-200 dark:bg-purple-900 text-purple-900 dark:text-purple-200 flex items-center justify-center text-xl shadow-2xs shrink-0">
+                      🎯
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-black text-slate-900 dark:text-slate-100 truncate">
+                        Family Goal
+                      </div>
+                      <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
+                        Weekly team reward progress
+                      </div>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-lg bg-purple-200 dark:bg-purple-900 text-purple-900 dark:text-purple-200 text-xs font-bold shrink-0">
+                    View
+                  </span>
+                </button>
+              )}
+
+              {/* 6. Host Guide / Raspberry Pi Button */}
               <button
                 id="btn-menu-pi-guide"
                 onClick={() => handleAction(onOpenPiGuide)}

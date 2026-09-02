@@ -348,6 +348,7 @@ export default function App() {
         onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
         onToggleGrocery={() => setIsGroceryOpen((prev) => !prev)}
         onToggleKiosk={() => setIsKioskMode(true)}
+        onOpenGoalManager={() => setIsGoalModalOpen(true)}
       />
 
       <main className="flex-1 pb-6 sm:pb-12 flex flex-col">
@@ -387,6 +388,8 @@ export default function App() {
             onOpenParentPin={() => setIsPinModalOpen(true)}
             onOpenCalendar={() => setIsCalendarOpen(true)}
             onOpenGoalManager={() => setIsGoalModalOpen(true)}
+            onOpenMenu={() => setIsMenuOpen(true)}
+            onOpenRewardStore={() => setIsRewardStoreOpen(true)}
           />
         )}
       </main>
@@ -458,7 +461,7 @@ export default function App() {
             onClick={() => setIsPinModalOpen(true)}
             className="text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
           >
-            🔒 Parent PIN
+            Parent PIN
           </button>
           <span>&copy; {new Date().getFullYear()} ChoreQuest Home Server</span>
         </div>

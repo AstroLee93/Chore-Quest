@@ -1,5 +1,4 @@
 import React from 'react';
-import { Trophy, Target, Sparkles, CheckCircle2, ChevronRight, Award } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { FamilyDatabase } from '../types';
 import { getFamilyWeeklyGoalProgress } from '../utils/storage';
@@ -49,11 +48,11 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
       }`}
     >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        {/* Left Side: Icon & Title */}
+        {/* Left Side: Badge & Title */}
         <div className="flex items-center gap-3.5 flex-1 min-w-0">
           <div
             onClick={isReached ? handleCelebrate : undefined}
-            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-sm transition-transform ${
+            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black text-xs sm:text-sm tracking-wider uppercase shrink-0 shadow-sm transition-transform ${
               onEditGoal ? 'group-hover:scale-105' : ''
             } ${
               isReached
@@ -61,24 +60,22 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
                 : theme.goalBannerIconBg
             }`}
           >
-            {goal.icon || '🏆'}
+            Goal
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${theme.goalBadge}`}>
-                <Trophy className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${theme.goalBadge}`}>
                 <span>Weekly Family Teamwork Goal</span>
               </span>
               {isReached ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white animate-pulse">
-                  <Sparkles className="w-3 h-3" />
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white animate-pulse">
                   <span>Goal Achieved!</span>
                 </span>
               ) : (
                 onEditGoal && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-black/10 dark:bg-white/15 text-current group-hover:bg-black/20 dark:group-hover:bg-white/25 transition-colors">
-                    <span>Change / View Options ⚙️</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-black/10 dark:bg-white/15 text-current group-hover:bg-black/20 dark:group-hover:bg-white/25 transition-colors">
+                    <span>Options</span>
                   </span>
                 )
               )}
@@ -89,7 +86,7 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
             </h3>
 
             <p className={`text-xs font-semibold truncate opacity-85 ${theme.goalTitleColor}`}>
-              🎁 Reward: <span className="text-pink-600 dark:text-pink-400 font-extrabold">{goal.reward}</span>
+              Reward: <span className="text-pink-600 dark:text-pink-400 font-extrabold">{goal.reward}</span>
             </p>
           </div>
         </div>
@@ -98,7 +95,7 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
         <div className="w-full md:w-72 shrink-0">
           <div className={`flex items-center justify-between text-xs font-black mb-1.5 ${theme.goalTitleColor}`}>
             <span className="opacity-80">
-              {isReached ? '🎉 Target Smashed!' : `${remaining} more chores to unlock!`}
+              {isReached ? 'Target Reached!' : `${remaining} more chores to unlock`}
             </span>
             <span className="font-black">
               {completedCount} / {target} ({percent}%)
@@ -126,10 +123,9 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
                   sound.playTap();
                   onEditGoal();
                 }}
-                className={`inline-flex items-center gap-1 text-[11px] font-black hover:opacity-100 ${theme.goalBadge} px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs`}
+                className={`inline-flex items-center text-[11px] font-black hover:opacity-100 ${theme.goalBadge} px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs`}
               >
-                <span>{isParentMode ? 'Admin Goal Settings ⚙️' : 'View / Change Goal 🎯'}</span>
-                <ChevronRight className="w-3 h-3" />
+                <span>{isParentMode ? 'Admin Goal Settings' : 'View / Change Goal'}</span>
               </button>
             </div>
           )}

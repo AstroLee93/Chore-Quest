@@ -7,7 +7,9 @@ import { SkipReasonModal } from './SkipReasonModal';
 import { ChoreTimerModal } from './ChoreTimerModal';
 import { ChoreWheelModal } from './ChoreWheelModal';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
+import { BadgeModal } from './BadgeModal';
 import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getBountyChores } from '../utils/storage';
+import { calculateKidBadges } from '../utils/badges';
 import { getSeasonalWeatherForDate, EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../utils/calendar';
 import { sound } from '../utils/sound';
 import { AppThemeId, APP_THEMES } from '../utils/theme';
@@ -55,6 +57,13 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const [skipModalChore, setSkipModalChore] = useState<ChoreItem | null>(null);
   const [activeTimerChore, setActiveTimerChore] = useState<ChoreItem | null>(null);
   const [isWheelOpen, setIsWheelOpen] = useState<boolean>(false);
+  const [selectedBadgeModalId, setSelectedBadgeModalId] = useState<string | null>(null);
+  const [isBadgeModalOpen, setIsBadgeModalOpen] = useState<boolean>(false);
+
+  // Dynamic badges progress calculation
+  const kidBadges = useMemo(() => {
+    return calculateKidBadges(kid, logs, chores, todayStr);
+  }, [kid, logs, chores, todayStr]);
 
   // Filter events relevant to this kid for today
   const kidTodayEvents = useMemo(() => {
@@ -471,27 +480,58 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 </p>
               </div>
 
-              {/* Unlocked Badges Box */}
+              {/* Dynamic Interactive Badges & Quest Trophy Box */}
               <div className="bg-indigo-800/50 p-4 rounded-2xl border border-indigo-700">
-                <h4 className="font-black text-yellow-400 mb-2.5 text-xs sm:text-sm uppercase tracking-wider">
-                  Unlocked Badges
-                </h4>
-                <div className="flex flex-wrap gap-2.5">
-                  <div className="w-11 h-11 bg-yellow-500 rounded-xl flex items-center justify-center text-2xl shadow-md transform hover:scale-110 transition-transform" title="Helper Gold Star">
-                    🥇
-                  </div>
-                  <div className="w-11 h-11 bg-emerald-500 rounded-xl flex items-center justify-center text-2xl shadow-md transform hover:scale-110 transition-transform" title="Lightning Helper">
-                    ⚡
-                  </div>
-                  <div className="w-11 h-11 bg-rose-500 rounded-xl flex items-center justify-center text-2xl shadow-md transform hover:scale-110 transition-transform" title="Tidy Cadet">
-                    🧹
-                  </div>
-                  <div className="w-11 h-11 bg-blue-500 rounded-xl flex items-center justify-center text-2xl shadow-md transform hover:scale-110 transition-transform" title="Streak Champion">
-                    🔥
-                  </div>
-                  <div className="w-11 h-11 bg-indigo-700 border-2 border-dashed border-indigo-500 rounded-xl flex items-center justify-center text-indigo-300 text-xs font-bold" title="Next Mystery Badge">
-                    🔒
-                  </div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <h4 className="font-black text-yellow-400 text-xs sm:text-sm uppercase tracking-wider flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-amber-300" />
+                    <span>Quest Badges ({kidBadges.filter((b) => b.isUnlocked).length}/{kidBadges.length})</span>
+                  </h4>
+                  <button
+                    onClick={() => {
+                      sound.playTap();
+                      setSelectedBadgeModalId(kidBadges[0]?.badge.id || null);
+                      setIsBadgeModalOpen(true);
+                    }}
+                    className="text-[11px] font-black text-amber-300 hover:text-amber-200 underline cursor-pointer"
+                  >
+                    View All
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {kidBadges.map(({ badge, isUnlocked, progressText, progressPercent }) => (
+                    <button
+                      key={badge.id}
+                      id={`btn-badge-${badge.id}`}
+                      onClick={() => {
+                        sound.playTap();
+                        setSelectedBadgeModalId(badge.id);
+                        setIsBadgeModalOpen(true);
+                      }}
+                      className={`relative rounded-xl p-2 flex flex-col items-center justify-center transition-all cursor-pointer group active:scale-95 border-2 ${
+                        isUnlocked
+                          ? `bg-gradient-to-br ${badge.bgGradient} border-amber-300 text-slate-950 shadow-md shadow-amber-500/20 hover:scale-105`
+                          : 'bg-indigo-900/60 border-indigo-700/80 text-indigo-300 opacity-60 hover:opacity-90 grayscale hover:grayscale-0'
+                      }`}
+                      title={`${badge.title} (${isUnlocked ? 'UNLOCKED' : 'LOCKED: ' + progressText}) - Tap to inspect`}
+                    >
+                      <span className="text-2xl filter drop-shadow-sm select-none">{badge.icon}</span>
+                      <span className="text-[10px] font-black leading-tight mt-1 truncate max-w-full text-center">
+                        {badge.title}
+                      </span>
+
+                      {!isUnlocked && (
+                        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-900 border border-slate-700 text-white flex items-center justify-center text-[9px]">
+                          🔒
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="text-[11px] font-bold text-indigo-200/80 mt-2.5 text-center">
+                  ✨ Tap any badge to check criteria & unlock requirements!
                 </div>
               </div>
             </div>
@@ -565,6 +605,15 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           setSkipModalChore(null);
         }}
         onClose={() => setSkipModalChore(null)}
+      />
+
+      {/* Dynamic Badge & Quest Detail Modal */}
+      <BadgeModal
+        isOpen={isBadgeModalOpen}
+        onClose={() => setIsBadgeModalOpen(false)}
+        kid={kid}
+        badges={kidBadges}
+        initialBadgeId={selectedBadgeModalId}
       />
     </div>
   );

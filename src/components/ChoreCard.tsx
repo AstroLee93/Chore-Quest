@@ -3,6 +3,7 @@ import { Check, Clock, AlertTriangle, Undo2, Star, HelpCircle, Sun, Moon, Sparkl
 import confetti from 'canvas-confetti';
 import { ChoreItem, ChoreLog, ChoreCategory } from '../types';
 import { sound } from '../utils/sound';
+import { ActionMenu } from './ActionMenu';
 
 interface ChoreCardProps {
   chore: ChoreItem;
@@ -276,24 +277,26 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
         {/* Right Side: Action Controls */}
         <div className="w-full sm:w-auto flex items-center justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
           {isCompleted ? (
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
               <span className="text-emerald-500 font-black text-lg sm:text-xl italic tracking-wide">
                 DONE!
               </span>
               <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs">
                 <Check className="w-7 h-7 stroke-[4]" />
               </div>
-              <button
-                id={`btn-undo-${chore.id}`}
-                onClick={() => {
-                  sound.playTap();
-                  onUndo(chore.id);
-                }}
-                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-                title="Undo completion"
-              >
-                <Undo2 className="w-4 h-4" />
-              </button>
+              <ActionMenu
+                id={`menu-completed-${chore.id}`}
+                label="Menu"
+                items={[
+                  {
+                    id: 'undo',
+                    label: 'Undo / Reset Task',
+                    icon: <Undo2 className="w-3.5 h-3.5" />,
+                    variant: 'warning',
+                    onClick: () => onUndo(chore.id),
+                  },
+                ]}
+              />
             </div>
           ) : isSkipped ? (
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -305,31 +308,44 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                 <Sparkles className="w-4 h-4" />
                 <span>Do it now!</span>
               </button>
-              <button
-                id={`btn-undo-skip-${chore.id}`}
-                onClick={() => {
-                  sound.playTap();
-                  onUndo(chore.id);
-                }}
-                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-                title="Clear skipped status"
-              >
-                <Undo2 className="w-4 h-4" />
-              </button>
+              <ActionMenu
+                id={`menu-skipped-${chore.id}`}
+                label="Menu"
+                items={[
+                  {
+                    id: 'undo-skip',
+                    label: 'Clear Skipped Status',
+                    icon: <Undo2 className="w-3.5 h-3.5" />,
+                    onClick: () => onUndo(chore.id),
+                  },
+                ]}
+              />
             </div>
           ) : (
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
-              {/* Skip / Can't complete button */}
-              <button
-                id={`btn-skip-${chore.id}`}
-                onClick={() => {
-                  sound.playTap();
-                  onOpenSkipModal(chore);
-                }}
-                className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 font-bold px-3.5 py-2.5 rounded-xl transition-all cursor-pointer text-xs sm:text-sm"
-              >
-                Can't do it...
-              </button>
+              <ActionMenu
+                id={`menu-active-${chore.id}`}
+                label="Menu"
+                items={[
+                  ...(onStartTimer
+                    ? [
+                        {
+                          id: 'timer',
+                          label: chore.timerMinutes ? `Start ${chore.timerMinutes}m Focus Timer` : 'Start Focus Timer',
+                          icon: <Timer className="w-3.5 h-3.5 text-sky-500" />,
+                          onClick: () => onStartTimer(chore),
+                        },
+                      ]
+                    : []),
+                  {
+                    id: 'skip',
+                    label: "Can't do it right now...",
+                    icon: <AlertTriangle className="w-3.5 h-3.5" />,
+                    variant: 'warning' as const,
+                    onClick: () => onOpenSkipModal(chore),
+                  },
+                ]}
+              />
 
               {/* Complete Big Vibrant Button */}
               <button

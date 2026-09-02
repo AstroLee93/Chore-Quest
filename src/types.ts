@@ -218,14 +218,20 @@ export type GroceryCategory =
   | 'household'
   | 'other';
 
+export type GroceryImportance = 'staple' | 'common' | 'treat' | 'luxury';
+
 export interface GroceryItem {
   id: string;
   name: string;
   category: GroceryCategory;
   quantity?: string; // e.g. "2 bags", "1 gallon", "3 lbs"
+  importance?: GroceryImportance; // 'staple' | 'common' | 'treat' | 'luxury'
   acquired: boolean;
   acquiredAt?: string;
-  addedBy?: string; // e.g. "Mom", "Leo 🦁", "Auto from Dinner Menu", "Replenished from Pantry"
+  isDepleted?: boolean; // Track depletion across all groceries
+  depletedAt?: string;
+  depletedBy?: string;
+  addedBy?: string; // e.g. "Mom", "Leo 🦁", "Auto from Dinner Menu", "Replenished from Pantry", "Kid Request (Leo)"
   notes?: string;
   isReplenishItem?: boolean;
   sourceMealDay?: DayOfWeekKey; // If imported from weekly dinner menu
@@ -233,11 +239,43 @@ export interface GroceryItem {
   createdAt: string;
 }
 
+export interface SpiceItem {
+  id: string;
+  name: string;
+  category?: string; // e.g. "Baking", "Herbs", "Peppers & Salts", "Seasoning Blends"
+  isEmpty: boolean; // Marked as empty when it runs out
+  needsReplenish: boolean; // Triggered when empty to add to replenish/shopping queue
+  addedBy?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface GroceryRequest {
+  id: string;
+  name: string;
+  itemName?: string;
+  quantity?: string;
+  category?: GroceryCategory;
+  importance?: GroceryImportance;
+  notes?: string;
+  kidId: string;
+  kidName: string;
+  kidAvatar?: string;
+  date?: string;
+  createdAt?: string;
+  status: 'pending' | 'approved' | 'denied';
+  deniedReason?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
 export interface PantryStapleItem {
   id: string;
   name: string;
   category: GroceryCategory;
   defaultQuantity?: string;
+  importance?: GroceryImportance;
   icon?: string;
   isDepleted: boolean; // True if "Used Up / Needs Replenish"
   depletedAt?: string;
@@ -251,7 +289,30 @@ export interface WeeklyGroceryList {
   weekStartDate?: string;
   items: GroceryItem[];
   pantryStaples?: PantryStapleItem[];
+  spices?: SpiceItem[];
+  requests?: GroceryRequest[];
   lastUpdated?: string;
+}
+
+export interface BadgeDefinition {
+  id: string;
+  title: string;
+  icon: string;
+  category: 'Milestone' | 'Speed' | 'Dedication' | 'Streak' | 'Savings' | 'Lifetime';
+  description: string;
+  requirement: string;
+  color: string;
+  bgGradient: string;
+}
+
+export interface KidBadgeProgress {
+  badge: BadgeDefinition;
+  isUnlocked: boolean;
+  currentValue: number;
+  targetValue: number;
+  progressPercent: number;
+  progressText: string;
+  unlockedDate?: string;
 }
 
 export interface FamilyDatabase {

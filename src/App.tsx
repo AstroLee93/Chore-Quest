@@ -68,6 +68,60 @@ export default function App() {
     }
   }, [database.kids, activeKidId]);
 
+  // Inactivity Auto-Timeout (2 minutes / 120s)
+  // Automatically logs out active kid / closes overlays to revert to secure Kiosk Kid Selector
+  useEffect(() => {
+    const isAtSubScreen =
+      activeKidId !== null ||
+      isParentMode ||
+      isRewardStoreOpen ||
+      isCalendarOpen ||
+      isMenuOpen ||
+      isGroceryOpen ||
+      isGoalModalOpen;
+
+    if (!isAtSubScreen) return;
+
+    const INACTIVITY_LIMIT_MS = 120000; // 2 minutes
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        // Auto return to home/kiosk selector
+        setActiveKidId(null);
+        setIsParentMode(false);
+        setIsRewardStoreOpen(false);
+        setIsCalendarOpen(false);
+        setIsMenuOpen(false);
+        setIsGroceryOpen(false);
+        setIsGoalModalOpen(false);
+        setIsPiGuideOpen(false);
+        setIsPinModalOpen(false);
+      }, INACTIVITY_LIMIT_MS);
+    };
+
+    resetTimer();
+
+    const activityEvents = ['mousedown', 'mousemove', 'touchstart', 'keydown', 'scroll', 'click'];
+    const handleActivity = () => resetTimer();
+
+    activityEvents.forEach((evt) => window.addEventListener(evt, handleActivity, { passive: true }));
+
+    return () => {
+      clearTimeout(timeoutId);
+      activityEvents.forEach((evt) => window.removeEventListener(evt, handleActivity));
+    };
+  }, [
+    activeKidId,
+    isParentMode,
+    isRewardStoreOpen,
+    isCalendarOpen,
+    isMenuOpen,
+    isGroceryOpen,
+    isGoalModalOpen,
+  ]);
+
   // Persist database updates locally and to server
   const handleUpdateDatabase = useCallback((updated: FamilyDatabase) => {
     setDatabase(updated);
@@ -230,6 +284,10 @@ export default function App() {
           onThemeChange={handleThemeChange}
           onUpdateDatabase={handleUpdateDatabase}
           onExitKiosk={() => setIsKioskMode(false)}
+          onSelectKid={(kid) => {
+            setActiveKidId(kid.id);
+            setIsKioskMode(false);
+          }}
           onOpenCalendar={() => setIsCalendarOpen(true)}
           onOpenMenu={() => setIsMenuOpen(true)}
         />
@@ -259,7 +317,7 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen ${themeConfig.bgGradient} flex flex-col font-sans transition-colors duration-300 ${
+      className={`min-h-[100dvh] ${themeConfig.bgGradient} flex flex-col font-sans transition-colors duration-300 ${
         themeConfig.isDark
           ? 'dark text-slate-100 selection:bg-indigo-500 selection:text-white'
           : 'text-slate-800 selection:bg-sky-200 selection:text-slate-900'
@@ -292,7 +350,7 @@ export default function App() {
         onToggleKiosk={() => setIsKioskMode(true)}
       />
 
-      <main className="flex-1 pb-16">
+      <main className="flex-1 pb-6 sm:pb-12 flex flex-col">
         {isParentMode ? (
           <ParentDashboard
             database={database}

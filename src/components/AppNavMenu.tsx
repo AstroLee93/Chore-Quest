@@ -267,8 +267,8 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
                 </button>
               )}
 
-              {/* 2. Automated Weekly Grocery List Button */}
-              {onToggleGrocery && (
+              {/* 2. Automated Weekly Grocery List Button (Admin or Main Dashboard Only) */}
+              {onToggleGrocery && (isParentMode || !activeKid) && (
                 <button
                   id="btn-menu-grocery"
                   onClick={() => handleAction(onToggleGrocery)}

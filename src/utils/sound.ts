@@ -259,6 +259,11 @@ class SoundEngine {
   public playFail() {
     this.playSkipNotice();
   }
+
+  // Undo / backspace subtle tone
+  public playUndo() {
+    this.playTap();
+  }
 }
 
 export const sound = new SoundEngine();

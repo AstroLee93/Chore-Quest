@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed } from 'lucide-react';
+import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent } from '../types';
 import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getMvpKid } from '../utils/storage';
@@ -12,6 +12,8 @@ import { ChoreTimerModal } from './ChoreTimerModal';
 import { FamilyGoalModal } from './FamilyGoalModal';
 import { WeeklyMenuModal } from './WeeklyMenuModal';
 import { ThemeSelector } from './ThemeSelector';
+import { ParentPinModal } from './ParentPinModal';
+import { KidPinModal } from './KidPinModal';
 
 interface KioskDashboardProps {
   database: FamilyDatabase;
@@ -19,6 +21,7 @@ interface KioskDashboardProps {
   onThemeChange?: (themeId: AppThemeId) => void;
   onUpdateDatabase: (updated: FamilyDatabase) => void;
   onExitKiosk: () => void;
+  onSelectKid?: (kid: KidProfile) => void;
   onOpenCalendar?: () => void;
   onOpenMenu?: () => void;
 }
@@ -29,6 +32,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   onThemeChange,
   onUpdateDatabase,
   onExitKiosk,
+  onSelectKid,
   onOpenCalendar,
   onOpenMenu,
 }) => {
@@ -37,6 +41,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [activeTimerChore, setActiveTimerChore] = useState<ChoreItem | null>(null);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [isMenuModalOpen, setIsMenuModalOpen] = useState<boolean>(false);
+  const [isExitPinOpen, setIsExitPinOpen] = useState<boolean>(false);
+  const [selectedKidForPin, setSelectedKidForPin] = useState<KidProfile | null>(null);
 
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = useMemo(() => getTodayDateString(), []);
@@ -296,11 +302,12 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           <button
             onClick={() => {
               sound.playTap();
-              onExitKiosk();
+              setIsExitPinOpen(true);
             }}
             className="p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-800 font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+            title="Exit Kiosk Mode (Parent PIN Required)"
           >
-            <X className="w-4 h-4 text-rose-400" />
+            <Lock className="w-4 h-4 text-rose-400" />
             <span className="hidden sm:inline">Exit Kiosk</span>
           </button>
         </div>
@@ -426,7 +433,14 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               <div>
                 {/* Header */}
                 <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/15">
-                  <div className="flex items-center gap-3">
+                  <div
+                    onClick={() => {
+                      sound.playTap();
+                      setSelectedKidForPin(kid);
+                    }}
+                    className="flex items-center gap-3 cursor-pointer group/header p-1 -m-1 rounded-2xl hover:bg-white/10 transition-colors"
+                    title={`Tap to unlock ${kid.name}'s Profile Dashboard (PIN required)`}
+                  >
                     <div className="relative">
                       {isMvp && (
                         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 text-2xl filter drop-shadow-[0_3px_6px_rgba(245,158,11,0.9)] animate-bounce select-none pointer-events-none">
@@ -438,8 +452,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                           backgroundColor: isMvp ? `${kid.color || '#3b82f6'}40` : `${kid.color || '#3b82f6'}25`,
                           borderColor: isMvp ? '#fbbf24' : (kid.color || '#3b82f6'),
                         }}
-                        className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-3xl shrink-0 shadow-inner ${
-                          isMvp ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-900 scale-105' : ''
+                        className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-3xl shrink-0 shadow-inner group-hover/header:scale-105 transition-transform ${
+                          isMvp ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-900' : ''
                         }`}
                       >
                         {kid.avatar}
@@ -447,8 +461,9 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     </div>
 
                     <div>
-                      <h2 className="text-xl font-black text-white flex items-center gap-2 flex-wrap">
+                      <h2 className="text-xl font-black text-white flex items-center gap-2 flex-wrap group-hover/header:text-amber-200 transition-colors">
                         <span>{kid.name}</span>
+                        <Lock className="w-3.5 h-3.5 text-white/50 group-hover/header:text-amber-300" />
                         {isMvp && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 font-black text-xs shadow-md tracking-wider uppercase border border-amber-300">
                             👑 MVP
@@ -462,6 +477,9 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                       </h2>
                       <div className="flex items-center gap-2 text-xs font-bold text-white/80 mt-0.5">
                         <span>{level.icon} {level.title}</span>
+                        <span className="text-[10px] text-amber-300 font-extrabold underline opacity-0 group-hover/header:opacity-100 transition-opacity">
+                          Enter PIN
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -766,6 +784,34 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           isParentMode={false}
         />
       )}
+
+      {/* Parent PIN Guard for exiting Kiosk mode */}
+      <ParentPinModal
+        isOpen={isExitPinOpen}
+        correctPin={database.settings.parentPin || '1234'}
+        isDefaultPin={!database.settings.parentPin || database.settings.parentPin === '1234'}
+        onSuccess={() => {
+          setIsExitPinOpen(false);
+          onExitKiosk();
+        }}
+        onClose={() => setIsExitPinOpen(false)}
+      />
+
+      {/* Child PIN Entry for Kiosk Mode */}
+      <KidPinModal
+        isOpen={!!selectedKidForPin}
+        kid={selectedKidForPin}
+        onClose={() => setSelectedKidForPin(null)}
+        onSuccess={() => {
+          if (selectedKidForPin && onSelectKid) {
+            const chosen = selectedKidForPin;
+            setSelectedKidForPin(null);
+            onSelectKid(chosen);
+          } else {
+            setSelectedKidForPin(null);
+          }
+        }}
+      />
     </div>
   );
 };

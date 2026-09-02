@@ -601,8 +601,8 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
               <span className="hidden md:inline">Presets</span>
             </button>
 
-            {/* Grocery List Shortcut */}
-            {onOpenGroceryList && (
+            {/* Grocery List Shortcut (Admin or Main Dashboard Only) */}
+            {onOpenGroceryList && (isParentMode || !activeKid) && (
               <button
                 id="btn-menu-to-grocery"
                 onClick={() => {

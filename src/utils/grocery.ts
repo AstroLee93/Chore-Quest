@@ -1,11 +1,48 @@
 import {
   GroceryCategory,
   GroceryItem,
+  GroceryImportance,
+  SpiceItem,
+  GroceryRequest,
   PantryStapleItem,
   WeeklyGroceryList,
   WeeklyDinnerMenu,
   DayOfWeekKey,
 } from '../types';
+
+export const GROCERY_IMPORTANCE_METADATA: Record<
+  GroceryImportance,
+  { label: string; icon: string; badgeBg: string; badgeText: string; badgeBorder: string }
+> = {
+  staple: {
+    label: 'Staple',
+    icon: '⭐️',
+    badgeBg: 'bg-blue-100 dark:bg-blue-950/60',
+    badgeText: 'text-blue-800 dark:text-blue-300',
+    badgeBorder: 'border-blue-300 dark:border-blue-800',
+  },
+  common: {
+    label: 'Common',
+    icon: '📦',
+    badgeBg: 'bg-slate-100 dark:bg-slate-800',
+    badgeText: 'text-slate-800 dark:text-slate-300',
+    badgeBorder: 'border-slate-300 dark:border-slate-700',
+  },
+  treat: {
+    label: 'Treat',
+    icon: '🍬',
+    badgeBg: 'bg-amber-100 dark:bg-amber-950/60',
+    badgeText: 'text-amber-800 dark:text-amber-300',
+    badgeBorder: 'border-amber-300 dark:border-amber-800',
+  },
+  luxury: {
+    label: 'Luxury',
+    icon: '👑',
+    badgeBg: 'bg-purple-100 dark:bg-purple-950/60',
+    badgeText: 'text-purple-800 dark:text-purple-300',
+    badgeBorder: 'border-purple-300 dark:border-purple-800',
+  },
+};
 
 const getTodayDateString = (): string => {
   const d = new Date();
@@ -245,331 +282,123 @@ export const detectGroceryCategory = (itemName: string): GroceryCategory => {
 };
 
 /**
- * Standard default pantry staples for family tracking with initial depletion states
+ * Standard default pantry staples for family tracking with clean initial state
  */
-export const DEFAULT_PANTRY_STAPLES: PantryStapleItem[] = [
-  // Dairy / Fridge
-  {
-    id: 'staple-milk',
-    name: 'Whole Milk / 2% Milk',
-    category: 'dairy_eggs',
-    defaultQuantity: '1 Gallon',
-    icon: '🥛',
-    isDepleted: true, // depleted for demo
-    depletedAt: getTodayDateString(),
-    depletedBy: 'Leo 🦁',
-    notes: 'Nearly empty in fridge door',
-  },
-  {
-    id: 'staple-eggs',
-    name: 'Large Grade A Eggs',
-    category: 'dairy_eggs',
-    defaultQuantity: '1 Carton (12 count)',
-    icon: '🥚',
-    isDepleted: true, // depleted for demo
-    depletedAt: getTodayDateString(),
-    depletedBy: 'Mom',
-    notes: 'Down to last 2 eggs',
-  },
-  {
-    id: 'staple-butter',
-    name: 'Salted Sweet Cream Butter',
-    category: 'dairy_eggs',
-    defaultQuantity: '1 Box (4 sticks)',
-    icon: '🧈',
-    isDepleted: false,
-  },
-  {
-    id: 'staple-cheese',
-    name: 'Shredded Cheddar & Mozzarella',
-    category: 'dairy_eggs',
-    defaultQuantity: '2 Bags (8 oz)',
-    icon: '🧀',
-    isDepleted: false,
-  },
-  // Bakery
-  {
-    id: 'staple-bread',
-    name: 'Whole Wheat Sandwich Bread',
-    category: 'bakery',
-    defaultQuantity: '1 Loaf',
-    icon: '🍞',
-    isDepleted: false,
-  },
-  {
-    id: 'staple-tortillas',
-    name: 'Soft Flour Tortillas (Taco Size)',
-    category: 'bakery',
-    defaultQuantity: '1 Pack (10-12 ct)',
-    icon: '🫓',
-    isDepleted: false,
-  },
-  // Produce
-  {
-    id: 'staple-bananas',
-    name: 'Fresh Organic Bananas',
-    category: 'produce',
-    defaultQuantity: '1 Bunch (5-6 count)',
-    icon: '🍌',
-    isDepleted: true,
-    depletedAt: getTodayDateString(),
-    depletedBy: 'Maya 🦄',
-    notes: 'Kids ate all the bananas!',
-  },
-  {
-    id: 'staple-apples',
-    name: 'Crisp Honeycrisp Apples',
-    category: 'produce',
-    defaultQuantity: '1 Bag (3 lbs)',
-    icon: '🍎',
-    isDepleted: false,
-  },
-  {
-    id: 'staple-garlic',
-    name: 'Fresh Garlic & Yellow Onions',
-    category: 'produce',
-    defaultQuantity: '1 Bag / 3 bulbs',
-    icon: '🧄',
-    isDepleted: false,
-  },
-  // Pantry Staples
-  {
-    id: 'staple-olive-oil',
-    name: 'Extra Virgin Olive Oil',
-    category: 'pantry',
-    defaultQuantity: '1 Bottle (750ml)',
-    icon: '🫒',
-    isDepleted: false,
-  },
-  {
-    id: 'staple-peanut-butter',
-    name: 'Creamy Peanut Butter (or SunButter)',
-    category: 'pantry',
-    defaultQuantity: '1 Jar (16 oz)',
-    icon: '🥜',
-    isDepleted: false,
-  },
-  {
-    id: 'staple-pasta',
-    name: 'Penne / Spaghetti Pasta',
-    category: 'pantry',
-    defaultQuantity: '2 Boxes (16 oz)',
-    icon: '🍝',
-    isDepleted: false,
-  },
-  {
-    id: 'staple-marinara',
-    name: 'Marinara Tomato Pasta Sauce',
-    category: 'pantry',
-    defaultQuantity: '2 Jars (24 oz)',
-    icon: '🥫',
-    isDepleted: false,
-  },
-  {
-    id: 'staple-rice',
-    name: 'Jasmine White Rice',
-    category: 'pantry',
-    defaultQuantity: '1 Bag (5 lbs)',
-    icon: '🍚',
-    isDepleted: false,
-  },
-  {
-    id: 'staple-cereal',
-    name: 'Honey Nut Toasted Oats / Cereal',
-    category: 'pantry',
-    defaultQuantity: '2 Family Size Boxes',
-    icon: '🥣',
-    isDepleted: false,
-  },
-  // Beverages
-  {
-    id: 'staple-coffee',
-    name: 'Medium Roast Coffee Beans / Grounds',
-    category: 'beverages',
-    defaultQuantity: '1 Bag (12 oz)',
-    icon: '☕',
-    isDepleted: false,
-  },
-  {
-    id: 'staple-oj',
-    name: '100% Pure Orange Juice (No Pulp)',
-    category: 'beverages',
-    defaultQuantity: '1 Bottle (52 oz)',
-    icon: '🍊',
-    isDepleted: false,
-  },
-  // Household
-  {
-    id: 'staple-paper-towels',
-    name: 'Ultra Absorbent Paper Towels',
-    category: 'household',
-    defaultQuantity: '1 Multi-Pack (6 rolls)',
-    icon: '🧻',
-    isDepleted: true, // depleted for demo
-    depletedAt: getTodayDateString(),
-    depletedBy: 'Dad',
-    notes: 'Last roll on the counter holder',
-  },
-  {
-    id: 'staple-trash-bags',
-    name: '13-Gallon Kitchen Trash Bags',
-    category: 'household',
-    defaultQuantity: '1 Box (45 count)',
-    icon: '🗑️',
-    isDepleted: false,
-  },
-  {
-    id: 'staple-dish-soap',
-    name: 'Liquid Dish Soap / Dishwasher Pods',
-    category: 'household',
-    defaultQuantity: '1 Large Refill Bottle',
-    icon: '🧼',
-    isDepleted: false,
-  },
-  // Snacks
-  {
-    id: 'staple-fruit-snacks',
-    name: 'Kids Organic Fruit Snacks',
-    category: 'snacks',
-    defaultQuantity: '1 Variety Box (24 ct)',
-    icon: '🍓',
-    isDepleted: true,
-    depletedAt: getTodayDateString(),
-    depletedBy: 'Sammy 🚀',
-    notes: 'Lunchbox snacks depleted',
-  },
-];
+export const DEFAULT_PANTRY_STAPLES: PantryStapleItem[] = [];
 
 /**
- * Initial Seed Grocery List
+ * Initial Clean Grocery List
  */
 export const DEFAULT_WEEKLY_GROCERY_LIST: WeeklyGroceryList = {
   title: 'Weekly Family Groceries',
   weekStartDate: getTodayDateString(),
   lastUpdated: new Date().toISOString(),
-  pantryStaples: DEFAULT_PANTRY_STAPLES,
-  items: [
-    {
-      id: 'g-item-1',
-      name: 'Whole Milk (Gallon)',
-      category: 'dairy_eggs',
-      quantity: '1 Gallon',
-      acquired: false,
-      addedBy: 'Replenished from Pantry',
-      isReplenishItem: true,
-      createdAt: getTodayDateString(),
-    },
-    {
-      id: 'g-item-2',
-      name: 'Large Grade A Eggs',
-      category: 'dairy_eggs',
-      quantity: '1 Dozen',
-      acquired: false,
-      addedBy: 'Replenished from Pantry',
-      isReplenishItem: true,
-      createdAt: getTodayDateString(),
-    },
-    {
-      id: 'g-item-3',
-      name: 'Fresh Organic Bananas',
-      category: 'produce',
-      quantity: '1 Bunch',
-      acquired: false,
-      addedBy: 'Maya 🦄',
-      isReplenishItem: true,
-      createdAt: getTodayDateString(),
-    },
-    {
-      id: 'g-item-4',
-      name: 'Lean Ground Beef (85/15)',
-      category: 'meat_seafood',
-      quantity: '1.5 lbs',
-      acquired: false,
-      addedBy: 'Auto from Taco Tuesday 🌮',
-      sourceMealDay: 'tuesday',
-      createdAt: getTodayDateString(),
-    },
-    {
-      id: 'g-item-5',
-      name: 'Soft Flour Tortillas & Taco Shells',
-      category: 'bakery',
-      quantity: '1 Pack',
-      acquired: true,
-      acquiredAt: new Date().toISOString(),
-      addedBy: 'Auto from Taco Tuesday 🌮',
-      sourceMealDay: 'tuesday',
-      createdAt: getTodayDateString(),
-    },
-    {
-      id: 'g-item-6',
-      name: 'Ultra Absorbent Paper Towels',
-      category: 'household',
-      quantity: '6 Rolls',
-      acquired: false,
-      addedBy: 'Replenished from Pantry',
-      isReplenishItem: true,
-      createdAt: getTodayDateString(),
-    },
-    {
-      id: 'g-item-7',
-      name: 'Crisp Honeycrisp Apples',
-      category: 'produce',
-      quantity: '3 lbs bag',
-      acquired: true,
-      acquiredAt: new Date().toISOString(),
-      addedBy: 'Mom',
-      createdAt: getTodayDateString(),
-    },
-    {
-      id: 'g-item-8',
-      name: 'Kids Organic Fruit Snacks',
-      category: 'snacks',
-      quantity: '1 Variety Box',
-      acquired: false,
-      addedBy: 'Sammy 🚀',
-      isReplenishItem: true,
-      createdAt: getTodayDateString(),
-    },
-  ],
+  pantryStaples: [],
+  spices: [],
+  requests: [],
+  items: [],
 };
 
 /**
- * Returns all pantry staple items currently marked as depleted
+ * Returns all depleted items across household groceries and pantry staples
  */
-export const getPantryDepletedItems = (groceryList: WeeklyGroceryList): PantryStapleItem[] => {
-  const staples = groceryList.pantryStaples || DEFAULT_PANTRY_STAPLES;
-  return staples.filter((s) => s.isDepleted);
+export const getPantryDepletedItems = (groceryList: WeeklyGroceryList): { id: string; name: string; category: GroceryCategory; quantity?: string; icon?: string; depletedBy?: string; notes?: string; importance?: GroceryImportance }[] => {
+  const result: { id: string; name: string; category: GroceryCategory; quantity?: string; icon?: string; depletedBy?: string; notes?: string; importance?: GroceryImportance }[] = [];
+  const seen = new Set<string>();
+
+  // Check all grocery items marked as depleted or replenish items
+  (groceryList.items || []).forEach((item) => {
+    if (item.isDepleted || item.isReplenishItem) {
+      const key = item.name.toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          icon: GROCERY_CATEGORY_METADATA[item.category]?.icon || '🛒',
+          depletedBy: item.depletedBy,
+          notes: item.notes,
+          importance: item.importance,
+        });
+      }
+    }
+  });
+
+  // Also include any legacy pantryStaples that are depleted
+  (groceryList.pantryStaples || []).forEach((staple) => {
+    if (staple.isDepleted) {
+      const key = staple.name.toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push({
+          id: staple.id,
+          name: staple.name,
+          category: staple.category,
+          quantity: staple.defaultQuantity,
+          icon: staple.icon || '🥫',
+          depletedBy: staple.depletedBy,
+          notes: staple.notes,
+          importance: staple.importance,
+        });
+      }
+    }
+  });
+
+  // Also check empty spices that need replenishment
+  (groceryList.spices || []).forEach((spice) => {
+    if (spice.isEmpty && spice.needsReplenish) {
+      const key = spice.name.toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push({
+          id: spice.id,
+          name: `${spice.name} (Seasoning)`,
+          category: 'pantry',
+          quantity: '1 Container',
+          icon: '🧂',
+          depletedBy: spice.addedBy,
+          notes: spice.notes,
+          importance: 'staple',
+        });
+      }
+    }
+  });
+
+  return result;
 };
 
 /**
- * Imports all depleted pantry items into the active grocery list (avoiding duplicate names)
+ * Imports all depleted items into the active grocery list (avoiding duplicate names)
  */
 export const importDepletedItemsToGroceryList = (
   currentList: WeeklyGroceryList,
-  customDepleted?: PantryStapleItem[]
+  customDepleted?: { id: string; name: string; category: GroceryCategory; quantity?: string; depletedBy?: string; notes?: string; importance?: GroceryImportance }[]
 ): { updatedList: WeeklyGroceryList; importedCount: number } => {
-  const staplesToImport = customDepleted || getPantryDepletedItems(currentList);
+  const itemsToImport = customDepleted || getPantryDepletedItems(currentList);
   const existingNames = new Set(
     (currentList.items || []).map((item) => item.name.toLowerCase().trim())
   );
 
   const newItems: GroceryItem[] = [];
 
-  staplesToImport.forEach((staple) => {
-    // Check if not already in active list
-    if (!existingNames.has(staple.name.toLowerCase().trim())) {
+  itemsToImport.forEach((dep) => {
+    if (!existingNames.has(dep.name.toLowerCase().trim())) {
       newItems.push({
         id: `g-rep-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        name: staple.name,
-        category: staple.category,
-        quantity: staple.defaultQuantity || '1',
+        name: dep.name,
+        category: dep.category,
+        quantity: dep.quantity || '1',
+        importance: dep.importance || 'staple',
         acquired: false,
-        addedBy: staple.depletedBy ? `Replenish (${staple.depletedBy})` : 'Pantry Replenishment',
-        notes: staple.notes,
+        isDepleted: false,
+        addedBy: dep.depletedBy ? `Replenish (${dep.depletedBy})` : 'Pantry Replenishment',
+        notes: dep.notes,
         isReplenishItem: true,
         createdAt: getTodayDateString(),
       });
-      existingNames.add(staple.name.toLowerCase().trim());
+      existingNames.add(dep.name.toLowerCase().trim());
     }
   });
 
@@ -673,8 +502,10 @@ export const startNewWeeklyGroceryList = (
         id: `g-rep-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         name: staple.name,
         category: staple.category,
-        quantity: staple.defaultQuantity || '1',
+        quantity: staple.quantity || '1',
+        importance: staple.importance || 'staple',
         acquired: false,
+        isDepleted: false,
         addedBy: staple.depletedBy ? `Replenish (${staple.depletedBy})` : 'Pantry Replenishment',
         notes: staple.notes,
         isReplenishItem: true,

@@ -1,9 +1,10 @@
-import React from 'react';
-import { Sparkles, Flame, Trophy, Plus, Award, Calendar, CloudSun, Clock, MapPin, Star } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, Flame, Trophy, Plus, Award, Calendar, CloudSun, Clock, MapPin, Star, Lock } from 'lucide-react';
 import { KidProfile, CalendarEvent, FamilyDatabase } from '../types';
 import { getKidLevelInfo, getTodayDateString } from '../utils/storage';
 import { getSeasonalWeatherForDate, EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../utils/calendar';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
+import { KidPinModal } from './KidPinModal';
 import { sound } from '../utils/sound';
 import { AppThemeId, APP_THEMES } from '../utils/theme';
 
@@ -28,6 +29,7 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
   onOpenCalendar,
   onOpenGoalManager,
 }) => {
+  const [selectedKidForPin, setSelectedKidForPin] = useState<KidProfile | null>(null);
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
   const todayEvents = events.filter((e) => e.date === todayStr);
@@ -135,9 +137,9 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
               id={`kid-card-${kid.id}`}
               onClick={() => {
                 sound.playTap();
-                onSelectKid(kid);
+                setSelectedKidForPin(kid);
               }}
-              className={`group relative ${theme.kidCardBg} rounded-[2.5rem] p-6 sm:p-7 border-2 ${theme.kidCardBorder} shadow-lg hover:shadow-2xl ${theme.kidCardHover} transition-all duration-300 text-left flex flex-col justify-between overflow-hidden cursor-pointer active:scale-[0.98]`}
+              className={`group relative ${theme.kidCardBg} rounded-[2.5rem] p-6 sm:p-7 border-2 ${theme.kidCardBorder} shadow-lg hover:shadow-2xl ${theme.kidCardHover} transition-all duration-300 text-left flex flex-col justify-between overflow-hidden cursor-pointer active:scale-[0.98] min-h-[44px]`}
             >
               {/* Avatar & Header */}
               <div className="flex items-center gap-4 mb-5">
@@ -148,9 +150,14 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
                   {kid.avatar || '⭐'}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className={`text-2xl sm:text-3xl font-black ${theme.kidCardNameColor} group-hover:opacity-85 transition-opacity`}>
-                    {kid.name}
-                  </h2>
+                  <div className="flex items-center justify-between">
+                    <h2 className={`text-2xl sm:text-3xl font-black ${theme.kidCardNameColor} group-hover:opacity-85 transition-opacity`}>
+                      {kid.name}
+                    </h2>
+                    <span className="p-1.5 rounded-xl bg-black/5 dark:bg-white/10 text-xs text-slate-500 dark:text-slate-300 flex items-center gap-1 font-black" title="PIN Protected Profile">
+                      <Lock className="w-3.5 h-3.5 text-indigo-500" />
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className={`text-xs font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 ${theme.accentPill}`}>
                       <span>{levelInfo.icon}</span>
@@ -208,7 +215,10 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
 
               {/* Tap to enter prompt */}
               <div className={`mt-5 pt-3 border-t border-black/10 dark:border-white/15 flex items-center justify-between text-xs sm:text-sm font-black group-hover:translate-x-1 transition-transform ${theme.kidCardNameColor}`}>
-                <span>View Today's Missions</span>
+                <span className="flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Enter 4-Digit PIN to Play</span>
+                </span>
                 <span className="text-base">➔</span>
               </div>
             </div>
@@ -224,12 +234,25 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
             sound.playTap();
             onOpenParentPin();
           }}
-          className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl ${theme.kidCardBg} hover:opacity-90 ${theme.kidCardNameColor} text-xs sm:text-sm font-black transition-all border-2 ${theme.kidCardBorder} shadow-sm backdrop-blur-md cursor-pointer active:scale-95`}
+          className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl ${theme.kidCardBg} hover:opacity-90 ${theme.kidCardNameColor} text-xs sm:text-sm font-black transition-all border-2 ${theme.kidCardBorder} shadow-sm backdrop-blur-md cursor-pointer active:scale-95 min-h-[44px]`}
         >
           <Plus className="w-4 h-4 text-amber-500 stroke-[3]" />
           <span>Parents: Manage kids, add categories, or change chore schedules</span>
         </button>
       </div>
+
+      {/* Kid Individual PIN Passcode Modal */}
+      <KidPinModal
+        isOpen={!!selectedKidForPin}
+        kid={selectedKidForPin}
+        onClose={() => setSelectedKidForPin(null)}
+        onSuccess={() => {
+          if (selectedKidForPin) {
+            onSelectKid(selectedKidForPin);
+            setSelectedKidForPin(null);
+          }
+        }}
+      />
     </div>
   );
 };

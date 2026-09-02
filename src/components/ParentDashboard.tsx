@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Shield,
   CheckCircle,
@@ -28,6 +28,7 @@ import {
   Search,
   Lock,
   UtensilsCrossed,
+  CheckSquare,
 } from 'lucide-react';
 import {
   FamilyDatabase,
@@ -45,6 +46,7 @@ import {
 import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON } from '../utils/storage';
 import { sound } from '../utils/sound';
 import { EmojiPicker } from './EmojiPicker';
+import { ActionMenu } from './ActionMenu';
 
 import { CalendarView } from './Calendar/CalendarView';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
@@ -69,6 +71,32 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'menu' | 'chores' | 'rewards' | 'kids' | 'settings'>('activity');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const todayStr = getTodayDateString();
+
+  // 2-Minute Inactivity Auto-Lock Timeout
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        onExitParentMode();
+      }, 2 * 60 * 1000); // 2 minutes
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetTimer, { passive: true });
+    });
+
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeoutId);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [onExitParentMode]);
 
   // Filter states for Activity Log
   const [activityDateFilter, setActivityDateFilter] = useState<string>(todayStr);
@@ -288,19 +316,39 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   };
 
   // --- Handlers for Kids ---
+  const handleResetKidPin = (kidId: string, newPin: string) => {
+    sound.playTap();
+    const sanitized = newPin.replace(/\D/g, '').slice(0, 4) || '1234';
+    const updatedKids = database.kids.map((k) =>
+      k.id === kidId ? { ...k, pin: sanitized } : k
+    );
+    onUpdateDatabase({ ...database, kids: updatedKids });
+  };
+
   const handleSaveKid = (kid: Partial<KidProfile>) => {
     sound.playTap();
     if (!kid.name?.trim()) return;
 
+    const sanitizedPin = kid.pin ? kid.pin.replace(/\D/g, '').slice(0, 4) : '1234';
+
     let updatedKids: KidProfile[];
     if (kid.id) {
-      updatedKids = database.kids.map((k) => (k.id === kid.id ? (kid as KidProfile) : k));
+      updatedKids = database.kids.map((k) =>
+        k.id === kid.id
+          ? ({
+              ...k,
+              ...kid,
+              pin: sanitizedPin || k.pin || '1234',
+            } as KidProfile)
+          : k
+      );
     } else {
       const newKid: KidProfile = {
         id: `kid-${Date.now()}`,
         name: kid.name.trim(),
         avatar: kid.avatar || '⭐',
         color: kid.color || '#3b82f6',
+        pin: sanitizedPin || '1234',
         stars: Number(kid.stars) || 0,
         lifetimeStars: Number(kid.stars) || 0,
         streakDays: 0,
@@ -656,43 +704,57 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     {/* Right: Parent Verification & Action buttons */}
                     <div className="flex items-center gap-2 shrink-0 justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                       {isCompleted && (
-                        <button
-                          onClick={() => handleToggleParentVerification(log.id)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black border-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
+                        <span
+                          className={`px-2.5 py-1 rounded-xl text-[11px] font-black border flex items-center gap-1 ${
                             log.verifiedByParent
-                              ? 'bg-emerald-600 text-white border-emerald-600'
-                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
                           }`}
                         >
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          <span>{log.verifiedByParent ? 'Verified by Parent' : 'Mark Verified'}</span>
-                        </button>
+                          <Check className="w-3 h-3 stroke-[3]" />
+                          <span>{log.verifiedByParent ? 'Verified' : 'Unverified'}</span>
+                        </span>
                       )}
 
-                      {/* Give Bonus Stars button */}
-                      {kid && (
-                        <button
-                          onClick={() => {
-                            setBonusStarModalKid(kid);
-                            setBonusStarsAmount(5);
-                            setBonusStarReason(`Great job on ${chore?.title || 'chores'}!`);
-                          }}
-                          className="px-3 py-1.5 rounded-xl text-xs font-black bg-yellow-100 hover:bg-yellow-200 text-slate-800 border-2 border-yellow-300 flex items-center gap-1 transition-colors cursor-pointer"
-                          title="Award Bonus Stars"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-                          <span>+Bonus ⭐</span>
-                        </button>
-                      )}
-
-                      {/* Re-open / Undo */}
-                      <button
-                        onClick={() => handleReopenTask(log.id)}
-                        className="px-3 py-1.5 rounded-xl text-xs font-black text-slate-500 hover:text-rose-600 hover:bg-rose-50 border-2 border-slate-200 transition-colors cursor-pointer"
-                        title="Reopen or clear this task entry"
-                      >
-                        Reset
-                      </button>
+                      <ActionMenu
+                        id={`menu-log-${log.id}`}
+                        label="Menu"
+                        items={[
+                          ...(isCompleted
+                            ? [
+                                {
+                                  id: 'verify',
+                                  label: log.verifiedByParent ? 'Unmark Verified' : 'Mark Verified',
+                                  icon: <Check className="w-3.5 h-3.5" />,
+                                  variant: (log.verifiedByParent ? 'default' : 'success') as 'default' | 'success',
+                                  onClick: () => handleToggleParentVerification(log.id),
+                                },
+                              ]
+                            : []),
+                          ...(kid
+                            ? [
+                                {
+                                  id: 'bonus',
+                                  label: 'Award Bonus Stars',
+                                  icon: <Sparkles className="w-3.5 h-3.5" />,
+                                  variant: 'warning' as const,
+                                  onClick: () => {
+                                    setBonusStarModalKid(kid);
+                                    setBonusStarsAmount(5);
+                                    setBonusStarReason(`Great job on ${chore?.title || 'chores'}!`);
+                                  },
+                                },
+                              ]
+                            : []),
+                          {
+                            id: 'reset',
+                            label: 'Reset / Reopen Task',
+                            icon: <RotateCcw className="w-3.5 h-3.5" />,
+                            variant: 'danger' as const,
+                            onClick: () => handleReopenTask(log.id),
+                          },
+                        ]}
+                      />
                     </div>
                   </div>
                 );
@@ -774,18 +836,25 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setEditingCategory(cat)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-700 hover:bg-indigo-50 cursor-pointer"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCategory(cat.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <ActionMenu
+                      id={`menu-cat-${cat.id}`}
+                      label="Menu"
+                      items={[
+                        {
+                          id: 'edit',
+                          label: 'Edit Category',
+                          icon: <Edit2 className="w-3.5 h-3.5" />,
+                          onClick: () => setEditingCategory(cat),
+                        },
+                        {
+                          id: 'delete',
+                          label: 'Delete Category',
+                          icon: <Trash2 className="w-3.5 h-3.5" />,
+                          variant: 'danger',
+                          onClick: () => handleDeleteCategory(cat.id),
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
               ))}
@@ -874,28 +943,42 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 justify-end">
-                      <button
-                        onClick={() => handleToggleChoreActive(chore.id)}
-                        className={`px-3 py-1 rounded-xl text-xs font-black cursor-pointer ${
-                          chore.isActive ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-200 text-slate-600'
+                      <span
+                        className={`px-2.5 py-1 rounded-xl text-xs font-black ${
+                          chore.isActive
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : 'bg-slate-200 text-slate-600'
                         }`}
                       >
                         {chore.isActive ? 'Active' : 'Paused'}
-                      </button>
-                      <button
-                        onClick={() => setEditingChore(chore)}
-                        className="p-2 rounded-xl text-slate-500 hover:text-indigo-700 hover:bg-indigo-50 border-2 border-slate-200 cursor-pointer"
-                        title="Edit Chore"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteChore(chore.id)}
-                        className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 border-2 border-slate-200 cursor-pointer"
-                        title="Delete Chore"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      </span>
+
+                      <ActionMenu
+                        id={`menu-chore-${chore.id}`}
+                        label="Menu"
+                        items={[
+                          {
+                            id: 'toggle-active',
+                            label: chore.isActive ? 'Pause Chore' : 'Activate Chore',
+                            icon: chore.isActive ? <X className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />,
+                            variant: chore.isActive ? 'warning' : 'success',
+                            onClick: () => handleToggleChoreActive(chore.id),
+                          },
+                          {
+                            id: 'edit',
+                            label: 'Edit Chore',
+                            icon: <Edit2 className="w-3.5 h-3.5" />,
+                            onClick: () => setEditingChore(chore),
+                          },
+                          {
+                            id: 'delete',
+                            label: 'Delete Chore',
+                            icon: <Trash2 className="w-3.5 h-3.5" />,
+                            variant: 'danger',
+                            onClick: () => handleDeleteChore(chore.id),
+                          },
+                        ]}
+                      />
                     </div>
                   </div>
                 );
@@ -964,20 +1047,27 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
                       <div className="flex items-center gap-2 justify-end">
                         {redemption.status === 'pending' ? (
-                          <>
-                            <button
-                              onClick={() => handleUpdateRedemptionStatus(redemption.id, 'fulfilled')}
-                              className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 shadow-xs cursor-pointer"
-                            >
-                              Approve & Mark Fulfilled
-                            </button>
-                            <button
-                              onClick={() => handleUpdateRedemptionStatus(redemption.id, 'rejected')}
-                              className="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-black hover:bg-rose-100 border border-rose-200 cursor-pointer"
-                            >
-                              Refund Stars
-                            </button>
-                          </>
+                          <ActionMenu
+                            id={`menu-redemption-${redemption.id}`}
+                            label="Review"
+                            buttonClassName="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                            items={[
+                              {
+                                id: 'fulfill',
+                                label: 'Approve & Mark Fulfilled',
+                                icon: <Check className="w-3.5 h-3.5" />,
+                                variant: 'success',
+                                onClick: () => handleUpdateRedemptionStatus(redemption.id, 'fulfilled'),
+                              },
+                              {
+                                id: 'refund',
+                                label: 'Refund Stars',
+                                icon: <RotateCcw className="w-3.5 h-3.5" />,
+                                variant: 'danger',
+                                onClick: () => handleUpdateRedemptionStatus(redemption.id, 'rejected'),
+                              },
+                            ]}
+                          />
                         ) : (
                           <span
                             className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${
@@ -1050,18 +1140,25 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       {reward.category.replace('_', ' ')}
                     </span>
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setEditingReward(reward)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-700 hover:bg-indigo-50 cursor-pointer"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteReward(reward.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <ActionMenu
+                        id={`menu-reward-${reward.id}`}
+                        label="Menu"
+                        items={[
+                          {
+                            id: 'edit',
+                            label: 'Edit Reward',
+                            icon: <Edit2 className="w-3.5 h-3.5" />,
+                            onClick: () => setEditingReward(reward),
+                          },
+                          {
+                            id: 'delete',
+                            label: 'Delete Reward',
+                            icon: <Trash2 className="w-3.5 h-3.5" />,
+                            variant: 'danger',
+                            onClick: () => handleDeleteReward(reward.id),
+                          },
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1120,21 +1217,57 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                         <div className="flex items-center justify-between">
                           <h4 className="font-black text-lg text-slate-800">{kid.name}</h4>
                           <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setEditingKid(kid)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-700 hover:bg-indigo-50 cursor-pointer"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteKid(kid.id)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <ActionMenu
+                              id={`menu-kid-${kid.id}`}
+                              label="Menu"
+                              items={[
+                                {
+                                  id: 'edit',
+                                  label: 'Edit Profile',
+                                  icon: <Edit2 className="w-3.5 h-3.5" />,
+                                  onClick: () => setEditingKid(kid),
+                                },
+                                {
+                                  id: 'reset-pin',
+                                  label: 'Reset PIN',
+                                  icon: <Lock className="w-3.5 h-3.5 text-indigo-600" />,
+                                  onClick: () => {
+                                    const entered = prompt(`Enter new 4-digit PIN for ${kid.name}:`, kid.pin || '1234');
+                                    if (entered !== null) {
+                                      const sanitized = entered.replace(/\D/g, '').slice(0, 4);
+                                      if (sanitized.length === 4) {
+                                        handleResetKidPin(kid.id, sanitized);
+                                      } else {
+                                        alert('PIN must be exactly 4 digits.');
+                                      }
+                                    }
+                                  },
+                                },
+                                {
+                                  id: 'add-stars',
+                                  label: 'Award +5 Stars',
+                                  icon: <Sparkles className="w-3.5 h-3.5 text-amber-500" />,
+                                  variant: 'warning',
+                                  onClick: () => handleAdjustKidStars(kid.id, 5),
+                                },
+                                {
+                                  id: 'deduct-stars',
+                                  label: 'Subtract -5 Stars',
+                                  icon: <Star className="w-3.5 h-3.5" />,
+                                  onClick: () => handleAdjustKidStars(kid.id, -5),
+                                },
+                                {
+                                  id: 'delete',
+                                  label: 'Delete Profile',
+                                  icon: <Trash2 className="w-3.5 h-3.5" />,
+                                  variant: 'danger',
+                                  onClick: () => handleDeleteKid(kid.id),
+                                },
+                              ]}
+                            />
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
                             {levelInfo.icon} Level {levelInfo.level}: {levelInfo.title}
                           </span>
@@ -1144,6 +1277,38 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                           </span>
                         </div>
                       </div>
+                    </div>
+
+                    {/* PIN Protection & Reset Row */}
+                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">
+                          <Lock className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-black uppercase text-slate-400">Child Security PIN</div>
+                          <div className="text-xs font-black font-mono text-slate-800 tracking-wider">
+                            {kid.pin || '1234'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const entered = prompt(`Set 4-digit PIN for ${kid.name}:`, kid.pin || '1234');
+                          if (entered !== null) {
+                            const sanitized = entered.replace(/\D/g, '').slice(0, 4);
+                            if (sanitized.length === 4) {
+                              handleResetKidPin(kid.id, sanitized);
+                            } else {
+                              alert('PIN must be exactly 4 digits.');
+                            }
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs font-black cursor-pointer transition-colors"
+                      >
+                        Reset PIN
+                      </button>
                     </div>
 
                     {/* Star Balance & Quick Adjuster */}
@@ -1820,6 +1985,37 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     />
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-black text-slate-700 uppercase">
+                    Child 4-Digit Security PIN:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setEditingKid({ ...editingKid, pin: '1234' })}
+                    className="text-[11px] font-black text-indigo-600 hover:text-indigo-800 cursor-pointer underline"
+                  >
+                    Reset to 1234
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  placeholder="1234"
+                  value={editingKid.pin ?? '1234'}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setEditingKid({ ...editingKid, pin: val });
+                  }}
+                  className="w-full px-4 py-2.5 rounded-2xl border-2 border-slate-200 bg-white font-mono font-black text-base text-slate-800 focus:outline-indigo-500 tracking-widest"
+                />
+                <p className="text-[11px] text-slate-400 font-bold mt-1">
+                  Used by {editingKid.name || 'this child'} to unlock their missions and star rewards.
+                </p>
               </div>
             </div>
 

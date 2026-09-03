@@ -29,6 +29,9 @@ import {
   Lock,
   UtensilsCrossed,
   CheckSquare,
+  Cookie,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import {
   FamilyDatabase,
@@ -42,9 +45,12 @@ import {
   FrequencyType,
   TimeOfDay,
   DayOfWeek,
+  GroceryRequest,
+  GroceryItem,
 } from '../types';
 import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON } from '../utils/storage';
 import { sound } from '../utils/sound';
+import { GROCERY_IMPORTANCE_METADATA } from '../utils/grocery';
 import { EmojiPicker } from './EmojiPicker';
 import { ActionMenu } from './ActionMenu';
 
@@ -59,6 +65,7 @@ interface ParentDashboardProps {
   onExitParentMode: () => void;
   onOpenPiGuide: () => void;
   onOpenCalendar?: () => void;
+  onOpenSnackRequest?: (kid?: KidProfile) => void;
 }
 
 export const ParentDashboard: React.FC<ParentDashboardProps> = ({
@@ -67,6 +74,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   onExitParentMode,
   onOpenPiGuide,
   onOpenCalendar,
+  onOpenSnackRequest,
 }) => {
   const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'menu' | 'chores' | 'rewards' | 'kids' | 'settings'>('activity');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
@@ -117,6 +125,147 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<boolean>(false);
   const [settingsSaved, setSettingsSaved] = useState<boolean>(false);
+
+  // Snack Requests State & Handlers
+  const [editingSnackReq, setEditingSnackReq] = useState<GroceryRequest | null>(null);
+  const [editingStarValue, setEditingStarValue] = useState<number>(0);
+  const [denyingSnackReqId, setDenyingSnackReqId] = useState<string | null>(null);
+  const [snackDenyReason, setSnackDenyReason] = useState<string>('');
+
+  const pendingSnackRequests = useMemo(() => {
+    return database.weeklyGroceryList?.requests?.filter((r) => r.status === 'pending') || [];
+  }, [database.weeklyGroceryList?.requests]);
+
+  const handleApproveSnackRequest = (req: GroceryRequest) => {
+    sound.playRewardRedeemed();
+    const groceryList = database.weeklyGroceryList || {
+      id: 'weekly-grocery',
+      weekStartDate: todayStr,
+      items: [],
+      pantryStaples: [],
+      spices: [],
+      requests: [],
+      lastUpdated: new Date().toISOString(),
+    };
+
+    const newItem: GroceryItem = {
+      id: `g-req-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name: req.name,
+      category: req.category,
+      quantity: req.quantity,
+      importance: req.importance,
+      acquired: false,
+      addedBy: `${req.kidName} (Snack Request)`,
+      notes: req.notes,
+      createdAt: todayStr,
+    };
+
+    const updatedRequests = (groceryList.requests || []).map((r) => {
+      if (r.id === req.id) {
+        return {
+          ...r,
+          status: 'approved' as const,
+          reviewedBy: 'Admin (Parent)',
+          reviewedAt: new Date().toISOString(),
+        };
+      }
+      return r;
+    });
+
+    onUpdateDatabase({
+      ...database,
+      weeklyGroceryList: {
+        ...groceryList,
+        items: [newItem, ...(groceryList.items || [])],
+        requests: updatedRequests,
+        lastUpdated: new Date().toISOString(),
+      },
+    });
+  };
+
+  const handleDenySnackRequest = (req: GroceryRequest) => {
+    sound.playTap();
+    const refundStars = req.starsDeducted && (req.starCost || 0) > 0 ? (req.starCost || 0) : 0;
+    const groceryList = database.weeklyGroceryList;
+    if (!groceryList) return;
+
+    const updatedKids = refundStars > 0 && req.kidId
+      ? database.kids.map((k) => (k.id === req.kidId ? { ...k, stars: k.stars + refundStars } : k))
+      : database.kids;
+
+    const updatedRequests = (groceryList.requests || []).map((r) => {
+      if (r.id === req.id) {
+        return {
+          ...r,
+          status: 'denied' as const,
+          reviewedBy: 'Admin (Parent)',
+          reviewedAt: new Date().toISOString(),
+          denialReason: snackDenyReason.trim() || 'Not this shopping trip',
+          starsDeducted: false,
+        };
+      }
+      return r;
+    });
+
+    onUpdateDatabase({
+      ...database,
+      kids: updatedKids,
+      weeklyGroceryList: {
+        ...groceryList,
+        requests: updatedRequests,
+        lastUpdated: new Date().toISOString(),
+      },
+    });
+
+    setDenyingSnackReqId(null);
+    setSnackDenyReason('');
+  };
+
+  const handleSaveEditedStarCost = (req: GroceryRequest, newCost: number) => {
+    if (newCost < 0) return;
+    const oldCost = req.starCost || 0;
+    const diff = newCost - oldCost;
+
+    let updatedKids = database.kids;
+    if (req.starsDeducted && req.kidId && diff !== 0) {
+      updatedKids = database.kids.map((k) => {
+        if (k.id === req.kidId) {
+          return {
+            ...k,
+            stars: Math.max(0, k.stars - diff),
+          };
+        }
+        return k;
+      });
+    }
+
+    const groceryList = database.weeklyGroceryList;
+    if (!groceryList) return;
+
+    const updatedRequests = (groceryList.requests || []).map((r) => {
+      if (r.id === req.id) {
+        return {
+          ...r,
+          starCost: newCost,
+          adminEditedStars: true,
+        };
+      }
+      return r;
+    });
+
+    onUpdateDatabase({
+      ...database,
+      kids: updatedKids,
+      weeklyGroceryList: {
+        ...groceryList,
+        requests: updatedRequests,
+        lastUpdated: new Date().toISOString(),
+      },
+    });
+
+    sound.playTap();
+    setEditingSnackReq(null);
+  };
 
   // --- Handlers for Activity Log ---
   const handleToggleParentVerification = (logId: string) => {
@@ -491,7 +640,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* Navigation Tabs - Edge-to-edge compact mobile strip */}
       <div className="flex gap-1 sm:gap-1.5 overflow-x-auto p-1 sm:p-1.5 rounded-none sm:rounded-xl bg-yellow-200/80 border-x-0 border-y sm:border-2 border-yellow-300 shadow-none sm:shadow-2xs scrollbar-none">
         {[
-          { id: 'activity', label: 'Daily Review & Audit', icon: CheckCircle, badge: database.logs.filter((l) => l.date === todayStr).length },
+          {
+            id: 'activity',
+            label: 'Daily Review & Audit',
+            icon: CheckCircle,
+            badge: database.logs.filter((l) => l.date === todayStr).length + pendingSnackRequests.length,
+          },
           { id: 'menu', label: 'Dinner Menu', icon: UtensilsCrossed },
           { id: 'calendar', label: 'Yearly Calendar', icon: Calendar, badge: (database.events || []).length },
           { id: 'chores', label: 'Chores & Categories', icon: FileSpreadsheet, badge: database.chores.length },
@@ -534,6 +688,150 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* TAB 1: DAILY REVIEW & AUDIT LOG */}
       {activeTab === 'activity' && (
         <div className="space-y-1 sm:space-y-4 animate-fade-in">
+          {/* Kids Grocery & Snack Requests Card */}
+          <div className="bg-gradient-to-r from-purple-900 to-indigo-950 rounded-none sm:rounded-2xl p-3 sm:p-4 text-white border-x-0 border-y sm:border-2 border-purple-500 shadow-none sm:shadow-xs space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/30 flex items-center justify-center text-xl shrink-0">
+                  🍪
+                </div>
+                <div>
+                  <h3 className="font-black text-sm sm:text-base text-yellow-300 flex items-center gap-1.5 flex-wrap">
+                    <span>Kids Grocery & Snack Requests</span>
+                    {pendingSnackRequests.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-pink-500 text-white text-[10px] font-black animate-pulse">
+                        {pendingSnackRequests.length} Pending
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-[11px] sm:text-xs text-purple-200 font-medium">
+                    Kids spend their stars on snacks & treats. Admins can approve, deny (with star refunds), or edit star prices!
+                  </p>
+                </div>
+              </div>
+
+              {onOpenSnackRequest && (
+                <button
+                  onClick={() => onOpenSnackRequest()}
+                  className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black transition-all cursor-pointer flex items-center gap-1 shadow-xs active:scale-95 shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Open Full Snack Hub & Rates</span>
+                </button>
+              )}
+            </div>
+
+            {pendingSnackRequests.length === 0 ? (
+              <div className="bg-purple-950/40 rounded-xl p-3 text-center border border-purple-800/60 text-purple-300 text-xs font-bold">
+                ✨ No pending kid snack requests right now. All caught up!
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                {pendingSnackRequests.map((req) => {
+                  const imp = GROCERY_IMPORTANCE_METADATA[req.importance || 'treat'];
+                  const kid = database.kids.find((k) => k.id === req.kidId);
+
+                  return (
+                    <div
+                      key={req.id}
+                      className="bg-white text-slate-900 rounded-xl p-3 border-2 border-purple-300 shadow-xs flex flex-col justify-between space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 border"
+                            style={{ backgroundColor: `${kid?.color || '#a855f7'}25` }}
+                          >
+                            {req.kidAvatar || kid?.avatar || '🦄'}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-black text-xs sm:text-sm text-slate-900 truncate">
+                              {req.name}
+                            </h4>
+                            <div className="text-[11px] font-bold text-slate-500">
+                              By <strong>{req.kidName}</strong> {req.quantity ? `• ${req.quantity}` : ''}
+                            </div>
+                          </div>
+                        </div>
+
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${imp.badgeBg} ${imp.badgeText} ${imp.badgeBorder} shrink-0`}>
+                          {imp.icon} {imp.label}
+                        </span>
+                      </div>
+
+                      {req.notes && (
+                        <div className="text-[11px] bg-slate-50 p-1.5 rounded-lg text-slate-600 italic font-medium">
+                          "{req.notes}"
+                        </div>
+                      )}
+
+                      {/* Star Cost & Edit Button */}
+                      <div className="flex items-center justify-between bg-purple-50 p-2 rounded-xl border border-purple-200">
+                        <div className="flex items-center gap-1 text-xs font-black text-purple-950">
+                          <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
+                          <span>{req.starCost || 0} Stars Paid</span>
+                          {req.adminEditedStars && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-purple-200 text-purple-800 font-bold">
+                              Admin edited
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setEditingSnackReq(req);
+                            setEditingStarValue(req.starCost || 0);
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-white hover:bg-purple-100 text-purple-800 font-black text-[11px] border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                          title="Edit stars required for this snack"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          <span>Edit Stars</span>
+                        </button>
+                      </div>
+
+                      {/* Action buttons: Approve / Deny */}
+                      <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
+                        <button
+                          onClick={() => handleApproveSnackRequest(req)}
+                          className="flex-1 py-1.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer"
+                        >
+                          <ThumbsUp className="w-3 h-3" />
+                          <span>Approve & Add</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (denyingSnackReqId === req.id) {
+                              handleDenySnackRequest(req);
+                            } else {
+                              setDenyingSnackReqId(req.id);
+                            }
+                          }}
+                          className="py-1.5 px-2.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 font-black text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <ThumbsDown className="w-3 h-3" />
+                          <span>{denyingSnackReqId === req.id ? 'Confirm Deny' : 'Deny (Refund)'}</span>
+                        </button>
+                      </div>
+
+                      {denyingSnackReqId === req.id && (
+                        <div className="pt-1 flex gap-1 animate-in fade-in">
+                          <input
+                            type="text"
+                            value={snackDenyReason}
+                            onChange={(e) => setSnackDenyReason(e.target.value)}
+                            placeholder="Reason for kid (stars refunded automatically)..."
+                            className="w-full px-2 py-1 text-xs rounded-lg border border-slate-300 bg-white font-medium"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           {/* Filter Bar */}
           <div className="bg-white p-2 sm:p-4 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-indigo-300 sm:border-indigo-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3">
@@ -2106,6 +2404,78 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           onUpdateDatabase={onUpdateDatabase}
           isParentMode={true}
         />
+      )}
+
+      {/* Admin Edit Star Cost Modal */}
+      {editingSnackReq && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 border-2 border-purple-500 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-base text-slate-900 flex items-center gap-2">
+                <Star className="w-5 h-5 text-amber-500 fill-amber-400" />
+                <span>Edit Required Stars</span>
+              </h3>
+              <button
+                onClick={() => setEditingSnackReq(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 font-semibold">
+              Adjust how many stars <strong>{editingSnackReq.kidName}</strong> is charged for <strong>"{editingSnackReq.name}"</strong>.
+              Kid balance is automatically updated for the difference!
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                Stars Required:
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingStarValue((v) => Math.max(0, v - 1))}
+                  className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 font-black text-lg text-slate-700 cursor-pointer"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editingStarValue}
+                  onChange={(e) => setEditingStarValue(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="flex-1 text-center font-black text-xl py-2 rounded-xl border-2 border-purple-300 focus:border-purple-600 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditingStarValue((v) => v + 1)}
+                  className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 font-black text-lg text-slate-700 cursor-pointer"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingSnackReq(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveEditedStarCost(editingSnackReq, editingStarValue)}
+                className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs shadow-md cursor-pointer"
+              >
+                Save Star Cost ⭐
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

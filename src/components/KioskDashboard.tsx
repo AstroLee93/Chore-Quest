@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent } from '../types';
+import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent, RewardItem, RewardRedemption } from '../types';
 import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getMvpKid } from '../utils/storage';
 import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar';
 import { getCurrentDayOfWeekKey, DEFAULT_WEEKLY_MENU } from '../utils/menu';
@@ -14,6 +14,10 @@ import { WeeklyMenuModal } from './WeeklyMenuModal';
 import { ThemeSelector } from './ThemeSelector';
 import { ParentPinModal } from './ParentPinModal';
 import { KidPinModal } from './KidPinModal';
+import { ActionMenu } from './ActionMenu';
+import { KidSnackRequestModal } from './KidSnackRequestModal';
+import { RewardStoreModal } from './RewardStoreModal';
+import { KidAvatarModal } from './KidAvatarModal';
 
 interface KioskDashboardProps {
   database: FamilyDatabase;
@@ -43,6 +47,11 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [isMenuModalOpen, setIsMenuModalOpen] = useState<boolean>(false);
   const [isExitPinOpen, setIsExitPinOpen] = useState<boolean>(false);
   const [selectedKidForPin, setSelectedKidForPin] = useState<KidProfile | null>(null);
+  const [snackKid, setSnackKid] = useState<KidProfile | null>(null);
+  const [isSnackModalOpen, setIsSnackModalOpen] = useState<boolean>(false);
+  const [rewardStoreKid, setRewardStoreKid] = useState<KidProfile | null>(null);
+  const [isRewardStoreOpen, setIsRewardStoreOpen] = useState<boolean>(false);
+  const [editingAvatarKid, setEditingAvatarKid] = useState<KidProfile | null>(null);
 
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = useMemo(() => getTodayDateString(), []);
@@ -124,6 +133,38 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
     onUpdateDatabase({ ...database, kids: updatedKids, logs: updatedLogs });
   }, [database, todayStr, onUpdateDatabase]);
+
+  const handleRedeemReward = useCallback((reward: RewardItem, note?: string) => {
+    if (!rewardStoreKid || rewardStoreKid.stars < reward.starCost) return;
+    sound.playRewardRedeemed();
+
+    const newRedemption: RewardRedemption = {
+      id: `redemption-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      rewardId: reward.id,
+      rewardTitle: reward.title,
+      rewardIcon: reward.icon,
+      kidId: rewardStoreKid.id,
+      starCost: reward.starCost,
+      date: new Date().toISOString(),
+      status: 'pending',
+      notes: note || undefined,
+    };
+
+    const updatedKids = database.kids.map((k) =>
+      k.id === rewardStoreKid.id
+        ? { ...k, stars: Math.max(0, k.stars - reward.starCost) }
+        : k
+    );
+
+    const updatedKid = updatedKids.find((k) => k.id === rewardStoreKid.id) || null;
+    setRewardStoreKid(updatedKid);
+
+    onUpdateDatabase({
+      ...database,
+      kids: updatedKids,
+      redemptions: [newRedemption, ...(database.redemptions || [])],
+    });
+  }, [database, rewardStoreKid, onUpdateDatabase]);
 
   // Memoized stats & calculations (prevents re-filtering hundreds of items on every 1-second clock tick)
   const todayEvents = useMemo(
@@ -484,20 +525,73 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <div
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black ${
-                        isMvp
-                          ? 'bg-amber-400 text-slate-950 shadow-md ring-1 ring-amber-300'
-                          : `${theme.kioskFooterPillSecondaryBg} ${theme.kioskFooterPillSecondaryText}`
-                      }`}
-                    >
-                      <Star className={`w-3.5 h-3.5 ${isMvp ? 'fill-slate-950 text-slate-950' : 'fill-amber-400 text-amber-400'}`} />
-                      <span>{kid.stars} Pts</span>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="text-right">
+                      <div
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black ${
+                          isMvp
+                            ? 'bg-amber-400 text-slate-950 shadow-md ring-1 ring-amber-300'
+                            : `${theme.kioskFooterPillSecondaryBg} ${theme.kioskFooterPillSecondaryText}`
+                        }`}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${isMvp ? 'fill-slate-950 text-slate-950' : 'fill-amber-400 text-amber-400'}`} />
+                        <span>{kid.stars} Pts</span>
+                      </div>
+                      <div className="flex items-center justify-end gap-1 text-[11px] font-black text-amber-400 mt-1">
+                        <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>{kid.streakDays} Day Streak</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-end gap-1 text-[11px] font-black text-amber-400 mt-1">
-                      <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>{kid.streakDays} Day Streak</span>
+
+                    {/* Kid Card Action Menu on Kiosk Screen */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <ActionMenu
+                        id={`kiosk-menu-kid-${kid.id}`}
+                        label="Menu"
+                        buttonClassName="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-black text-xs transition-all shadow-xs cursor-pointer active:scale-95"
+                        items={[
+                          {
+                            id: 'enter',
+                            label: '🎮 Enter Profile & Play',
+                            variant: 'primary',
+                            onClick: () => {
+                              setSelectedKidForPin(kid);
+                            },
+                          },
+                          {
+                            id: 'avatar',
+                            label: '🎨 Change Avatar & Color',
+                            onClick: () => setEditingAvatarKid(kid),
+                          },
+                          {
+                            id: 'rewards',
+                            label: '🎁 Rewards Store',
+                            onClick: () => {
+                              setRewardStoreKid(kid);
+                              setIsRewardStoreOpen(true);
+                            },
+                          },
+                          {
+                            id: 'snack_request',
+                            label: '🍪 Kids Grocery & Snack Request',
+                            variant: 'primary',
+                            onClick: () => {
+                              setSnackKid(kid);
+                              setIsSnackModalOpen(true);
+                            },
+                          },
+                          {
+                            id: 'goal',
+                            label: '🏆 Family Team Goal',
+                            onClick: () => setIsGoalModalOpen(true),
+                          },
+                          {
+                            id: 'parent',
+                            label: '🛡️ Exit Kiosk (Parent PIN)',
+                            onClick: () => setIsExitPinOpen(true),
+                          },
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>
@@ -812,6 +906,53 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           }
         }}
       />
+
+      {/* Snack Request Modal in Kiosk */}
+      {isSnackModalOpen && snackKid && (
+        <KidSnackRequestModal
+          isOpen={isSnackModalOpen}
+          onClose={() => {
+            setIsSnackModalOpen(false);
+            setSnackKid(null);
+          }}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          initialKid={snackKid}
+          isParentMode={false}
+        />
+      )}
+
+      {/* Rewards Store Modal in Kiosk */}
+      {isRewardStoreOpen && rewardStoreKid && (
+        <RewardStoreModal
+          isOpen={isRewardStoreOpen}
+          activeKid={rewardStoreKid}
+          rewards={database.rewards || []}
+          redemptions={database.redemptions || []}
+          settings={database.settings}
+          onRedeemReward={handleRedeemReward}
+          onClose={() => {
+            setIsRewardStoreOpen(false);
+            setRewardStoreKid(null);
+          }}
+        />
+      )}
+
+      {/* Avatar & Color Customizer in Kiosk */}
+      {editingAvatarKid && (
+        <KidAvatarModal
+          isOpen={!!editingAvatarKid}
+          kid={editingAvatarKid}
+          onClose={() => setEditingAvatarKid(null)}
+          onSave={(updatedKid) => {
+            const updatedKids = database.kids.map((k) =>
+              k.id === updatedKid.id ? updatedKid : k
+            );
+            onUpdateDatabase({ ...database, kids: updatedKids });
+            setEditingAvatarKid(null);
+          }}
+        />
+      )}
     </div>
   );
 };

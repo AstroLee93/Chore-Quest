@@ -933,18 +933,42 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
                         {/* Category and Kid Assignment Dropdowns */}
                         <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                           <select
-                            value={evt.category}
-                            onChange={(e) =>
-                              updateStagedEvent(evt.id, {
-                                category: e.target.value as CalendarEventCategory,
-                                icon: EVENT_CATEGORIES[e.target.value as CalendarEventCategory]?.icon || evt.icon,
-                              })
-                            }
+                            value={evt.category === 'custom' && evt.customCategoryName ? `custom:${evt.customCategoryName}` : evt.category}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val.startsWith('custom:')) {
+                                const cName = val.replace('custom:', '');
+                                const found = database.customCalendarCategories?.find((c) => c.name === cName);
+                                updateStagedEvent(evt.id, {
+                                  category: 'custom',
+                                  customCategoryName: cName,
+                                  customCategoryIcon: found?.icon || '✨',
+                                  customCategoryDescription: found?.description,
+                                  customCategoryColor: found?.color,
+                                  icon: found?.icon || '✨',
+                                  color: found?.color,
+                                });
+                              } else {
+                                updateStagedEvent(evt.id, {
+                                  category: val as CalendarEventCategory,
+                                  customCategoryName: undefined,
+                                  icon: EVENT_CATEGORIES[val as CalendarEventCategory]?.icon || evt.icon,
+                                  color: EVENT_CATEGORIES[val as CalendarEventCategory]?.color,
+                                });
+                              }
+                            }}
                             className="px-2 py-1 rounded-xl bg-slate-900 border border-slate-700 text-[11px] font-black text-slate-300 focus:outline-indigo-500"
                           >
-                            {Object.values(EVENT_CATEGORIES).map((cat) => (
-                              <option key={cat.id} value={cat.id}>
-                                {cat.icon} {cat.shortLabel}
+                            {Object.values(EVENT_CATEGORIES)
+                              .filter((c) => c.id !== 'custom')
+                              .map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                  {cat.icon} {cat.shortLabel}
+                                </option>
+                              ))}
+                            {database.customCalendarCategories?.map((c) => (
+                              <option key={c.id} value={`custom:${c.name}`}>
+                                {c.icon || '✨'} {c.name}
                               </option>
                             ))}
                           </select>

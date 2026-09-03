@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Plus, Calendar as CalendarIcon, Clock, MapPin, Sparkles, CheckCircle2, Edit3, Trash2, CloudSun, AlertCircle, Users } from 'lucide-react';
-import { CalendarEvent, ChoreItem, DayWeather, KidProfile } from '../../types';
-import { EVENT_CATEGORIES, WEATHER_CONDITIONS, getSeasonalWeatherForDate } from '../../utils/calendar';
+import { CalendarEvent, ChoreItem, CustomCalendarCategory, DayWeather, KidProfile } from '../../types';
+import { EVENT_CATEGORIES, WEATHER_CONDITIONS, getEventCategoryMeta, getSeasonalWeatherForDate } from '../../utils/calendar';
 import { sound } from '../../utils/sound';
 
 interface DayDetailModalProps {
@@ -10,6 +10,7 @@ interface DayDetailModalProps {
   events: CalendarEvent[];
   chores: ChoreItem[];
   kids: KidProfile[];
+  customCategories?: CustomCalendarCategory[];
   customWeather?: DayWeather;
   tempUnit?: 'F' | 'C';
   onAddEvent: (dateStr: string) => void;
@@ -25,6 +26,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   events,
   chores,
   kids,
+  customCategories,
   customWeather,
   tempUnit = 'F',
   onAddEvent,
@@ -168,7 +170,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             ) : (
               <div className="space-y-2.5">
                 {events.map((evt) => {
-                  const catMeta = EVENT_CATEGORIES[evt.category] || EVENT_CATEGORIES.practice;
+                  const catMeta = getEventCategoryMeta(evt, customCategories);
                   const assignedKids = evt.assignedKidIds?.includes('all')
                     ? kids
                     : kids.filter((k) => evt.assignedKidIds?.includes(k.id));
@@ -194,11 +196,20 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                                 </span>
                               )}
                               <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${catMeta.badgeBg}`}
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border flex items-center gap-1 ${catMeta.badgeBg}`}
                               >
-                                {catMeta.shortLabel}
+                                <span>{catMeta.icon}</span>
+                                <span>{catMeta.shortLabel}</span>
                               </span>
                             </div>
+
+                            {/* Activity Type Category Description */}
+                            {catMeta.description && (
+                              <div className="text-[11px] text-purple-900 font-semibold mt-1.5 bg-purple-50 px-2.5 py-1 rounded-xl border border-purple-200 flex items-start gap-1.5">
+                                <span className="text-purple-600 font-black shrink-0">🏷️ {catMeta.shortLabel}:</span>
+                                <span>{catMeta.description}</span>
+                              </div>
+                            )}
 
                             {/* Time & Location */}
                             <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold mt-1 flex-wrap">

@@ -1,7 +1,7 @@
-import { CalendarEvent, CalendarEventCategory, DayWeather, WeatherCondition } from '../types';
+import { CalendarEvent, CalendarEventCategory, CustomCalendarCategory, DayWeather, WeatherCondition } from '../types';
 
 export interface CategoryMeta {
-  id: CalendarEventCategory;
+  id: CalendarEventCategory | string;
   label: string;
   shortLabel: string;
   icon: string;
@@ -10,6 +10,7 @@ export interface CategoryMeta {
   borderColor: string;
   textColor: string;
   badgeBg: string;
+  description?: string;
 }
 
 export const EVENT_CATEGORIES: Record<CalendarEventCategory, CategoryMeta> = {
@@ -101,7 +102,186 @@ export const EVENT_CATEGORIES: Record<CalendarEventCategory, CategoryMeta> = {
     textColor: 'text-slate-900',
     badgeBg: 'bg-slate-100 text-slate-800 border-slate-300',
   },
+  custom: {
+    id: 'custom',
+    label: 'Custom Activity Type',
+    shortLabel: 'Custom',
+    icon: '✨',
+    color: '#8b5cf6',
+    bgColor: 'bg-purple-500',
+    borderColor: 'border-purple-300',
+    textColor: 'text-purple-900',
+    badgeBg: 'bg-purple-100 text-purple-900 border-purple-300',
+  },
 };
+
+export interface CustomColorOption {
+  id: string;
+  name: string;
+  color: string;
+  badgeBg: string;
+}
+
+export const CUSTOM_CATEGORY_COLORS: CustomColorOption[] = [
+  { id: 'purple', name: 'Royal Purple', color: '#8b5cf6', badgeBg: 'bg-purple-100 text-purple-900 border-purple-300' },
+  { id: 'indigo', name: 'Indigo Blue', color: '#6366f1', badgeBg: 'bg-indigo-100 text-indigo-900 border-indigo-300' },
+  { id: 'emerald', name: 'Emerald Green', color: '#10b981', badgeBg: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
+  { id: 'teal', name: 'Sea Teal', color: '#14b8a6', badgeBg: 'bg-teal-100 text-teal-900 border-teal-300' },
+  { id: 'cyan', name: 'Sky Cyan', color: '#06b6d4', badgeBg: 'bg-cyan-100 text-cyan-900 border-cyan-300' },
+  { id: 'rose', name: 'Ruby Rose', color: '#f43f5e', badgeBg: 'bg-rose-100 text-rose-900 border-rose-300' },
+  { id: 'pink', name: 'Berry Pink', color: '#ec4899', badgeBg: 'bg-pink-100 text-pink-900 border-pink-300' },
+  { id: 'amber', name: 'Golden Amber', color: '#f59e0b', badgeBg: 'bg-amber-100 text-amber-900 border-amber-300' },
+  { id: 'orange', name: 'Sunset Orange', color: '#f97316', badgeBg: 'bg-orange-100 text-orange-900 border-orange-300' },
+  { id: 'slate', name: 'Slate Gray', color: '#64748b', badgeBg: 'bg-slate-100 text-slate-800 border-slate-300' },
+];
+
+export interface PopularCustomCategorySuggestion {
+  name: string;
+  icon: string;
+  description: string;
+  color: string;
+}
+
+export const POPULAR_CUSTOM_CATEGORY_SUGGESTIONS: PopularCustomCategorySuggestion[] = [
+  {
+    name: 'Martial Arts & Karate',
+    icon: '🥋',
+    description: 'Dojo sparring, forms, kata training, and belt advancement',
+    color: '#f59e0b',
+  },
+  {
+    name: 'Music & Instrument Lessons',
+    icon: '🎹',
+    description: 'Piano, guitar, violin, or voice practice and recitals',
+    color: '#8b5cf6',
+  },
+  {
+    name: 'Dance & Ballet Rehearsal',
+    icon: '🩰',
+    description: 'Choreography rehearsals, recital costumes, and stage prep',
+    color: '#ec4899',
+  },
+  {
+    name: 'Scouts & Camping',
+    icon: '🏕️',
+    description: 'Troop meetings, merit badges, outdoor expeditions, and service',
+    color: '#10b981',
+  },
+  {
+    name: 'Swimming & Aquatics',
+    icon: '🏊',
+    description: 'Swim lessons, laps, team meets, and water safety',
+    color: '#06b6d4',
+  },
+  {
+    name: 'Robotics & STEM Club',
+    icon: '🤖',
+    description: 'Coding challenges, robot builds, science fair prep, and math club',
+    color: '#6366f1',
+  },
+  {
+    name: 'Art, Pottery & Theater',
+    icon: '🎨',
+    description: 'Creative studio sessions, stage plays, and pottery classes',
+    color: '#f97316',
+  },
+  {
+    name: 'Tutoring & Academic Coaching',
+    icon: '📝',
+    description: 'One-on-one subject tutoring, speech therapy, and study skills',
+    color: '#14b8a6',
+  },
+  {
+    name: 'Youth Group & Community Faith',
+    icon: '⛪',
+    description: 'Youth group meetings, volunteering, community service, and choir',
+    color: '#8b5cf6',
+  },
+  {
+    name: 'Pet Training & Vet Care',
+    icon: '🐕',
+    description: 'Puppy obedience training, agility courses, and checkups',
+    color: '#64748b',
+  },
+];
+
+export function getEventCategoryMeta(
+  eventOrCategory: CalendarEvent | CalendarEventCategory | string | undefined,
+  customCategories?: CustomCalendarCategory[]
+): CategoryMeta & { description?: string; isCustom?: boolean } {
+  if (!eventOrCategory) {
+    return EVENT_CATEGORIES.practice;
+  }
+
+  // If passed a full CalendarEvent object
+  if (typeof eventOrCategory === 'object' && eventOrCategory !== null) {
+    const evt = eventOrCategory as CalendarEvent;
+    if (evt.category === 'custom' || evt.customCategoryName) {
+      const name = evt.customCategoryName?.trim() || 'Custom Activity';
+      const icon = evt.customCategoryIcon || evt.icon || '✨';
+      const colorOption =
+        CUSTOM_CATEGORY_COLORS.find(
+          (c) => c.color === evt.customCategoryColor || c.id === evt.customCategoryColor
+        ) || CUSTOM_CATEGORY_COLORS[0];
+
+      return {
+        id: 'custom',
+        label: name,
+        shortLabel: name,
+        icon: icon,
+        color: colorOption.color,
+        bgColor: 'bg-purple-500',
+        borderColor: 'border-purple-300',
+        textColor: 'text-purple-900',
+        badgeBg: colorOption.badgeBg,
+        description: evt.customCategoryDescription || undefined,
+        isCustom: true,
+      };
+    }
+
+    const preset = EVENT_CATEGORIES[evt.category];
+    if (preset) return preset;
+  }
+
+  // If passed a string (category key or custom category id/name)
+  if (typeof eventOrCategory === 'string') {
+    const preset = EVENT_CATEGORIES[eventOrCategory as CalendarEventCategory];
+    if (preset && eventOrCategory !== 'custom') return preset;
+
+    // Check customCategories if provided
+    if (customCategories && customCategories.length > 0) {
+      const matched = customCategories.find(
+        (c) =>
+          c.id === eventOrCategory ||
+          c.name.toLowerCase() === eventOrCategory.toLowerCase()
+      );
+      if (matched) {
+        const colorOption =
+          CUSTOM_CATEGORY_COLORS.find(
+            (c) => c.color === matched.color || c.id === matched.color
+          ) || CUSTOM_CATEGORY_COLORS[0];
+
+        return {
+          id: matched.id,
+          label: matched.name,
+          shortLabel: matched.name,
+          icon: matched.icon || '✨',
+          color: colorOption.color,
+          bgColor: 'bg-purple-500',
+          borderColor: 'border-purple-300',
+          textColor: 'text-purple-900',
+          badgeBg: colorOption.badgeBg,
+          description: matched.description,
+          isCustom: true,
+        };
+      }
+    }
+
+    if (preset) return preset;
+  }
+
+  return EVENT_CATEGORIES.practice;
+}
 
 export const WEATHER_CONDITIONS: Record<
   WeatherCondition,

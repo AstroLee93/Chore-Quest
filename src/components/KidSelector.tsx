@@ -4,7 +4,6 @@ import { getKidLevelInfo } from '../utils/storage';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { KidPinModal } from './KidPinModal';
 import { KidAvatarModal } from './KidAvatarModal';
-import { ActionMenu } from './ActionMenu';
 import { sound } from '../utils/sound';
 import { AppThemeId, APP_THEMES } from '../utils/theme';
 
@@ -15,10 +14,9 @@ interface KidSelectorProps {
   currentTheme?: AppThemeId;
   onSelectKid: (kid: KidProfile) => void;
   onOpenParentPin: () => void;
-  onOpenCalendar?: () => void;
   onOpenGoalManager?: () => void;
-  onOpenMenu?: () => void;
   onOpenRewardStore?: () => void;
+  onOpenSnackRequest?: (kid: KidProfile) => void;
   onUpdateDatabase?: (updatedDb: FamilyDatabase) => void;
 }
 
@@ -28,10 +26,9 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
   currentTheme = 'coastal-horizon',
   onSelectKid,
   onOpenParentPin,
-  onOpenCalendar,
   onOpenGoalManager,
-  onOpenMenu,
   onOpenRewardStore,
+  onOpenSnackRequest,
   onUpdateDatabase,
 }) => {
   const [selectedKidForPin, setSelectedKidForPin] = useState<KidProfile | null>(null);
@@ -128,77 +125,6 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
                     <h2 className={`text-base sm:text-lg font-black ${theme.kidCardNameColor} group-hover:opacity-85 transition-opacity truncate`}>
                       {kid.name}
                     </h2>
-
-                    {/* ONLY icon on the kid card profile: The Menu Drop Down Icon */}
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <ActionMenu
-                        id={`menu-kid-card-${kid.id}`}
-                        label="Menu"
-                        items={[
-                          {
-                            id: 'enter',
-                            label: '🎮 Enter Profile & Play',
-                            variant: 'primary',
-                            onClick: () => {
-                              setSelectedKidForPin(kid);
-                            },
-                          },
-                          ...(database && onUpdateDatabase
-                            ? [
-                                {
-                                  id: 'avatar',
-                                  label: '🎨 Change Avatar & Color',
-                                  onClick: () => setEditingAvatarKid(kid),
-                                },
-                              ]
-                            : []),
-                          ...(onOpenRewardStore
-                            ? [
-                                {
-                                  id: 'rewards',
-                                  label: '🎁 Rewards Store',
-                                  onClick: () => {
-                                    onSelectKid(kid);
-                                    onOpenRewardStore();
-                                  },
-                                },
-                              ]
-                            : []),
-                          ...(onOpenCalendar
-                            ? [
-                                {
-                                  id: 'calendar',
-                                  label: '📅 Family Calendar',
-                                  onClick: () => onOpenCalendar(),
-                                },
-                              ]
-                            : []),
-                          ...(onOpenMenu
-                            ? [
-                                {
-                                  id: 'dinner',
-                                  label: '🍽️ Weekly Dinner Menu',
-                                  onClick: () => onOpenMenu(),
-                                },
-                              ]
-                            : []),
-                          ...(onOpenGoalManager
-                            ? [
-                                {
-                                  id: 'goal',
-                                  label: '🏆 Family Team Goal',
-                                  onClick: () => onOpenGoalManager(),
-                                },
-                              ]
-                            : []),
-                          {
-                            id: 'parent',
-                            label: '🛡️ Parent PIN / Admin',
-                            onClick: () => onOpenParentPin(),
-                          },
-                        ]}
-                      />
-                    </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 mt-0.5">

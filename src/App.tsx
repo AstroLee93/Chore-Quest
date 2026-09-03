@@ -16,6 +16,7 @@ import { KioskDashboard } from './components/KioskDashboard';
 import { FamilyGoalModal } from './components/FamilyGoalModal';
 import { WeeklyMenuModal } from './components/WeeklyMenuModal';
 import { WeeklyGroceryModal } from './components/WeeklyGroceryModal';
+import { KidSnackRequestModal } from './components/KidSnackRequestModal';
 
 export default function App() {
   const [database, setDatabase] = useState<FamilyDatabase>(() => loadDatabase());
@@ -28,6 +29,8 @@ export default function App() {
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [isGroceryOpen, setIsGroceryOpen] = useState<boolean>(false);
+  const [isSnackRequestOpen, setIsSnackRequestOpen] = useState<boolean>(false);
+  const [snackRequestKid, setSnackRequestKid] = useState<KidProfile | null>(null);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [isSyncConnected, setIsSyncConnected] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<AppThemeId>(() => getSavedThemeId());
@@ -78,6 +81,7 @@ export default function App() {
       isCalendarOpen ||
       isMenuOpen ||
       isGroceryOpen ||
+      isSnackRequestOpen ||
       isGoalModalOpen;
 
     if (!isAtSubScreen) return;
@@ -96,6 +100,8 @@ export default function App() {
         setIsCalendarOpen(false);
         setIsMenuOpen(false);
         setIsGroceryOpen(false);
+        setIsSnackRequestOpen(false);
+        setSnackRequestKid(null);
         setIsGoalModalOpen(false);
         setIsPiGuideOpen(false);
         setIsPinModalOpen(false);
@@ -127,6 +133,7 @@ export default function App() {
     isCalendarOpen,
     isMenuOpen,
     isGroceryOpen,
+    isSnackRequestOpen,
     isGoalModalOpen,
   ]);
 
@@ -367,6 +374,10 @@ export default function App() {
             onExitParentMode={() => setIsParentMode(false)}
             onOpenPiGuide={() => setIsPiGuideOpen(true)}
             onOpenCalendar={() => setIsCalendarOpen(true)}
+            onOpenSnackRequest={(kid) => {
+              if (kid) setSnackRequestKid(kid);
+              setIsSnackRequestOpen(true);
+            }}
           />
         ) : activeKid ? (
           <KidDashboard
@@ -385,6 +396,10 @@ export default function App() {
             onOpenRewardStore={() => setIsRewardStoreOpen(true)}
             onOpenCalendar={() => setIsCalendarOpen(true)}
             onOpenGoalManager={() => setIsGoalModalOpen(true)}
+            onOpenSnackRequest={(k) => {
+              setSnackRequestKid(k);
+              setIsSnackRequestOpen(true);
+            }}
           />
         ) : (
           <KidSelector
@@ -394,14 +409,30 @@ export default function App() {
             currentTheme={currentTheme}
             onSelectKid={(kid) => setActiveKidId(kid.id)}
             onOpenParentPin={() => setIsPinModalOpen(true)}
-            onOpenCalendar={() => setIsCalendarOpen(true)}
             onOpenGoalManager={() => setIsGoalModalOpen(true)}
-            onOpenMenu={() => setIsMenuOpen(true)}
             onOpenRewardStore={() => setIsRewardStoreOpen(true)}
+            onOpenSnackRequest={(kid) => {
+              setSnackRequestKid(kid);
+              setIsSnackRequestOpen(true);
+            }}
             onUpdateDatabase={handleUpdateDatabase}
           />
         )}
       </main>
+
+      {isSnackRequestOpen && (
+        <KidSnackRequestModal
+          isOpen={isSnackRequestOpen}
+          onClose={() => {
+            setIsSnackRequestOpen(false);
+            setSnackRequestKid(null);
+          }}
+          database={database}
+          onUpdateDatabase={handleUpdateDatabase}
+          initialKid={snackRequestKid || activeKid}
+          isParentMode={isParentMode}
+        />
+      )}
 
       {isCalendarOpen && (
         <CalendarView

@@ -102,6 +102,7 @@ export type CalendarEventCategory =
   | 'milestone'
   | 'birthday'
   | 'family'
+  | 'custom'
   | 'other';
 
 export type WeatherCondition =
@@ -121,6 +122,15 @@ export interface DayWeather {
   source?: 'auto' | 'custom';
 }
 
+export interface CustomCalendarCategory {
+  id: string;
+  name: string;
+  icon: string;
+  description?: string;
+  color?: string;
+  badgeBg?: string;
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -129,6 +139,10 @@ export interface CalendarEvent {
   time?: string; // e.g. "15:30" or "3:30 PM"
   endTime?: string;
   category: CalendarEventCategory;
+  customCategoryName?: string;
+  customCategoryIcon?: string;
+  customCategoryDescription?: string;
+  customCategoryColor?: string;
   assignedKidIds: string[]; // array of kid IDs or ['all']
   location?: string;
   color?: string; // hex color or tailwind accent
@@ -137,6 +151,13 @@ export interface CalendarEvent {
   weatherIcon?: WeatherCondition;
   isImportant?: boolean;
   remindMinutesBefore?: number;
+}
+
+export interface SnackStarTiers {
+  staple: number; // Healthy/Fresh e.g. 5
+  common: number; // Everyday snacks e.g. 12
+  treat: number;  // Sweet treats/goodies e.g. 20
+  luxury: number; // Gourmet/Specialty e.g. 35
 }
 
 export interface AppSettings {
@@ -149,6 +170,7 @@ export interface AppSettings {
   tempUnit?: 'F' | 'C';
   savedCalendarIcsUrl?: string;
   kioskTheme?: string;
+  snackStarTiers?: SnackStarTiers;
 }
 
 export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
@@ -258,6 +280,10 @@ export interface GroceryRequest {
   quantity?: string;
   category?: GroceryCategory;
   importance?: GroceryImportance;
+  starCost?: number; // Stars required/charged as payment for this snack/treat
+  starsDeducted?: boolean; // Whether the stars were deducted from kid's balance
+  originalStarCost?: number; // Original star cost before admin adjustment
+  adminEditedStars?: boolean; // True if admin explicitly edited the star cost
   notes?: string;
   kidId: string;
   kidName: string;
@@ -330,6 +356,7 @@ export interface FamilyDatabase {
   savedFamilyGoals?: FamilyGoal[];
   weeklyMenu?: WeeklyDinnerMenu;
   weeklyGroceryList?: WeeklyGroceryList;
+  customCalendarCategories?: CustomCalendarCategory[];
   lastBackupDate?: string;
 }
 

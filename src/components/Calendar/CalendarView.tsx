@@ -24,6 +24,7 @@ import {
   CalendarEvent,
   CalendarEventCategory,
   ChoreItem,
+  CustomCalendarCategory,
   DayWeather,
   FamilyDatabase,
   KidProfile,
@@ -32,6 +33,7 @@ import {
   EVENT_CATEGORIES,
   WEATHER_CONDITIONS,
   getSeasonalWeatherForDate,
+  getEventCategoryMeta,
 } from '../../utils/calendar';
 import { isChoreScheduledForDate, getTodayDateString } from '../../utils/storage';
 import { sound } from '../../utils/sound';
@@ -129,7 +131,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   // Event CRUD
-  const handleSaveEvent = (savedEvent: CalendarEvent) => {
+  const handleSaveEvent = (savedEvent: CalendarEvent, saveAsCustomCategory?: boolean) => {
     const existingIndex = events.findIndex((e) => e.id === savedEvent.id);
     let nextEvents: CalendarEvent[];
     if (existingIndex >= 0) {
@@ -138,12 +140,51 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     } else {
       nextEvents = [...events, savedEvent];
     }
+
+    let nextCustomCategories = database.customCalendarCategories || [];
+    if (
+      (savedEvent.category === 'custom' || savedEvent.customCategoryName) &&
+      savedEvent.customCategoryName?.trim() &&
+      saveAsCustomCategory !== false
+    ) {
+      const catName = savedEvent.customCategoryName.trim();
+      const existingCatIdx = nextCustomCategories.findIndex(
+        (c) => c.name.toLowerCase() === catName.toLowerCase()
+      );
+      const newCat: CustomCalendarCategory = {
+        id:
+          existingCatIdx >= 0
+            ? nextCustomCategories[existingCatIdx].id
+            : `cat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: catName,
+        icon: savedEvent.customCategoryIcon || savedEvent.icon || '✨',
+        description: savedEvent.customCategoryDescription,
+        color: savedEvent.customCategoryColor || savedEvent.color,
+      };
+
+      if (existingCatIdx >= 0) {
+        nextCustomCategories = [...nextCustomCategories];
+        nextCustomCategories[existingCatIdx] = newCat;
+      } else {
+        nextCustomCategories = [...nextCustomCategories, newCat];
+      }
+    }
+
     onUpdateDatabase({
       ...database,
       events: nextEvents,
+      customCalendarCategories: nextCustomCategories,
     });
     setIsEventModalOpen(false);
     setEditingEvent(null);
+  };
+
+  const handleDeleteCustomCategory = (catId: string) => {
+    const nextCats = (database.customCalendarCategories || []).filter((c) => c.id !== catId);
+    onUpdateDatabase({
+      ...database,
+      customCalendarCategories: nextCats,
+    });
   };
 
   const handleDeleteEvent = (eventId: string) => {
@@ -189,8 +230,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         if (!matchesKid) return false;
       }
       // Category filter
-      if (selectedCategory !== 'all' && evt.category !== selectedCategory) {
-        return false;
+      if (selectedCategory !== 'all') {
+        if (selectedCategory === 'custom') {
+          if (evt.category !== 'custom' && !evt.customCategoryName) return false;
+        } else if (selectedCategory.startsWith('custom:')) {
+          const targetName = selectedCategory.replace('custom:', '').toLowerCase();
+          const evtCustomName = evt.customCategoryName?.toLowerCase() || '';
+          if (evtCustomName !== targetName) return false;
+        } else if (evt.category !== selectedCategory) {
+          return false;
+        }
       }
       return true;
     });
@@ -512,14 +561,28 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               className="px-3 py-1.5 bg-white/90 rounded-xl border border-slate-200 text-xs font-black text-slate-700 cursor-pointer shadow-2xs"
             >
               <option value="all">All Event Types ({filteredEvents.length})</option>
-              {(Object.keys(EVENT_CATEGORIES) as CalendarEventCategory[]).map((catKey) => {
-                const meta = EVENT_CATEGORIES[catKey];
-                return (
-                  <option key={catKey} value={catKey}>
-                    {meta.icon} {meta.label}
-                  </option>
-                );
-              })}
+              {(Object.keys(EVENT_CATEGORIES) as CalendarEventCategory[])
+                .filter((catKey) => catKey !== 'custom')
+                .map((catKey) => {
+                  const meta = EVENT_CATEGORIES[catKey];
+                  return (
+                    <option key={catKey} value={catKey}>
+                      {meta.icon} {meta.label}
+                    </option>
+                  );
+                })}
+              {database.customCalendarCategories && database.customCalendarCategories.length > 0 ? (
+                <>
+                  <option value="custom">✨ All Custom Activities</option>
+                  {database.customCalendarCategories.map((c) => (
+                    <option key={c.id} value={`custom:${c.name}`}>
+                      {c.icon || '✨'} {c.name}
+                    </option>
+                  ))}
+                </>
+              ) : (
+                <option value="custom">✨ Custom Activities</option>
+              )}
             </select>
           </div>
         </div>
@@ -625,7 +688,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     {/* Middle: Event Tag Pills */}
                     <div className="space-y-1 my-1 flex-1 overflow-hidden">
                       {dayEvents.slice(0, 3).map((evt) => {
-                        const catMeta = EVENT_CATEGORIES[evt.category] || EVENT_CATEGORIES.practice;
+                        const catMeta = getEventCategoryMeta(evt, database.customCalendarCategories);
 
                         if (isPastDay) {
                           return (
@@ -853,7 +916,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 </div>
               ) : (
                 agendaEvents.map((evt) => {
-                  const catMeta = EVENT_CATEGORIES[evt.category] || EVENT_CATEGORIES.practice;
+                  const catMeta = getEventCategoryMeta(evt, database.customCalendarCategories);
                   const isPast = evt.date < todayStr;
                   const assignedKids = evt.assignedKidIds?.includes('all')
                     ? database.kids
@@ -899,13 +962,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                               </span>
                             )}
                             <span
-                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-black border ${
+                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-black border flex items-center gap-1 ${
                                 isPast ? 'bg-slate-200 text-slate-600 border-slate-300' : catMeta.badgeBg
                               }`}
                             >
-                              {catMeta.shortLabel}
+                              <span>{catMeta.icon}</span>
+                              <span>{catMeta.shortLabel}</span>
                             </span>
                           </div>
+
+                          {/* Category / Activity Type Description */}
+                          {catMeta.description && (
+                            <div className="text-[11px] text-purple-900 font-semibold mt-1 bg-purple-50 px-2.5 py-1 rounded-xl border border-purple-200 inline-flex items-center gap-1.5 flex-wrap">
+                              <span className="text-purple-600 font-black">🏷️ {catMeta.shortLabel}:</span>
+                              <span>{catMeta.description}</span>
+                            </div>
+                          )}
 
                           {/* Date, Time, Location */}
                           <div className="flex items-center gap-4 text-xs text-slate-500 font-bold mt-1.5 flex-wrap">
@@ -993,6 +1065,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             isChoreScheduledForDate(c, selectedDateForDetail)
           )}
           kids={database.kids}
+          customCategories={database.customCalendarCategories || []}
           customWeather={weatherMap[selectedDateForDetail]}
           tempUnit={tempUnit}
           onAddEvent={(d) => {
@@ -1018,9 +1091,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           isOpen={isEventModalOpen}
           event={editingEvent}
           kids={database.kids}
+          customCategories={database.customCalendarCategories || []}
           initialDate={dateForNewEvent || todayStr}
           onSave={handleSaveEvent}
           onDelete={handleDeleteEvent}
+          onDeleteCustomCategory={handleDeleteCustomCategory}
           onClose={() => {
             setIsEventModalOpen(false);
             setEditingEvent(null);

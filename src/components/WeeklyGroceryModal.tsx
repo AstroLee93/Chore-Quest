@@ -642,6 +642,9 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
 
   const handleDenyRequest = (requestId: string) => {
     sound.playTap();
+    const targetReq = requests.find((r) => r.id === requestId);
+    const refundStars = targetReq?.starsDeducted && (targetReq.starCost || 0) > 0 ? (targetReq.starCost || 0) : 0;
+
     const updatedRequests = requests.map((r) => {
       if (r.id === requestId) {
         return {
@@ -650,20 +653,29 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
           reviewedBy: isParentMode ? 'Mom & Dad' : 'Admin',
           reviewedAt: new Date().toISOString(),
           denialReason: denyReason.trim() || 'Not this shopping trip',
+          starsDeducted: false,
         };
       }
       return r;
     });
 
-    handleUpdateGroceryList({
-      ...groceryList,
-      requests: updatedRequests,
-      lastUpdated: new Date().toISOString(),
+    const updatedKids = refundStars > 0 && targetReq?.kidId
+      ? database.kids.map((k) => (k.id === targetReq.kidId ? { ...k, stars: k.stars + refundStars } : k))
+      : database.kids;
+
+    onUpdateDatabase({
+      ...database,
+      kids: updatedKids,
+      weeklyGroceryList: {
+        ...groceryList,
+        requests: updatedRequests,
+        lastUpdated: new Date().toISOString(),
+      },
     });
 
     setDenyingRequestId(null);
     setDenyReason('');
-    showToast('Grocery request denied.');
+    showToast(refundStars > 0 ? `Grocery request denied and ${refundStars}⭐ refunded!` : 'Grocery request denied.');
   };
 
   // 10. Start New Weekly Grocery List Confirmation
@@ -1950,6 +1962,17 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                           {req.notes && (
                             <div className="text-xs bg-slate-50 dark:bg-slate-900/60 p-2 rounded-xl text-slate-600 dark:text-slate-300 italic font-medium">
                               "{req.notes}"
+                            </div>
+                          )}
+
+                          {req.starCost !== undefined && req.starCost > 0 && (
+                            <div className="flex items-center gap-1.5 text-xs font-black text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 px-2.5 py-1 rounded-lg border border-purple-200 dark:border-purple-800">
+                              <span>⭐ {req.starCost} Stars Paid</span>
+                              {req.adminEditedStars && (
+                                <span className="text-[10px] text-purple-600 dark:text-purple-400 font-bold bg-purple-100 dark:bg-purple-900 px-1.5 py-0.5 rounded">
+                                  Admin adjusted
+                                </span>
+                              )}
                             </div>
                           )}
 

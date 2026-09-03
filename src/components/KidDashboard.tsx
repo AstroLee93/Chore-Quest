@@ -30,6 +30,7 @@ interface KidDashboardProps {
   onOpenRewardStore: () => void;
   onOpenCalendar?: () => void;
   onOpenGoalManager?: () => void;
+  onOpenSnackRequest?: (kid: KidProfile) => void;
 }
 
 export const KidDashboard: React.FC<KidDashboardProps> = ({
@@ -48,6 +49,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   onOpenRewardStore,
   onOpenCalendar,
   onOpenGoalManager,
+  onOpenSnackRequest,
 }) => {
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = getTodayDateString();
@@ -171,8 +173,21 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             </div>
           </div>
 
-          {/* Mini Action Badges: Chore Roulette Button & Progress Count */}
-          <div className="flex items-center gap-3 self-end sm:self-center">
+          {/* Mini Action Badges: Chore Roulette Button, Snack Request & Progress Count */}
+          <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-center flex-wrap justify-end">
+            {onOpenSnackRequest && (
+              <button
+                onClick={() => {
+                  sound.playTap();
+                  onOpenSnackRequest(kid);
+                }}
+                className="px-3.5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                title="Spend your stars to request delicious snacks & treats!"
+              >
+                <span>🍪 Snacks ({kid.stars}⭐)</span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 sound.playTap();

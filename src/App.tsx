@@ -658,9 +658,10 @@ export default function App() {
           <span className="opacity-40">•</span>
           <button
             onClick={() => setIsPiGuideOpen(true)}
-            className="text-indigo-600 hover:text-indigo-800 underline transition-colors cursor-pointer"
+            className="text-indigo-600 hover:text-indigo-800 underline transition-colors cursor-pointer flex items-center gap-1 font-black"
           >
-            Pi Host Setup
+            <span>📖</span>
+            <span>Family Guide & Pi Setup</span>
           </button>
         </div>
         <div className="flex items-center gap-4">

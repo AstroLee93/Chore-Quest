@@ -388,15 +388,15 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
                 className="p-3.5 rounded-2xl bg-yellow-50/80 hover:bg-yellow-100/90 dark:bg-yellow-950/30 dark:hover:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-900/40 flex items-center justify-between gap-3 text-left transition-all cursor-pointer active:scale-95 shadow-xs"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-200 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-200 flex items-center justify-center shadow-2xs shrink-0">
-                    <Server className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  <div className="w-10 h-10 rounded-xl bg-yellow-200 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-200 flex items-center justify-center shadow-2xs shrink-0 text-xl">
+                    📖
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-black text-slate-900 dark:text-slate-100 truncate">
-                      Host Guide
+                      Family & Pi Guide
                     </div>
                     <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
-                      Raspberry Pi Wi-Fi & IP
+                      Kids handbook, parents manual & PDF
                     </div>
                   </div>
                 </div>

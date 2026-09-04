@@ -42,6 +42,7 @@ import {
   RewardItem,
   RewardRedemption,
   AppSettings,
+  SnackStarTiers,
   FrequencyType,
   TimeOfDay,
   DayOfWeek,
@@ -50,9 +51,16 @@ import {
 } from '../types';
 import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON } from '../utils/storage';
 import { sound } from '../utils/sound';
+import { formatTime12Hour, checkCategoryTimeWindow } from '../utils/timeWindow';
 import { GROCERY_IMPORTANCE_METADATA } from '../utils/grocery';
 import { EmojiPicker } from './EmojiPicker';
 import { ActionMenu } from './ActionMenu';
+import {
+  CURATED_SNACK_CATALOG,
+  SnackCatalogItem,
+  getSnackItemStarCost,
+  getStarCostForImportance,
+} from '../utils/snackCatalog';
 
 import { CalendarView } from './Calendar/CalendarView';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
@@ -131,6 +139,89 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const [editingStarValue, setEditingStarValue] = useState<number>(0);
   const [denyingSnackReqId, setDenyingSnackReqId] = useState<string | null>(null);
   const [snackDenyReason, setSnackDenyReason] = useState<string>('');
+
+  // Child PIN Reset input field state
+  const [pinInputs, setPinInputs] = useState<Record<string, string>>({});
+  const [pinFeedback, setPinFeedback] = useState<{ kidId: string; text: string; isError?: boolean } | null>(null);
+
+  // Snack/Treat Star Pricing configuration state
+  const [snackTiersForm, setSnackTiersForm] = useState<SnackStarTiers>(() => ({
+    staple: database.settings.snackStarTiers?.staple ?? 5,
+    common: database.settings.snackStarTiers?.common ?? 12,
+    treat: database.settings.snackStarTiers?.treat ?? 20,
+    luxury: database.settings.snackStarTiers?.luxury ?? 35,
+  }));
+  const [customSnackOverrides, setCustomSnackOverrides] = useState<Record<string, number>>(
+    () => database.settings.customSnackStarOverrides || {}
+  );
+  const [isSnackCatalogExpanded, setIsSnackCatalogExpanded] = useState(false);
+  const [snackSearchTerm, setSnackSearchTerm] = useState('');
+  const [snackTiersSaved, setSnackTiersSaved] = useState(false);
+
+  useEffect(() => {
+    if (database.settings.snackStarTiers) {
+      setSnackTiersForm({
+        staple: database.settings.snackStarTiers.staple ?? 5,
+        common: database.settings.snackStarTiers.common ?? 12,
+        treat: database.settings.snackStarTiers.treat ?? 20,
+        luxury: database.settings.snackStarTiers.luxury ?? 35,
+      });
+    }
+  }, [database.settings.snackStarTiers]);
+
+  useEffect(() => {
+    if (database.settings.customSnackStarOverrides) {
+      setCustomSnackOverrides(database.settings.customSnackStarOverrides);
+    }
+  }, [database.settings.customSnackStarOverrides]);
+
+  const handleSaveSnackTiers = () => {
+    sound.playStarEarned();
+    onUpdateDatabase({
+      ...database,
+      settings: {
+        ...database.settings,
+        snackStarTiers: snackTiersForm,
+        customSnackStarOverrides: customSnackOverrides,
+      },
+    });
+    setSnackTiersSaved(true);
+    setTimeout(() => setSnackTiersSaved(false), 3500);
+  };
+
+  const handleUpdateItemStarCost = (itemId: string, newCost: number) => {
+    const updated = {
+      ...customSnackOverrides,
+      [itemId]: Math.max(0, newCost),
+    };
+    setCustomSnackOverrides(updated);
+    onUpdateDatabase({
+      ...database,
+      settings: {
+        ...database.settings,
+        snackStarTiers: snackTiersForm,
+        customSnackStarOverrides: updated,
+      },
+    });
+    setSnackTiersSaved(true);
+    setTimeout(() => setSnackTiersSaved(false), 3000);
+  };
+
+  const handleResetItemStarCost = (itemId: string) => {
+    const updated = { ...customSnackOverrides };
+    delete updated[itemId];
+    setCustomSnackOverrides(updated);
+    onUpdateDatabase({
+      ...database,
+      settings: {
+        ...database.settings,
+        snackStarTiers: snackTiersForm,
+        customSnackStarOverrides: updated,
+      },
+    });
+    setSnackTiersSaved(true);
+    setTimeout(() => setSnackTiersSaved(false), 3000);
+  };
 
   const pendingSnackRequests = useMemo(() => {
     return database.weeklyGroceryList?.requests?.filter((r) => r.status === 'pending') || [];
@@ -380,7 +471,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
     let updatedCategories: ChoreCategory[];
     if (cat.id) {
-      updatedCategories = database.categories.map((c) => (c.id === cat.id ? (cat as ChoreCategory) : c));
+      updatedCategories = database.categories.map((c) =>
+        c.id === cat.id
+          ? {
+              ...c,
+              ...(cat as ChoreCategory),
+              timeWindow: cat.timeWindow || c.timeWindow,
+            }
+          : c
+      );
     } else {
       const newCat: ChoreCategory = {
         id: `cat-${Date.now()}`,
@@ -389,11 +488,39 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
         color: cat.color || '#f59e0b',
         description: cat.description?.trim() || '',
         order: database.categories.length + 1,
+        timeWindow: cat.timeWindow || {
+          enabled: false,
+          startTime: '06:00',
+          endTime: '11:00',
+        },
       };
       updatedCategories = [...database.categories, newCat];
     }
     onUpdateDatabase({ ...database, categories: updatedCategories });
     setEditingCategory(null);
+  };
+
+  const handleUpdateCategoryTimeWindow = (
+    catId: string,
+    enabled: boolean,
+    startTime: string,
+    endTime: string
+  ) => {
+    sound.playTap();
+    const updatedCategories = database.categories.map((c) => {
+      if (c.id === catId) {
+        return {
+          ...c,
+          timeWindow: {
+            enabled,
+            startTime,
+            endTime,
+          },
+        };
+      }
+      return c;
+    });
+    onUpdateDatabase({ ...database, categories: updatedCategories });
   };
 
   const handleDeleteCategory = (catId: string) => {
@@ -721,7 +848,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               )}
             </div>
 
-            {pendingSnackRequests.length === 0 ? (
+              {pendingSnackRequests.length === 0 ? (
               <div className="bg-purple-950/40 rounded-xl p-3 text-center border border-purple-800/60 text-purple-300 text-xs font-bold">
                 ✨ No pending kid snack requests right now. All caught up!
               </div>
@@ -782,10 +909,10 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             setEditingSnackReq(req);
                             setEditingStarValue(req.starCost || 0);
                           }}
-                          className="px-2 py-0.5 rounded-lg bg-white hover:bg-purple-100 text-purple-800 font-black text-[11px] border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                          className="min-h-[44px] px-3 py-1.5 rounded-xl bg-white hover:bg-purple-100 text-purple-800 font-black text-xs border border-purple-300 flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs active:scale-95"
                           title="Edit stars required for this snack"
                         >
-                          <Edit2 className="w-3 h-3" />
+                          <Edit2 className="w-3.5 h-3.5" />
                           <span>Edit Stars</span>
                         </button>
                       </div>
@@ -794,9 +921,9 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
                         <button
                           onClick={() => handleApproveSnackRequest(req)}
-                          className="flex-1 py-1.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer"
+                          className="flex-1 min-h-[44px] py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-95 cursor-pointer"
                         >
-                          <ThumbsUp className="w-3 h-3" />
+                          <ThumbsUp className="w-4 h-4" />
                           <span>Approve & Add</span>
                         </button>
 
@@ -808,9 +935,9 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                               setDenyingSnackReqId(req.id);
                             }
                           }}
-                          className="py-1.5 px-2.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 font-black text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                          className="min-h-[44px] py-2 px-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors active:scale-95"
                         >
-                          <ThumbsDown className="w-3 h-3" />
+                          <ThumbsDown className="w-4 h-4" />
                           <span>{denyingSnackReqId === req.id ? 'Confirm Deny' : 'Deny (Refund)'}</span>
                         </button>
                       </div>
@@ -822,7 +949,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             value={snackDenyReason}
                             onChange={(e) => setSnackDenyReason(e.target.value)}
                             placeholder="Reason for kid (stars refunded automatically)..."
-                            className="w-full px-2 py-1 text-xs rounded-lg border border-slate-300 bg-white font-medium"
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-medium min-h-[44px]"
                           />
                         </div>
                       )}
@@ -831,6 +958,235 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 })}
               </div>
             )}
+
+            {/* General Snack & Treat Star Pricing Editor */}
+            <div className="bg-purple-950/60 rounded-xl p-3.5 sm:p-4 border border-purple-500/50 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-amber-300 flex items-center gap-1.5">
+                    <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    <span>Snack & Treat Star Pricing Tiers</span>
+                  </h4>
+                  <p className="text-[11px] text-purple-200 font-medium mt-0.5">
+                    Adjust the necessary stars required for each snack category if the default amount does not reflect your family's desired rates!
+                  </p>
+                </div>
+                {snackTiersSaved && (
+                  <span className="text-xs font-black text-emerald-400 flex items-center gap-1 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-500">
+                    <Check className="w-3.5 h-3.5 stroke-[3]" /> Saved Star Pricing!
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-slate-900">
+                <div className="bg-white rounded-xl p-2.5 border border-purple-300 flex flex-col justify-between">
+                  <div className="text-[10px] sm:text-xs font-black text-emerald-800 flex items-center gap-1">
+                    <span>🥦</span>
+                    <span>Healthy Staple</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-semibold mb-1">Fruit, veggies, cheese</div>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={snackTiersForm.staple}
+                      onChange={(e) => setSnackTiersForm(prev => ({ ...prev, staple: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      className="w-full px-2 py-1.5 text-center font-black text-sm rounded-lg border border-slate-300 focus:outline-purple-500 min-h-[44px]"
+                    />
+                    <span className="text-xs font-black text-amber-600">⭐</span>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-2.5 border border-purple-300 flex flex-col justify-between">
+                  <div className="text-[10px] sm:text-xs font-black text-sky-800 flex items-center gap-1">
+                    <span>🥨</span>
+                    <span>Everyday Munchies</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-semibold mb-1">Crackers, bars, pretzels</div>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={snackTiersForm.common}
+                      onChange={(e) => setSnackTiersForm(prev => ({ ...prev, common: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      className="w-full px-2 py-1.5 text-center font-black text-sm rounded-lg border border-slate-300 focus:outline-purple-500 min-h-[44px]"
+                    />
+                    <span className="text-xs font-black text-amber-600">⭐</span>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-2.5 border border-purple-300 flex flex-col justify-between">
+                  <div className="text-[10px] sm:text-xs font-black text-purple-800 flex items-center gap-1">
+                    <span>🍦</span>
+                    <span>Sweet Treats</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-semibold mb-1">Ice cream, cookies, candy</div>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={snackTiersForm.treat}
+                      onChange={(e) => setSnackTiersForm(prev => ({ ...prev, treat: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      className="w-full px-2 py-1.5 text-center font-black text-sm rounded-lg border border-slate-300 focus:outline-purple-500 min-h-[44px]"
+                    />
+                    <span className="text-xs font-black text-amber-600">⭐</span>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-2.5 border border-purple-300 flex flex-col justify-between">
+                  <div className="text-[10px] sm:text-xs font-black text-amber-800 flex items-center gap-1">
+                    <span>🧋</span>
+                    <span>Luxury Treats</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-semibold mb-1">Gourmet drinks, outings</div>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={snackTiersForm.luxury}
+                      onChange={(e) => setSnackTiersForm(prev => ({ ...prev, luxury: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      className="w-full px-2 py-1.5 text-center font-black text-sm rounded-lg border border-slate-300 focus:outline-purple-500 min-h-[44px]"
+                    />
+                    <span className="text-xs font-black text-amber-600">⭐</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Individual Snack/Treat Custom Pricing Section */}
+              <div className="pt-3 border-t border-amber-200">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <h5 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                      <span>Specific Snack Item Star Overrides</span>
+                      {Object.keys(customSnackOverrides).length > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 font-black text-[10px]">
+                          {Object.keys(customSnackOverrides).length} customized
+                        </span>
+                      )}
+                    </h5>
+                    <p className="text-[11px] text-slate-600 font-medium">
+                      Need a specific snack or treat to cost more or fewer stars than its category tier? Set custom star amounts below.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSnackCatalogExpanded(!isSnackCatalogExpanded)}
+                    className="min-h-[44px] px-3.5 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-100 text-amber-950 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  >
+                    <span>{isSnackCatalogExpanded ? 'Hide Catalog' : 'Browse & Edit Items'}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isSnackCatalogExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+
+                {isSnackCatalogExpanded && (
+                  <div className="mt-3 p-3 bg-white rounded-xl border border-amber-200 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Search snacks & treats by name or category..."
+                        value={snackSearchTerm}
+                        onChange={(e) => setSnackSearchTerm(e.target.value)}
+                        className="w-full text-xs font-bold px-3 py-2 rounded-lg border border-slate-200 focus:outline-indigo-500 min-h-[44px]"
+                      />
+                    </div>
+
+                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 pr-1">
+                      {CURATED_SNACK_CATALOG
+                        .filter(item => 
+                          !snackSearchTerm || 
+                          item.name.toLowerCase().includes(snackSearchTerm.toLowerCase()) ||
+                          item.description.toLowerCase().includes(snackSearchTerm.toLowerCase()) ||
+                          item.category.toLowerCase().includes(snackSearchTerm.toLowerCase())
+                        )
+                        .map(item => {
+                          const hasOverride = customSnackOverrides[item.id] !== undefined;
+                          const currentCost = getSnackItemStarCost(item, database.settings);
+                          const tierDefault = getStarCostForImportance(item.importance, database.settings);
+
+                          return (
+                            <div key={item.id} className="py-2.5 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="text-2xl shrink-0">{item.icon}</span>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-xs font-black text-slate-900 truncate">{item.name}</span>
+                                    {hasOverride ? (
+                                      <span className="px-1.5 py-0.5 rounded bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-black">
+                                        Custom
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-slate-400">
+                                        (Tier: {tierDefault}⭐)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-slate-500 font-medium">
+                                    {item.category} • {item.defaultQuantity || '1 serving'}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden bg-slate-50">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateItemStarCost(item.id, Math.max(0, currentCost - 1))}
+                                    className="min-h-[44px] min-w-[36px] px-2 text-slate-700 hover:bg-slate-200 font-black text-sm flex items-center justify-center cursor-pointer"
+                                  >
+                                    -
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={currentCost}
+                                    onChange={(e) => handleUpdateItemStarCost(item.id, parseInt(e.target.value) || 0)}
+                                    className="w-12 text-center text-xs font-black bg-white py-1 min-h-[44px] focus:outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateItemStarCost(item.id, currentCost + 1)}
+                                    className="min-h-[44px] min-w-[36px] px-2 text-slate-700 hover:bg-slate-200 font-black text-sm flex items-center justify-center cursor-pointer"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                <span className="text-xs font-black text-amber-500">⭐</span>
+                                {hasOverride && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleResetItemStarCost(item.id)}
+                                    className="min-h-[44px] px-2 text-[11px] font-bold text-slate-400 hover:text-red-500 cursor-pointer ml-1"
+                                    title="Reset to category tier default"
+                                  >
+                                    Reset
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={handleSaveSnackTiers}
+                  className="min-h-[44px] px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer transition-all"
+                >
+                  <Star className="w-4 h-4 fill-slate-950 text-slate-950" />
+                  <span>Save Star Pricing ⭐</span>
+                </button>
+              </div>
+            </div>
           </div>
           {/* Filter Bar */}
           <div className="bg-white p-2 sm:p-4 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-indigo-300 sm:border-indigo-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
@@ -1109,51 +1465,248 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2.5">
-              {database.categories.map((cat) => (
-                <div
-                  key={cat.id}
-                  className="p-2 sm:p-3 rounded-lg sm:rounded-xl border border-slate-200 flex items-center justify-between gap-2 hover:border-yellow-400 transition-colors bg-white shadow-none sm:shadow-2xs"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div
-                      className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-sm sm:text-base shrink-0 border border-white shadow-2xs"
-                      style={{ backgroundColor: `${cat.color}30` }}
-                    >
-                      {cat.color === '#f59e0b' ? '🌅' : cat.color === '#8b5cf6' ? '🛏️' : cat.color === '#3b82f6' ? '📚' : '🏠'}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-black text-xs sm:text-sm text-slate-800 truncate">
-                        {cat.name}
+              {database.categories.map((cat) => {
+                const timeStatus = checkCategoryTimeWindow(cat);
+                return (
+                  <div
+                    key={cat.id}
+                    className="p-2 sm:p-3 rounded-lg sm:rounded-xl border border-slate-200 flex items-center justify-between gap-2 hover:border-yellow-400 transition-colors bg-white shadow-none sm:shadow-2xs"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-sm sm:text-base shrink-0 border border-white shadow-2xs"
+                        style={{ backgroundColor: `${cat.color}30` }}
+                      >
+                        {cat.color === '#f59e0b' ? '🌅' : cat.color === '#8b5cf6' ? '🛏️' : cat.color === '#3b82f6' ? '📚' : cat.color === '#6366f1' ? '🌙' : '🏠'}
                       </div>
-                      <div className="text-[10px] sm:text-[11px] text-slate-400 font-bold truncate">
-                        {database.chores.filter((c) => c.categoryId === cat.id).length} chores
+                      <div className="min-w-0">
+                        <div className="font-black text-xs sm:text-sm text-slate-800 truncate">
+                          {cat.name}
+                        </div>
+                        <div className="text-[10px] sm:text-[11px] text-slate-400 font-bold truncate">
+                          {database.chores.filter((c) => c.categoryId === cat.id).length} chores
+                        </div>
+                        {cat.timeWindow?.enabled ? (
+                          <div className="mt-1 flex items-center gap-1">
+                            <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200 inline-flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5 text-amber-600" />
+                              {formatTime12Hour(cat.timeWindow.startTime)} – {formatTime12Hour(cat.timeWindow.endTime)}
+                            </span>
+                            {timeStatus.isAllowed ? (
+                              <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">
+                                Open
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-200">
+                                Locked
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="mt-1">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 inline-flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5 text-slate-400" />
+                              Anytime
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-1">
-                    <ActionMenu
-                      id={`menu-cat-${cat.id}`}
-                      label="Menu"
-                      items={[
-                        {
-                          id: 'edit',
-                          label: 'Edit Category',
-                          icon: <Edit2 className="w-3.5 h-3.5" />,
-                          onClick: () => setEditingCategory(cat),
-                        },
-                        {
-                          id: 'delete',
-                          label: 'Delete Category',
-                          icon: <Trash2 className="w-3.5 h-3.5" />,
-                          variant: 'danger',
-                          onClick: () => handleDeleteCategory(cat.id),
-                        },
-                      ]}
-                    />
+                    <div className="flex items-center gap-1">
+                      <ActionMenu
+                        id={`menu-cat-${cat.id}`}
+                        label="Menu"
+                        items={[
+                          {
+                            id: 'edit',
+                            label: 'Edit Category & Schedule',
+                            icon: <Edit2 className="w-3.5 h-3.5" />,
+                            onClick: () => setEditingCategory(cat),
+                          },
+                          {
+                            id: 'toggle-window',
+                            label: cat.timeWindow?.enabled ? 'Disable Time Frame (Allow Anytime)' : 'Enable Time Frame',
+                            icon: <Clock className="w-3.5 h-3.5" />,
+                            onClick: () => {
+                              handleUpdateCategoryTimeWindow(
+                                cat.id,
+                                !cat.timeWindow?.enabled,
+                                cat.timeWindow?.startTime || '06:00',
+                                cat.timeWindow?.endTime || '11:00'
+                              );
+                            },
+                          },
+                          {
+                            id: 'delete',
+                            label: 'Delete Category',
+                            icon: <Trash2 className="w-3.5 h-3.5" />,
+                            variant: 'danger',
+                            onClick: () => handleDeleteCategory(cat.id),
+                          },
+                        ]}
+                      />
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Time-Gated Chore Categories Scheduler Table */}
+          <div className="bg-white p-2 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-yellow-400 shadow-none sm:shadow-2xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-900 flex items-center justify-center text-xl shrink-0">
+                  ⏰
                 </div>
-              ))}
+                <div>
+                  <h3 className="font-black text-slate-800 text-xs sm:text-base flex items-center gap-1.5">
+                    <span>Category Check-Off Time Frames</span>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-900 text-white text-[10px] font-black">
+                      Timed Routines
+                    </span>
+                  </h3>
+                  <p className="text-[11px] sm:text-xs text-slate-500 font-bold">
+                    Ensure chores are completed in a timely manner by setting check-off hours for each category. Kids can only check off tasks during these hours!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Schedule Table */}
+            <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+              {database.categories.map((cat) => {
+                const isEnabled = !!cat.timeWindow?.enabled;
+                const startTime = cat.timeWindow?.startTime || '06:00';
+                const endTime = cat.timeWindow?.endTime || '11:00';
+                const timeStatus = checkCategoryTimeWindow(cat);
+
+                return (
+                  <div
+                    key={`sched-${cat.id}`}
+                    className={`p-3 sm:p-4 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
+                      isEnabled ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'bg-slate-50/50 hover:bg-slate-50'
+                    }`}
+                  >
+                    {/* Left: Category info & Toggle */}
+                    <div className="flex items-center gap-3 min-w-[220px]">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-2xs border border-white"
+                        style={{ backgroundColor: `${cat.color}30` }}
+                      >
+                        {cat.color === '#f59e0b' ? '🌅' : cat.color === '#8b5cf6' ? '🛏️' : cat.color === '#3b82f6' ? '📚' : cat.color === '#6366f1' ? '🌙' : '🏠'}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-black text-sm text-slate-900">{cat.name}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700">
+                            {database.chores.filter((c) => c.categoryId === cat.id).length} chores
+                          </span>
+                        </div>
+                        <div className="mt-0.5">
+                          {isEnabled ? (
+                            <span className="text-[10px] font-bold text-amber-900 flex items-center gap-1">
+                              <span>Window:</span>
+                              <strong className="font-black">{formatTime12Hour(startTime)} – {formatTime12Hour(endTime)}</strong>
+                              {timeStatus.isAllowed ? (
+                                <span className="text-emerald-700 font-black ml-1">(🟢 Open Now)</span>
+                              ) : (
+                                <span className="text-amber-800 font-black ml-1">(🔒 Locked)</span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-400">
+                              🔓 Any time (no time restrictions applied)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Middle: Controls (Time Pickers & Presets) */}
+                    <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
+                      {/* Enable Switch */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleUpdateCategoryTimeWindow(cat.id, !isEnabled, startTime, endTime);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                          isEnabled
+                            ? 'bg-amber-500 text-slate-950 shadow-xs hover:bg-amber-400'
+                            : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                        }`}
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{isEnabled ? 'Time Gate Active' : 'Enable Time Gate'}</span>
+                      </button>
+
+                      {isEnabled && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs">
+                            <label className="text-[10px] font-black text-slate-400 uppercase">From</label>
+                            <input
+                              type="time"
+                              value={startTime}
+                              onChange={(e) => {
+                                handleUpdateCategoryTimeWindow(cat.id, true, e.target.value, endTime);
+                              }}
+                              className="text-xs font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer"
+                            />
+                            <span className="text-slate-300 font-black">–</span>
+                            <label className="text-[10px] font-black text-slate-400 uppercase">To</label>
+                            <input
+                              type="time"
+                              value={endTime}
+                              onChange={(e) => {
+                                handleUpdateCategoryTimeWindow(cat.id, true, startTime, e.target.value);
+                              }}
+                              className="text-xs font-black text-slate-900 bg-transparent focus:outline-none cursor-pointer"
+                            />
+                          </div>
+
+                          {/* Quick Preset Buttons */}
+                          <div className="flex items-center gap-1 flex-wrap text-[10px] font-bold">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateCategoryTimeWindow(cat.id, true, '06:00', '11:00')}
+                              className="px-2 py-1 rounded-lg bg-yellow-100 hover:bg-yellow-200 text-yellow-900 border border-yellow-300 cursor-pointer transition-colors"
+                              title="Set 06:00 AM – 11:00 AM"
+                            >
+                              🌅 Morning
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateCategoryTimeWindow(cat.id, true, '12:00', '19:00')}
+                              className="px-2 py-1 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-900 border border-sky-300 cursor-pointer transition-colors"
+                              title="Set 12:00 PM – 07:00 PM"
+                            >
+                              ☀️ Afternoon
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateCategoryTimeWindow(cat.id, true, '18:00', '21:30')}
+                              className="px-2 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-900 border border-indigo-300 cursor-pointer transition-colors"
+                              title="Set 06:00 PM – 09:30 PM"
+                            >
+                              🌙 Evening
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateCategoryTimeWindow(cat.id, true, '15:00', '18:00')}
+                              className="px-2 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 cursor-pointer transition-colors"
+                              title="Set 03:00 PM – 06:00 PM"
+                            >
+                              🏫 After School
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -1216,6 +1769,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                           <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-700">
                             {category?.name || 'Uncategorized'}
                           </span>
+                          {category?.timeWindow?.enabled && (
+                            <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-900 border border-amber-200 inline-flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5 text-amber-600" />
+                              {formatTime12Hour(category.timeWindow.startTime)} – {formatTime12Hour(category.timeWindow.endTime)}
+                            </span>
+                          )}
                           <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.2 rounded-md bg-indigo-50 text-indigo-700 capitalize">
                             {chore.frequency}
                           </span>
@@ -1525,17 +2084,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                                 },
                                 {
                                   id: 'reset-pin',
-                                  label: 'Reset PIN',
+                                  label: 'Reset Security PIN',
                                   icon: <Lock className="w-3.5 h-3.5 text-indigo-600" />,
                                   onClick: () => {
-                                    const entered = prompt(`Enter new 4-digit PIN for ${kid.name}:`, kid.pin || '1234');
-                                    if (entered !== null) {
-                                      const sanitized = entered.replace(/\D/g, '').slice(0, 4);
-                                      if (sanitized.length === 4) {
-                                        handleResetKidPin(kid.id, sanitized);
-                                      } else {
-                                        alert('PIN must be exactly 4 digits.');
-                                      }
+                                    const currentInput = document.getElementById(`kid-pin-input-${kid.id}`);
+                                    if (currentInput) {
+                                      currentInput.focus();
                                     }
                                   },
                                 },
@@ -1575,36 +2129,64 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       </div>
                     </div>
 
-                    {/* PIN Protection & Reset Row */}
-                    <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-md bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">
-                          <Lock className="w-3 h-3" />
-                        </div>
-                        <div>
-                          <div className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400">Child Security PIN</div>
-                          <div className="text-xs font-black font-mono text-slate-800 tracking-wider">
-                            {kid.pin || '1234'}
+                    {/* PIN Protection & Clear Reset Input Field Row */}
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs shrink-0">
+                            <Lock className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <div className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400">Child Security PIN</div>
+                            <div className="text-sm font-black font-mono text-slate-800 tracking-wider">
+                              {kid.pin || '1234'}
+                            </div>
                           </div>
                         </div>
+
+                        {pinFeedback?.kidId === kid.id && (
+                          <span className={`text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md ${pinFeedback.isError ? 'bg-rose-100 text-rose-700 border border-rose-300' : 'bg-emerald-100 text-emerald-700 border border-emerald-300'}`}>
+                            {pinFeedback.text}
+                          </span>
+                        )}
                       </div>
 
-                      <button
-                        onClick={() => {
-                          const entered = prompt(`Set 4-digit PIN for ${kid.name}:`, kid.pin || '1234');
-                          if (entered !== null) {
-                            const sanitized = entered.replace(/\D/g, '').slice(0, 4);
-                            if (sanitized.length === 4) {
-                              handleResetKidPin(kid.id, sanitized);
-                            } else {
-                              alert('PIN must be exactly 4 digits.');
+                      {/* Clear Reset PIN input field with touch-friendly hit targets */}
+                      <div className="flex items-center gap-2 pt-1 border-t border-slate-200/70">
+                        <input
+                          id={`kid-pin-input-${kid.id}`}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={4}
+                          value={pinInputs[kid.id] ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                            setPinInputs((prev) => ({ ...prev, [kid.id]: val }));
+                          }}
+                          placeholder="New 4-digit PIN"
+                          className="flex-1 px-3 py-2 text-xs font-mono font-black text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-indigo-500 min-h-[44px]"
+                        />
+                        <button
+                          type="button"
+                          id={`btn-save-pin-${kid.id}`}
+                          onClick={() => {
+                            const val = (pinInputs[kid.id] ?? '').trim();
+                            if (val.length !== 4) {
+                              setPinFeedback({ kidId: kid.id, text: 'Must be 4 digits', isError: true });
+                              setTimeout(() => setPinFeedback(null), 3000);
+                              return;
                             }
-                          }
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs font-black cursor-pointer transition-colors"
-                      >
-                        Reset PIN
-                      </button>
+                            handleResetKidPin(kid.id, val);
+                            setPinFeedback({ kidId: kid.id, text: `PIN updated to ${val}!` });
+                            setPinInputs((prev) => ({ ...prev, [kid.id]: '' }));
+                            setTimeout(() => setPinFeedback(null), 3500);
+                          }}
+                          className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs cursor-pointer active:scale-95 transition-all flex items-center justify-center shrink-0"
+                        >
+                          Save PIN
+                        </button>
+                      </div>
                     </div>
 
                     {/* Star Balance & Quick Adjuster */}
@@ -1731,10 +2313,120 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 sound.playTap();
                 setIsGoalModalOpen(true);
               }}
-              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 shadow-xs active:scale-95 cursor-pointer border border-amber-400"
+              className="min-h-[44px] px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 shadow-xs active:scale-95 cursor-pointer border border-amber-400"
             >
               Configure Goal & Presets ⚙️
             </button>
+          </div>
+
+          {/* Snack & Treat Star Pricing Configuration (Settings Tab) */}
+          <div className="bg-white p-2.5 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-purple-400 shadow-none sm:shadow-2xs space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="font-black text-slate-800 text-xs sm:text-base flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                  Snack & Treat Star Pricing Configuration
+                </h3>
+                <p className="text-[11px] sm:text-xs text-slate-500 font-bold">
+                  Configure the default stars required for kids to acquire snacks and treats. If the default cost doesn't reflect what you desire, adjust them here!
+                </p>
+              </div>
+              {snackTiersSaved && (
+                <span className="text-xs font-black text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-300">
+                  <Check className="w-3.5 h-3.5 stroke-[3]" /> Saved Star Pricing!
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+              <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                <div className="text-xs font-black text-emerald-900 flex items-center gap-1">
+                  <span>🥦</span>
+                  <span>Healthy Staple Tier</span>
+                </div>
+                <div className="text-[10px] text-emerald-700 font-semibold mb-2">Strawberries, carrots, cheese</div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={snackTiersForm.staple}
+                    onChange={(e) => setSnackTiersForm(prev => ({ ...prev, staple: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    className="w-full px-3 py-2 text-center font-black text-sm rounded-xl border border-emerald-300 bg-white focus:outline-emerald-500 min-h-[44px]"
+                  />
+                  <span className="text-xs font-black text-amber-600">⭐</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-sky-50/70 border border-sky-200">
+                <div className="text-xs font-black text-sky-900 flex items-center gap-1">
+                  <span>🥨</span>
+                  <span>Everyday Munchies Tier</span>
+                </div>
+                <div className="text-[10px] text-sky-700 font-semibold mb-2">Crackers, bars, trail mix</div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={snackTiersForm.common}
+                    onChange={(e) => setSnackTiersForm(prev => ({ ...prev, common: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    className="w-full px-3 py-2 text-center font-black text-sm rounded-xl border border-sky-300 bg-white focus:outline-sky-500 min-h-[44px]"
+                  />
+                  <span className="text-xs font-black text-amber-600">⭐</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200">
+                <div className="text-xs font-black text-purple-900 flex items-center gap-1">
+                  <span>🍦</span>
+                  <span>Sweet Treat Tier</span>
+                </div>
+                <div className="text-[10px] text-purple-700 font-semibold mb-2">Ice cream, cookies, gummies</div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={snackTiersForm.treat}
+                    onChange={(e) => setSnackTiersForm(prev => ({ ...prev, treat: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    className="w-full px-3 py-2 text-center font-black text-sm rounded-xl border border-purple-300 bg-white focus:outline-purple-500 min-h-[44px]"
+                  />
+                  <span className="text-xs font-black text-amber-600">⭐</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200">
+                <div className="text-xs font-black text-amber-900 flex items-center gap-1">
+                  <span>🧋</span>
+                  <span>Luxury Treat Tier</span>
+                </div>
+                <div className="text-[10px] text-amber-700 font-semibold mb-2">Boba tea, fancy shakes, outings</div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={snackTiersForm.luxury}
+                    onChange={(e) => setSnackTiersForm(prev => ({ ...prev, luxury: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    className="w-full px-3 py-2 text-center font-black text-sm rounded-xl border border-amber-300 bg-white focus:outline-amber-500 min-h-[44px]"
+                  />
+                  <span className="text-xs font-black text-amber-600">⭐</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                id="btn-save-snack-star-tiers"
+                onClick={handleSaveSnackTiers}
+                className="min-h-[44px] px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer transition-all"
+              >
+                <Star className="w-4 h-4 fill-amber-300 text-amber-300" />
+                <span>Save Snack Star Pricing ⭐</span>
+              </button>
+            </div>
           </div>
 
           {/* Backup & Restore Section */}
@@ -1850,6 +2542,25 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       </option>
                     ))}
                   </select>
+                  {(() => {
+                    const selCat = database.categories.find(
+                      (c) => c.id === (editingChore.categoryId || database.categories[0]?.id)
+                    );
+                    if (selCat?.timeWindow?.enabled) {
+                      return (
+                        <div className="mt-1 text-[10px] font-bold text-amber-900 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span>Window: {formatTime12Hour(selCat.timeWindow.startTime)} – {formatTime12Hour(selCat.timeWindow.endTime)}</span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="mt-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>Anytime check-off</span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div>
@@ -2124,6 +2835,156 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     />
                   ))}
                 </div>
+              </div>
+
+              {/* Time Window Configuration Section */}
+              <div className="pt-3 border-t border-yellow-200">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-indigo-700" />
+                    <label className="text-[11px] sm:text-xs font-black text-slate-800 uppercase">
+                      Check-Off Time Frame
+                    </label>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!editingCategory.timeWindow?.enabled}
+                      onChange={(e) => {
+                        const enabled = e.target.checked;
+                        setEditingCategory({
+                          ...editingCategory,
+                          timeWindow: {
+                            enabled,
+                            startTime: editingCategory.timeWindow?.startTime || '06:00',
+                            endTime: editingCategory.timeWindow?.endTime || '11:00',
+                          },
+                        });
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-900"></div>
+                  </label>
+                </div>
+
+                <p className="text-[10px] text-slate-500 font-bold mb-2">
+                  Restrict when kids can check off chores in this category. Outside these hours, completion is locked.
+                </p>
+
+                {editingCategory.timeWindow?.enabled ? (
+                  <div className="p-2.5 rounded-xl bg-white border border-yellow-300 space-y-2.5">
+                    {/* Presets */}
+                    <div>
+                      <span className="text-[9px] font-black uppercase text-slate-400 block mb-1">
+                        Quick Presets:
+                      </span>
+                      <div className="grid grid-cols-2 gap-1 text-[10px] font-black">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingCategory({
+                              ...editingCategory,
+                              timeWindow: { enabled: true, startTime: '06:00', endTime: '11:00' },
+                            })
+                          }
+                          className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors text-left cursor-pointer"
+                        >
+                          🌅 Morning (6am–11am)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingCategory({
+                              ...editingCategory,
+                              timeWindow: { enabled: true, startTime: '12:00', endTime: '19:00' },
+                            })
+                          }
+                          className="px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 transition-colors text-left cursor-pointer"
+                        >
+                          ☀️ Afternoon (12pm–7pm)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingCategory({
+                              ...editingCategory,
+                              timeWindow: { enabled: true, startTime: '18:00', endTime: '21:30' },
+                            })
+                          }
+                          className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition-colors text-left cursor-pointer"
+                        >
+                          🌙 Evening (6pm–9:30pm)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingCategory({
+                              ...editingCategory,
+                              timeWindow: { enabled: true, startTime: '15:00', endTime: '18:00' },
+                            })
+                          }
+                          className="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 transition-colors text-left cursor-pointer"
+                        >
+                          🏫 After School (3pm–6pm)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Time Pickers */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-black text-slate-700 block mb-0.5">
+                          Start Time (Opens):
+                        </label>
+                        <input
+                          type="time"
+                          value={editingCategory.timeWindow?.startTime || '06:00'}
+                          onChange={(e) =>
+                            setEditingCategory({
+                              ...editingCategory,
+                              timeWindow: {
+                                enabled: true,
+                                startTime: e.target.value,
+                                endTime: editingCategory.timeWindow?.endTime || '11:00',
+                              },
+                            })
+                          }
+                          className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-black bg-slate-50 text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-slate-700 block mb-0.5">
+                          End Time (Closes):
+                        </label>
+                        <input
+                          type="time"
+                          value={editingCategory.timeWindow?.endTime || '11:00'}
+                          onChange={(e) =>
+                            setEditingCategory({
+                              ...editingCategory,
+                              timeWindow: {
+                                enabled: true,
+                                startTime: editingCategory.timeWindow?.startTime || '06:00',
+                                endTime: e.target.value,
+                              },
+                            })
+                          }
+                          className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-black bg-slate-50 text-slate-800"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] font-black text-indigo-900 bg-indigo-50 border border-indigo-200 p-2 rounded-lg flex items-center justify-between">
+                      <span>Window: {formatTime12Hour(editingCategory.timeWindow?.startTime || '06:00')} – {formatTime12Hour(editingCategory.timeWindow?.endTime || '11:00')}</span>
+                      <span className="text-[10px] text-slate-500 font-bold">Daily recurring</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-slate-100 text-[11px] text-slate-500 font-bold flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Anytime check-off: Kids can mark chores completed at any hour of the day.</span>
+                  </div>
+                )}
               </div>
             </div>
 

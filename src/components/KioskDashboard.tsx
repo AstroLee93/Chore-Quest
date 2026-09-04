@@ -6,6 +6,7 @@ import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getK
 import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar';
 import { getCurrentDayOfWeekKey, DEFAULT_WEEKLY_MENU } from '../utils/menu';
 import { sound } from '../utils/sound';
+import { checkCategoryTimeWindow } from '../utils/timeWindow';
 import { AppThemeId, APP_THEMES } from '../utils/theme';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { ChoreTimerModal } from './ChoreTimerModal';
@@ -82,6 +83,14 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   }, []);
 
   const handleQuickCompleteChore = useCallback((chore: ChoreItem, kid: KidProfile) => {
+    // Check category time window restriction
+    const category = (database.categories || []).find((c) => c.id === chore.categoryId);
+    const timeStatus = checkCategoryTimeWindow(category);
+    if (!timeStatus.isAllowed) {
+      sound.playWarning();
+      return;
+    }
+
     sound.playChoreComplete();
     sound.playStarEarned();
 
@@ -626,12 +635,19 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
                       );
                       const isDone = log?.status === 'completed';
+                      const category = (database.categories || []).find((c) => c.id === chore.categoryId);
+                      const timeStatus = checkCategoryTimeWindow(category);
+                      const isTimeLocked = !isDone && !timeStatus.isAllowed;
 
                       return (
                         <div
                           key={chore.id}
                           className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                            isDone ? theme.kioskCardItemDone : theme.kioskCardItemBg
+                            isDone
+                              ? theme.kioskCardItemDone
+                              : isTimeLocked
+                              ? 'bg-black/30 border-amber-500/30 opacity-80'
+                              : theme.kioskCardItemBg
                           }`}
                         >
                           <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -640,7 +656,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                               <div className={`text-xs sm:text-sm font-black truncate ${isDone ? 'line-through opacity-70 text-white' : 'text-white'}`}>
                                 {chore.title}
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] font-bold text-white/70">
+                              <div className="flex items-center gap-2 text-[10px] font-bold text-white/70 flex-wrap">
                                 <span className="text-amber-300 font-extrabold">
                                   +{chore.stars + (chore.bountyBonusStars || 0)} pts
                                 </span>
@@ -650,12 +666,18 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                     <span>{chore.timerMinutes}m timer</span>
                                   </span>
                                 )}
+                                {isTimeLocked && (
+                                  <span className="text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded-md border border-amber-400/30 flex items-center gap-1 font-black">
+                                    <Lock className="w-2.5 h-2.5 text-amber-300" />
+                                    <span>{timeStatus.formattedRange} ({timeStatus.message})</span>
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {!isDone && (
+                            {!isDone && !isTimeLocked && (
                               <button
                                 onClick={() => {
                                   sound.playTap();
@@ -672,6 +694,14 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                               <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
                                 <Check className="w-4 h-4 stroke-[3]" />
                               </div>
+                            ) : isTimeLocked ? (
+                              <button
+                                onClick={() => sound.playWarning()}
+                                className="w-9 h-9 rounded-xl bg-slate-800/80 border border-amber-500/40 text-amber-400 flex items-center justify-center shadow-sm cursor-not-allowed hover:bg-slate-800 active:scale-95 transition-all"
+                                title={`Locked: ${timeStatus.message} (${timeStatus.formattedRange})`}
+                              >
+                                <Lock className="w-4 h-4 stroke-[2.5]" />
+                              </button>
                             ) : (
                               <button
                                 onClick={() => handleQuickCompleteChore(chore, kid)}

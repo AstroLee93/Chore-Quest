@@ -16,6 +16,12 @@ export interface KidProfile {
   pin?: string; // optional kid pin
 }
 
+export interface CategoryTimeWindow {
+  enabled: boolean;
+  startTime: string; // "HH:mm" 24-hour format, e.g. "06:00"
+  endTime: string;   // "HH:mm" 24-hour format, e.g. "11:00"
+}
+
 export interface ChoreCategory {
   id: string;
   name: string;
@@ -23,6 +29,7 @@ export interface ChoreCategory {
   color: string;
   description?: string;
   order: number;
+  timeWindow?: CategoryTimeWindow;
 }
 
 export interface ChoreItem {
@@ -171,6 +178,7 @@ export interface AppSettings {
   savedCalendarIcsUrl?: string;
   kioskTheme?: string;
   snackStarTiers?: SnackStarTiers;
+  customSnackStarOverrides?: Record<string, number>; // Individual snack item star cost overrides
 }
 
 export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';

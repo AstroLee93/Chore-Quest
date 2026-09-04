@@ -28,6 +28,7 @@ import {
   CURATED_SNACK_CATALOG,
   SnackCatalogItem,
   getStarCostForImportance,
+  getSnackItemStarCost,
   DEFAULT_SNACK_STAR_TIERS,
 } from '../utils/snackCatalog';
 import { GROCERY_IMPORTANCE_METADATA } from '../utils/grocery';
@@ -41,6 +42,7 @@ interface KidSnackRequestModalProps {
   onUpdateDatabase: (updated: FamilyDatabase) => void;
   initialKid?: KidProfile | null;
   isParentMode?: boolean;
+  onPostActionComplete?: () => void;
 }
 
 export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
@@ -50,6 +52,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
   onUpdateDatabase,
   initialKid = null,
   isParentMode = false,
+  onPostActionComplete,
 }) => {
   // Select which kid is making the request
   const [selectedKidId, setSelectedKidId] = useState<string>(
@@ -114,7 +117,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
       return getStarCostForImportance(customImportance, database.settings);
     }
     if (selectedPreset) {
-      return selectedPreset.defaultStarCost;
+      return getSnackItemStarCost(selectedPreset, database.settings);
     }
     return 0;
   }, [isCustomMode, customImportance, selectedPreset, database.settings]);
@@ -196,10 +199,20 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
     });
 
     confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
-    showToast(
-      `🎉 Paid ${starCost} ⭐! Request for "${itemName}" sent to Mom & Dad for this week's grocery trip!`,
-      'success'
-    );
+    if (onPostActionComplete) {
+      showToast(
+        `🎉 Paid ${starCost} ⭐! Request for "${itemName}" sent! Returning to Kiosk...`,
+        'success'
+      );
+      setTimeout(() => {
+        onPostActionComplete();
+      }, 1200);
+    } else {
+      showToast(
+        `🎉 Paid ${starCost} ⭐! Request for "${itemName}" sent to Mom & Dad for this week's grocery trip!`,
+        'success'
+      );
+    }
 
     // Reset checkout state and switch to my requests tab
     setSelectedPreset(null);
@@ -442,9 +455,9 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
               sound.playTap();
               onClose();
             }}
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-yellow-200/80 dark:bg-slate-800 hover:bg-yellow-300 border border-yellow-300 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 font-bold transition-all active:scale-95 cursor-pointer"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-yellow-200/80 dark:bg-slate-800 hover:bg-yellow-300 border border-yellow-300 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 font-bold transition-all active:scale-95 cursor-pointer"
           >
-            <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+            <X className="w-5 h-5 stroke-[2.5]" />
           </button>
         </div>
 
@@ -579,10 +592,10 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                 <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
                   {[
                     { id: 'all', label: 'All Items' },
-                    { id: 'healthy', label: '🍓 Healthy (5-8⭐)' },
-                    { id: 'munchies', label: '🍿 Munchies (12-14⭐)' },
-                    { id: 'treats', label: '🍪 Treats (15-22⭐)' },
-                    { id: 'luxury', label: '👑 Luxury (35-45⭐)' },
+                    { id: 'healthy', label: `🍓 Healthy (${getStarCostForImportance('staple', database.settings)}⭐)` },
+                    { id: 'munchies', label: `🍿 Munchies (${getStarCostForImportance('common', database.settings)}⭐)` },
+                    { id: 'treats', label: `🍪 Treats (${getStarCostForImportance('treat', database.settings)}⭐)` },
+                    { id: 'luxury', label: `👑 Luxury (${getStarCostForImportance('luxury', database.settings)}⭐)` },
                   ].map((cat) => (
                     <button
                       key={cat.id}
@@ -709,7 +722,8 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {filteredCatalog.map((snack) => {
                     const isSelected = selectedPreset?.id === snack.id;
-                    const canAfford = activeKid ? activeKid.stars >= snack.defaultStarCost : false;
+                    const snackCost = getSnackItemStarCost(snack, database.settings);
+                    const canAfford = activeKid ? activeKid.stars >= snackCost : false;
                     const impMeta = GROCERY_IMPORTANCE_METADATA[snack.importance];
 
                     return (
@@ -753,7 +767,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
 
                           <div className="flex items-center gap-1.5">
                             <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-900 font-black text-xs shadow-xs">
-                              ⭐ {snack.defaultStarCost} Stars
+                              ⭐ {snackCost} Stars
                             </span>
 
                             {isSelected && (

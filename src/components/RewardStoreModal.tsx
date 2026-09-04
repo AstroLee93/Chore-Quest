@@ -12,6 +12,7 @@ interface RewardStoreModalProps {
   settings: AppSettings;
   onRedeemReward: (reward: RewardItem, note?: string) => void;
   onClose: () => void;
+  onPostActionComplete?: () => void;
 }
 
 export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
@@ -22,10 +23,12 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
   settings,
   onRedeemReward,
   onClose,
+  onPostActionComplete,
 }) => {
   const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
   const [redeemingReward, setRedeemingReward] = useState<RewardItem | null>(null);
   const [customNote, setCustomNote] = useState('');
+  const [redeemSuccessBanner, setRedeemSuccessBanner] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -45,6 +48,13 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
     onRedeemReward(reward, customNote);
     setRedeemingReward(null);
     setCustomNote('');
+
+    if (onPostActionComplete) {
+      setRedeemSuccessBanner(`🎉 ${reward.title} claimed! Returning to Kiosk...`);
+      setTimeout(() => {
+        onPostActionComplete();
+      }, 1200);
+    }
   };
 
   return (
@@ -79,11 +89,17 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
               sound.playTap();
               onClose();
             }}
-            className="p-2.5 rounded-2xl text-slate-500 hover:text-slate-800 bg-white hover:bg-slate-100 border-2 border-slate-200 transition-colors cursor-pointer"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-2xl text-slate-500 hover:text-slate-800 bg-white hover:bg-slate-100 border-2 border-slate-200 transition-colors cursor-pointer active:scale-95"
           >
             <X className="w-5 h-5 stroke-[2.5]" />
           </button>
         </div>
+
+        {redeemSuccessBanner && (
+          <div className="mt-3 p-3 bg-emerald-600 text-white rounded-2xl font-black text-center text-xs sm:text-sm animate-pulse shadow-md">
+            {redeemSuccessBanner}
+          </div>
+        )}
 
         {/* Tab Switcher */}
         <div className="flex gap-2 my-4 p-1.5 rounded-2xl bg-yellow-200/70 border-2 border-yellow-300">
@@ -93,7 +109,7 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
               sound.playTap();
               setActiveTab('catalog');
             }}
-            className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            className={`flex-1 min-h-[44px] py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
               activeTab === 'catalog'
                 ? 'bg-indigo-900 text-white shadow-sm'
                 : 'text-slate-700 hover:text-slate-900'
@@ -107,7 +123,7 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
               sound.playTap();
               setActiveTab('history');
             }}
-            className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            className={`flex-1 min-h-[44px] py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
               activeTab === 'history'
                 ? 'bg-indigo-900 text-white shadow-sm'
                 : 'text-slate-700 hover:text-slate-900'

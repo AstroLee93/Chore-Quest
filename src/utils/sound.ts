@@ -260,6 +260,11 @@ class SoundEngine {
     this.playSkipNotice();
   }
 
+  // Warning / locked tone
+  public playWarning() {
+    this.playSkipNotice();
+  }
+
   // Undo / backspace subtle tone
   public playUndo() {
     this.playTap();

@@ -154,6 +154,11 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       color: '#f59e0b', // amber
       description: 'Start the day strong and ready!',
       order: 1,
+      timeWindow: {
+        enabled: true,
+        startTime: '06:00',
+        endTime: '11:00',
+      },
     },
     {
       id: 'cat-bedroom',
@@ -162,6 +167,11 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       color: '#8b5cf6', // purple
       description: 'Keep personal spaces tidy and clean.',
       order: 2,
+      timeWindow: {
+        enabled: true,
+        startTime: '12:00',
+        endTime: '19:00',
+      },
     },
     {
       id: 'cat-school',
@@ -170,6 +180,11 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       color: '#3b82f6', // blue
       description: 'Homework, reading, and backpack prep.',
       order: 3,
+      timeWindow: {
+        enabled: true,
+        startTime: '12:00',
+        endTime: '19:00',
+      },
     },
     {
       id: 'cat-household',
@@ -178,6 +193,11 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       color: '#10b981', // emerald
       description: 'Helping the whole family around the house.',
       order: 4,
+      timeWindow: {
+        enabled: false,
+        startTime: '08:00',
+        endTime: '20:00',
+      },
     },
     {
       id: 'cat-evening',
@@ -186,6 +206,11 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       color: '#6366f1', // indigo
       description: 'Winding down and getting ready for tomorrow.',
       order: 5,
+      timeWindow: {
+        enabled: true,
+        startTime: '18:00',
+        endTime: '21:30',
+      },
     },
     {
       id: 'cat-pets',
@@ -194,6 +219,11 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       color: '#f43f5e', // rose
       description: 'Loving and feeding our furry friends.',
       order: 6,
+      timeWindow: {
+        enabled: false,
+        startTime: '07:00',
+        endTime: '20:00',
+      },
     }
   ],
   chores: [
@@ -598,6 +628,23 @@ export const loadDatabase = (): FamilyDatabase => {
     }
     if (!parsed.weeklyGroceryList || !parsed.weeklyGroceryList.items) {
       parsed.weeklyGroceryList = DEFAULT_WEEKLY_GROCERY_LIST;
+    }
+    // Migrate categories without timeWindow if any
+    if (parsed.categories && parsed.categories.length > 0) {
+      parsed.categories = parsed.categories.map((cat) => {
+        if (!cat.timeWindow) {
+          const defaultCat = DEFAULT_SEED_DATA.categories.find((c) => c.id === cat.id);
+          return {
+            ...cat,
+            timeWindow: defaultCat?.timeWindow || {
+              enabled: false,
+              startTime: '08:00',
+              endTime: '20:00',
+            },
+          };
+        }
+        return cat;
+      });
     }
     return parsed;
   } catch (err) {

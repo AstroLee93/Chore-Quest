@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Check, Clock, AlertTriangle, Undo2, Star, HelpCircle, Sun, Moon, Sparkles, ChevronRight, Play, CheckSquare, Square, Target, Timer } from 'lucide-react';
+import { Check, Clock, AlertTriangle, Undo2, Star, HelpCircle, Sun, Moon, Sparkles, ChevronRight, Play, CheckSquare, Square, Target, Timer, Lock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { ChoreItem, ChoreLog, ChoreCategory } from '../types';
 import { sound } from '../utils/sound';
 import { ActionMenu } from './ActionMenu';
+import { checkCategoryTimeWindow } from '../utils/timeWindow';
 
 interface ChoreCardProps {
   chore: ChoreItem;
@@ -29,6 +30,10 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
 
   // Subtasks local state (synced or tracked per session)
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [showTimeLockAlert, setShowTimeLockAlert] = useState<boolean>(false);
+
+  const timeWindowStatus = checkCategoryTimeWindow(category);
+  const isTimeLocked = timeWindowStatus.hasRestriction && !timeWindowStatus.isAllowed;
 
   const handleToggleSubtask = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -51,6 +56,13 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   const handleCompleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isCompleted) return;
+
+    if (isTimeLocked) {
+      sound.playWarning();
+      setShowTimeLockAlert(true);
+      setTimeout(() => setShowTimeLockAlert(false), 5000);
+      return;
+    }
 
     // Confetti effect from target position
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -163,6 +175,27 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                 </span>
               )}
 
+              {/* Time Window Restriction Badge */}
+              {timeWindowStatus.hasRestriction && (
+                <span
+                  className={`inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                    isTimeLocked
+                      ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700'
+                      : 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700'
+                  }`}
+                  title={timeWindowStatus.message || `Available: ${timeWindowStatus.formattedRange}`}
+                >
+                  {isTimeLocked ? (
+                    <Lock className="w-3 h-3 text-amber-700 dark:text-amber-400" />
+                  ) : (
+                    <Clock className="w-3 h-3 text-emerald-700 dark:text-emerald-400" />
+                  )}
+                  <span>
+                    {timeWindowStatus.formattedRange} {isTimeLocked ? '• Locked' : '• Open'}
+                  </span>
+                </span>
+              )}
+
               {/* Star reward badge */}
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                 <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
@@ -271,6 +304,36 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                 <span>Finished today! +{chore.stars + (chore.bountyBonusStars || 0)} points added</span>
               </div>
             )}
+
+            {/* Time-Lock Info Notice or Alert if locked */}
+            {isTimeLocked && !isCompleted && (
+              <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/80 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
+                <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="font-black">Scheduled Check-Off Window: {timeWindowStatus.formattedRange}</span>
+                  <p className="text-[11px] font-medium text-amber-800 dark:text-amber-300 mt-0.5">
+                    {timeWindowStatus.message || `Tasks in ${category?.name || 'this category'} can only be checked off during this time.`}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Tap Alert Feedback */}
+            {showTimeLockAlert && (
+              <div className="mt-2 p-2.5 rounded-xl bg-amber-400 text-slate-950 text-xs font-black shadow-md border-2 border-amber-300 flex items-center justify-between gap-2 animate-bounce">
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-slate-950" />
+                  <span>⏰ Locked! Only available between {timeWindowStatus.formattedRange}.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTimeLockAlert(false)}
+                  className="px-2 py-0.5 rounded-md bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10px] font-extrabold cursor-pointer"
+                >
+                  OK
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -303,10 +366,15 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
               <button
                 id={`btn-retry-${chore.id}`}
                 onClick={handleCompleteClick}
-                className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                className={`px-4 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
+                  isTimeLocked
+                    ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                    : 'bg-orange-500 hover:bg-orange-600 text-white'
+                }`}
+                title={isTimeLocked ? timeWindowStatus.message : 'Complete task now'}
               >
-                <Sparkles className="w-4 h-4" />
-                <span>Do it now!</span>
+                {isTimeLocked ? <Lock className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                <span>{isTimeLocked ? 'Locked' : 'Do it now!'}</span>
               </button>
               <ActionMenu
                 id={`menu-skipped-${chore.id}`}
@@ -347,15 +415,32 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                 ]}
               />
 
-              {/* Complete Big Vibrant Button */}
-              <button
-                id={`btn-complete-${chore.id}`}
-                onClick={handleCompleteClick}
-                className="w-12 h-12 bg-emerald-500 hover:bg-emerald-600 active:scale-95 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 transition-all cursor-pointer shrink-0"
-                title="Complete Task"
-              >
-                <Check className="w-7 h-7 stroke-[4]" />
-              </button>
+              {/* Complete Big Vibrant Button (Or Locked Indicator) */}
+              {isTimeLocked ? (
+                <button
+                  id={`btn-complete-${chore.id}`}
+                  onClick={handleCompleteClick}
+                  className="min-h-[48px] px-3.5 py-2 bg-amber-50 dark:bg-amber-950/80 hover:bg-amber-100 dark:hover:bg-amber-900/90 active:scale-95 rounded-2xl flex items-center gap-2 text-amber-900 dark:text-amber-200 border-2 border-amber-400 shadow-sm transition-all cursor-pointer shrink-0"
+                  title={timeWindowStatus.message || `Check-off window is ${timeWindowStatus.formattedRange}`}
+                >
+                  <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <div className="text-left leading-tight hidden sm:block">
+                    <div className="text-xs font-black">Locked</div>
+                    <div className="text-[9px] font-bold text-amber-700 dark:text-amber-300">
+                      {timeWindowStatus.startTimeFormatted}
+                    </div>
+                  </div>
+                </button>
+              ) : (
+                <button
+                  id={`btn-complete-${chore.id}`}
+                  onClick={handleCompleteClick}
+                  className="w-12 h-12 bg-emerald-500 hover:bg-emerald-600 active:scale-95 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 transition-all cursor-pointer shrink-0"
+                  title="Complete Task"
+                >
+                  <Check className="w-7 h-7 stroke-[4]" />
+                </button>
+              )}
             </div>
           )}
         </div>

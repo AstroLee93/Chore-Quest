@@ -3,6 +3,7 @@ import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, RewardItem, RewardRede
 import { loadDatabase, saveDatabase, getTodayDateString } from './utils/storage';
 import { fetchServerDatabase, pushServerDatabase, subscribeToDatabaseSync } from './utils/api';
 import { sound } from './utils/sound';
+import { checkCategoryTimeWindow } from './utils/timeWindow';
 import { AppThemeId, APP_THEMES, getSavedThemeId, saveThemeId } from './utils/theme';
 import { Navbar } from './components/Navbar';
 import { KidSelector } from './components/KidSelector';
@@ -17,12 +18,14 @@ import { FamilyGoalModal } from './components/FamilyGoalModal';
 import { WeeklyMenuModal } from './components/WeeklyMenuModal';
 import { WeeklyGroceryModal } from './components/WeeklyGroceryModal';
 import { KidSnackRequestModal } from './components/KidSnackRequestModal';
+import { Home } from 'lucide-react';
 
 export default function App() {
   const [database, setDatabase] = useState<FamilyDatabase>(() => loadDatabase());
   const [activeKidId, setActiveKidId] = useState<string | null>(null);
   const [isParentMode, setIsParentMode] = useState<boolean>(false);
   const [isKioskMode, setIsKioskMode] = useState<boolean>(false);
+  const [isKioskKidSession, setIsKioskKidSession] = useState<boolean>(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
   const [isRewardStoreOpen, setIsRewardStoreOpen] = useState<boolean>(false);
   const [isPiGuideOpen, setIsPiGuideOpen] = useState<boolean>(false);
@@ -77,6 +80,7 @@ export default function App() {
     const isAtSubScreen =
       activeKidId !== null ||
       isParentMode ||
+      isKioskKidSession ||
       isRewardStoreOpen ||
       isCalendarOpen ||
       isMenuOpen ||
@@ -95,6 +99,8 @@ export default function App() {
       timeoutId = setTimeout(() => {
         // Auto return to home/kiosk selector
         setActiveKidId(null);
+        setIsKioskKidSession(false);
+        setIsKioskMode(true);
         setIsParentMode(false);
         setIsRewardStoreOpen(false);
         setIsCalendarOpen(false);
@@ -129,6 +135,7 @@ export default function App() {
   }, [
     activeKidId,
     isParentMode,
+    isKioskKidSession,
     isRewardStoreOpen,
     isCalendarOpen,
     isMenuOpen,
@@ -156,6 +163,14 @@ export default function App() {
   // Complete a chore
   const handleToggleCompleteChore = useCallback((chore: ChoreItem) => {
     if (!activeKid) return;
+
+    // Check category time window restriction
+    const category = database.categories.find((c) => c.id === chore.categoryId);
+    const timeStatus = checkCategoryTimeWindow(category);
+    if (!timeStatus.isAllowed) {
+      sound.playWarning();
+      return;
+    }
 
     const existingLog = database.logs.find(
       (l) => l.choreId === chore.id && l.kidId === activeKid.id && l.date === todayStr
@@ -289,8 +304,160 @@ export default function App() {
     });
   }, [database, handleUpdateDatabase]);
 
+  // Strict Kiosk Navigation: Return directly back to Kiosk Selection Screen
+  const handleReturnToKiosk = useCallback(() => {
+    sound.playTap();
+    setActiveKidId(null);
+    setIsKioskKidSession(false);
+    setIsKioskMode(true);
+    setIsRewardStoreOpen(false);
+    setIsSnackRequestOpen(false);
+    setSnackRequestKid(null);
+    setIsGoalModalOpen(false);
+    setIsCalendarOpen(false);
+    setIsMenuOpen(false);
+    setIsGroceryOpen(false);
+  }, []);
+
   // If Kiosk Mode is active
   if (isKioskMode) {
+    if (isKioskKidSession && activeKid) {
+      return (
+        <div
+          className={`min-h-[100dvh] ${themeConfig.bgGradient} flex flex-col font-sans transition-colors duration-300 ${
+            themeConfig.isDark
+              ? 'dark text-slate-100 selection:bg-indigo-500 selection:text-white'
+              : 'text-slate-800 selection:bg-sky-200 selection:text-slate-900'
+          }`}
+        >
+          {/* STRICT KIOSK KID SESSION HEADER: ONLY Return to Kiosk button, NO adult links */}
+          <header
+            className={`sticky top-0 z-40 px-4 sm:px-6 py-3.5 backdrop-blur-md border-b flex items-center justify-between gap-3 shadow-md ${
+              themeConfig.isDark
+                ? 'bg-slate-900/90 border-slate-700 text-white'
+                : 'bg-white/95 border-slate-200 text-slate-900'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                style={{
+                  backgroundColor: `${activeKid.color || '#3b82f6'}30`,
+                  borderColor: activeKid.color || '#3b82f6',
+                }}
+                className="w-12 h-12 rounded-2xl border-2 flex items-center justify-center text-2xl shadow-inner shrink-0"
+              >
+                {activeKid.avatar}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg sm:text-xl font-black tracking-tight">{activeKid.name}'s Missions</h1>
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-xs">
+                    ⭐ {activeKid.stars} Stars
+                  </span>
+                </div>
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                  🔥 {activeKid.streakDays} Day Streak • Kiosk Mode Active
+                </p>
+              </div>
+            </div>
+
+            {/* Strict Kiosk Routing: The ONLY navigation exit path available */}
+            <button
+              id="btn-kiosk-kid-exit"
+              onClick={handleReturnToKiosk}
+              className="min-h-[48px] px-5 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-sm sm:text-base shadow-lg border-2 border-amber-300 flex items-center gap-2 cursor-pointer transition-all"
+              title="Return directly back to Family Kiosk display"
+            >
+              <Home className="w-5 h-5 text-slate-950" />
+              <span>Done / Return to Kiosk 🏠</span>
+            </button>
+          </header>
+
+          <main className="flex-1 p-3 sm:p-6 flex flex-col max-w-7xl mx-auto w-full">
+            <KidDashboard
+              kid={activeKid}
+              categories={database.categories}
+              chores={database.chores}
+              logs={database.logs}
+              rewards={database.rewards}
+              settings={database.settings}
+              events={database.events || []}
+              database={database}
+              currentTheme={currentTheme}
+              isKioskKidSession={true}
+              onReturnToKiosk={handleReturnToKiosk}
+              onToggleCompleteChore={(chore) => {
+                handleToggleCompleteChore(chore);
+                setTimeout(handleReturnToKiosk, 1200);
+              }}
+              onSkipChoreWithReason={(choreId, cat, note) => {
+                handleSkipChoreWithReason(choreId, cat, note);
+                setTimeout(handleReturnToKiosk, 1200);
+              }}
+              onUndoChoreStatus={handleUndoChoreStatus}
+              onOpenRewardStore={() => setIsRewardStoreOpen(true)}
+              onOpenCalendar={() => setIsCalendarOpen(true)}
+              onOpenGoalManager={() => setIsGoalModalOpen(true)}
+              onOpenSnackRequest={(k) => {
+                setSnackRequestKid(k);
+                setIsSnackRequestOpen(true);
+              }}
+            />
+          </main>
+
+          {isSnackRequestOpen && (
+            <KidSnackRequestModal
+              isOpen={isSnackRequestOpen}
+              onClose={() => {
+                setIsSnackRequestOpen(false);
+                setSnackRequestKid(null);
+                handleReturnToKiosk();
+              }}
+              database={database}
+              onUpdateDatabase={handleUpdateDatabase}
+              initialKid={activeKid}
+              isParentMode={false}
+              onPostActionComplete={handleReturnToKiosk}
+            />
+          )}
+
+          {isRewardStoreOpen && (
+            <RewardStoreModal
+              isOpen={isRewardStoreOpen}
+              activeKid={activeKid}
+              rewards={database.rewards || []}
+              redemptions={database.redemptions || []}
+              settings={database.settings}
+              onRedeemReward={handleRedeemReward}
+              onPostActionComplete={handleReturnToKiosk}
+              onClose={() => {
+                setIsRewardStoreOpen(false);
+                handleReturnToKiosk();
+              }}
+            />
+          )}
+
+          {isCalendarOpen && (
+            <CalendarView
+              database={database}
+              activeKid={activeKid}
+              onUpdateDatabase={handleUpdateDatabase}
+              onClose={() => setIsCalendarOpen(false)}
+            />
+          )}
+
+          {isGoalModalOpen && (
+            <FamilyGoalModal
+              isOpen={isGoalModalOpen}
+              database={database}
+              onClose={() => setIsGoalModalOpen(false)}
+              onUpdateDatabase={handleUpdateDatabase}
+            />
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className={`min-h-screen ${themeConfig.kioskBg} font-sans`}>
         <KioskDashboard
@@ -301,7 +468,7 @@ export default function App() {
           onExitKiosk={() => setIsKioskMode(false)}
           onSelectKid={(kid) => {
             setActiveKidId(kid.id);
-            setIsKioskMode(false);
+            setIsKioskKidSession(true);
           }}
           onOpenCalendar={() => setIsCalendarOpen(true)}
           onOpenMenu={() => setIsMenuOpen(true)}

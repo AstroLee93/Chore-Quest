@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer } from 'lucide-react';
+import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { KidProfile, ChoreItem, ChoreCategory, ChoreLog, AppSettings, RewardItem, CalendarEvent, FamilyDatabase } from '../types';
 import { ChoreCard } from './ChoreCard';
@@ -24,6 +24,8 @@ interface KidDashboardProps {
   events?: CalendarEvent[];
   database?: FamilyDatabase;
   currentTheme?: AppThemeId;
+  isKioskKidSession?: boolean;
+  onReturnToKiosk?: () => void;
   onToggleCompleteChore: (chore: ChoreItem) => void;
   onSkipChoreWithReason: (choreId: string, category: 'sick' | 'supplies' | 'time' | 'already_done' | 'need_help' | 'other', note: string) => void;
   onUndoChoreStatus: (choreId: string) => void;
@@ -43,6 +45,8 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   events = [],
   database,
   currentTheme = 'coastal-horizon',
+  isKioskKidSession = false,
+  onReturnToKiosk,
   onToggleCompleteChore,
   onSkipChoreWithReason,
   onUndoChoreStatus,
@@ -199,6 +203,21 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
               <RotateCw className="w-4 h-4" />
               <span>Chore Roulette 🎡</span>
             </button>
+
+            {onReturnToKiosk && (
+              <button
+                id="btn-kid-return-to-kiosk-top"
+                onClick={() => {
+                  sound.playTap();
+                  onReturnToKiosk();
+                }}
+                className="min-h-[48px] px-4 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer border-2 border-amber-500 shrink-0"
+                title="Finish up and return to Kiosk screen"
+              >
+                <Home className="w-4 h-4 text-slate-950" />
+                <span>Done / Return to Kiosk</span>
+              </button>
+            )}
 
             <div className="text-right pl-2">
               <div className="text-2xl sm:text-3xl font-black text-indigo-950">
@@ -435,6 +454,23 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Prominent Kiosk Exit Button at Bottom of Tasks */}
+        {onReturnToKiosk && (
+          <div className="mt-6 flex justify-center pb-2">
+            <button
+              id="btn-kid-return-to-kiosk-bottom"
+              onClick={() => {
+                sound.playTap();
+                onReturnToKiosk();
+              }}
+              className="min-h-[52px] w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-sm sm:text-base shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2.5 cursor-pointer border-2 border-amber-400"
+            >
+              <Home className="w-5 h-5 text-slate-950" />
+              <span>Done / Return to Kiosk 🏠</span>
+            </button>
           </div>
         )}
       </div>

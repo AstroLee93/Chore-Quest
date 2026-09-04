@@ -25,6 +25,16 @@ export function getStarCostForImportance(importance: GroceryImportance, settings
   return DEFAULT_SNACK_STAR_TIERS[importance] || 15;
 }
 
+export function getSnackItemStarCost(item: SnackCatalogItem, settings?: AppSettings): number {
+  if (settings?.customSnackStarOverrides && typeof settings.customSnackStarOverrides[item.id] === 'number') {
+    return settings.customSnackStarOverrides[item.id];
+  }
+  if (settings?.snackStarTiers && typeof settings.snackStarTiers[item.importance] === 'number') {
+    return settings.snackStarTiers[item.importance];
+  }
+  return item.defaultStarCost ?? DEFAULT_SNACK_STAR_TIERS[item.importance] ?? 10;
+}
+
 export const CURATED_SNACK_CATALOG: SnackCatalogItem[] = [
   // Healthy & Fresh Snacks (Staple Tier - 5 to 8 ⭐)
   {

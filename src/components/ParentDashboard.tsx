@@ -50,7 +50,7 @@ import {
   GroceryItem,
   GroceryImportance,
 } from '../types';
-import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON } from '../utils/storage';
+import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON, getKioskTimeoutMs } from '../utils/storage';
 import { sound } from '../utils/sound';
 import { formatTime12Hour, checkCategoryTimeWindow } from '../utils/timeWindow';
 import { GROCERY_IMPORTANCE_METADATA } from '../utils/grocery';
@@ -89,18 +89,21 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const todayStr = getTodayDateString();
 
-  // 2-Minute Inactivity Auto-Lock Timeout
+  // Inactivity Auto-Lock Timeout
   useEffect(() => {
+    const timeoutMs = getKioskTimeoutMs(database.settings?.kioskTimeout);
+    if (!timeoutMs) return; // 'off' disables auto-lock completely
+
     let timeoutId: NodeJS.Timeout;
 
     const resetTimer = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         onExitParentMode();
-      }, 2 * 60 * 1000); // 2 minutes
+      }, timeoutMs);
     };
 
-    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click', 'input'];
     activityEvents.forEach((event) => {
       window.addEventListener(event, resetTimer, { passive: true });
     });
@@ -113,7 +116,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
         window.removeEventListener(event, resetTimer);
       });
     };
-  }, [onExitParentMode]);
+  }, [onExitParentMode, database.settings?.kioskTimeout]);
 
   // Filter states for Activity Log
   const [activityDateFilter, setActivityDateFilter] = useState<string>(todayStr);
@@ -2261,7 +2264,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               <p className="hidden sm:block text-xs text-slate-500 font-bold">Configure parent passcodes, family title, and reward policies.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
               <div>
                 <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
                   Parent 4-Digit Security PIN:
@@ -2274,7 +2277,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-slate-200 font-mono text-sm font-black text-slate-800 focus:outline-indigo-500 bg-yellow-50/50"
                   required
                 />
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5">Used to access this parent portal</p>
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5">Required to enter parent portal & exit kiosk mode</p>
               </div>
 
               <div>
@@ -2288,6 +2291,30 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-slate-200 text-xs sm:text-sm font-black text-slate-800 focus:outline-indigo-500 bg-yellow-50/50"
                 />
                 <p className="text-[10px] text-slate-400 font-bold mt-0.5">Shown in the header across mobile and desktop</p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                  ⏱️ Kiosk Return / Idle Timeout:
+                </label>
+                <select
+                  id="select-kiosk-timeout"
+                  value={settingsForm.kioskTimeout || '5m'}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, kioskTimeout: e.target.value as any })}
+                  className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-slate-200 text-xs sm:text-sm font-black text-slate-800 focus:outline-indigo-500 bg-yellow-50/50 cursor-pointer"
+                >
+                  <option value="off">Off (Never auto-return / no timeout)</option>
+                  <option value="1m">1 Minute</option>
+                  <option value="2m">2 Minutes</option>
+                  <option value="3m">3 Minutes</option>
+                  <option value="5m">5 Minutes (Recommended)</option>
+                  <option value="10m">10 Minutes</option>
+                  <option value="15m">15 Minutes</option>
+                  <option value="30m">30 Minutes</option>
+                </select>
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                  Set to "Off" to prevent losing progress while adding groceries, planning meals, or viewing missions.
+                </p>
               </div>
             </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, RewardItem, RewardRedemption } from './types';
-import { loadDatabase, saveDatabase, getTodayDateString } from './utils/storage';
+import { loadDatabase, saveDatabase, getTodayDateString, getSavedKioskMode, saveKioskMode, getKioskTimeoutMs } from './utils/storage';
 import { fetchServerDatabase, pushServerDatabase, subscribeToDatabaseSync } from './utils/api';
 import { sound } from './utils/sound';
 import { checkCategoryTimeWindow } from './utils/timeWindow';
@@ -24,7 +24,7 @@ export default function App() {
   const [database, setDatabase] = useState<FamilyDatabase>(() => loadDatabase());
   const [activeKidId, setActiveKidId] = useState<string | null>(null);
   const [isParentMode, setIsParentMode] = useState<boolean>(false);
-  const [isKioskMode, setIsKioskMode] = useState<boolean>(false);
+  const [isKioskMode, setIsKioskMode] = useState<boolean>(() => getSavedKioskMode());
   const [isKioskKidSession, setIsKioskKidSession] = useState<boolean>(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
   const [isRewardStoreOpen, setIsRewardStoreOpen] = useState<boolean>(false);
@@ -74,44 +74,51 @@ export default function App() {
     }
   }, [database.kids, activeKidId]);
 
-  // Inactivity Auto-Timeout (2 minutes / 120s)
-  // Automatically logs out active kid / closes overlays to revert to secure Kiosk Kid Selector
+  // Inactivity Auto-Timeout with configurable duration & 'off' option
+  // Automatically logs out active kid / closes overlays to revert to secure Kiosk Kid Selector when in Kiosk Mode
   useEffect(() => {
-    const isAtSubScreen =
-      activeKidId !== null ||
-      isParentMode ||
-      isKioskKidSession ||
-      isRewardStoreOpen ||
-      isCalendarOpen ||
-      isMenuOpen ||
-      isGroceryOpen ||
-      isSnackRequestOpen ||
-      isGoalModalOpen;
+    const timeoutMs = getKioskTimeoutMs(database.settings?.kioskTimeout);
+    if (!timeoutMs) return; // 'off' disables auto-timeout completely
+
+    const isAtSubScreen = isKioskMode
+      ? (activeKidId !== null ||
+         isKioskKidSession ||
+         isRewardStoreOpen ||
+         isCalendarOpen ||
+         isMenuOpen ||
+         isGroceryOpen ||
+         isSnackRequestOpen ||
+         isGoalModalOpen)
+      : (activeKidId !== null && !isParentMode && !isGroceryOpen && !isMenuOpen && !isCalendarOpen);
 
     if (!isAtSubScreen) return;
 
-    const INACTIVITY_LIMIT_MS = 120000; // 2 minutes
     let timeoutId: ReturnType<typeof setTimeout>;
     let lastActivityTime = 0;
 
     const resetTimer = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        // Auto return to home/kiosk selector
-        setActiveKidId(null);
-        setIsKioskKidSession(false);
-        setIsKioskMode(true);
-        setIsParentMode(false);
-        setIsRewardStoreOpen(false);
-        setIsCalendarOpen(false);
-        setIsMenuOpen(false);
-        setIsGroceryOpen(false);
-        setIsSnackRequestOpen(false);
-        setSnackRequestKid(null);
-        setIsGoalModalOpen(false);
-        setIsPiGuideOpen(false);
-        setIsPinModalOpen(false);
-      }, INACTIVITY_LIMIT_MS);
+        if (isKioskMode) {
+          // Auto return to home/kiosk selector in kiosk mode
+          setActiveKidId(null);
+          setIsKioskKidSession(false);
+          setIsKioskMode(true);
+          saveKioskMode(true);
+          setIsRewardStoreOpen(false);
+          setIsCalendarOpen(false);
+          setIsMenuOpen(false);
+          setIsGroceryOpen(false);
+          setIsSnackRequestOpen(false);
+          setSnackRequestKid(null);
+          setIsGoalModalOpen(false);
+          setIsPiGuideOpen(false);
+          setIsPinModalOpen(false);
+        } else {
+          // In standard mode, only deselect kid if idle, but NEVER force into kiosk mode!
+          setActiveKidId(null);
+        }
+      }, timeoutMs);
     };
 
     resetTimer();
@@ -119,13 +126,13 @@ export default function App() {
     // High performance throttled listener for activity detection
     const handleActivity = () => {
       const now = Date.now();
-      if (now - lastActivityTime > 5000) {
+      if (now - lastActivityTime > 1000) {
         lastActivityTime = now;
         resetTimer();
       }
     };
 
-    const activityEvents = ['pointerdown', 'touchstart', 'keydown', 'click'];
+    const activityEvents = ['pointerdown', 'touchstart', 'keydown', 'click', 'input', 'mousemove', 'scroll'];
     activityEvents.forEach((evt) => window.addEventListener(evt, handleActivity, { passive: true }));
 
     return () => {
@@ -135,6 +142,7 @@ export default function App() {
   }, [
     activeKidId,
     isParentMode,
+    isKioskMode,
     isKioskKidSession,
     isRewardStoreOpen,
     isCalendarOpen,
@@ -142,6 +150,7 @@ export default function App() {
     isGroceryOpen,
     isSnackRequestOpen,
     isGoalModalOpen,
+    database.settings?.kioskTimeout,
   ]);
 
   // Persist database updates locally and to server
@@ -304,12 +313,27 @@ export default function App() {
     });
   }, [database, handleUpdateDatabase]);
 
+  // Enter Kiosk Mode (persists lock so reload/refresh cannot bypass PIN)
+  const handleEnterKiosk = useCallback(() => {
+    sound.playTap();
+    setIsKioskMode(true);
+    saveKioskMode(true);
+  }, []);
+
+  // Exit Kiosk Mode (invoked ONLY after entering correct Parent PIN in KioskDashboard)
+  const handleExitKiosk = useCallback(() => {
+    sound.playTap();
+    setIsKioskMode(false);
+    saveKioskMode(false);
+  }, []);
+
   // Strict Kiosk Navigation: Return directly back to Kiosk Selection Screen
   const handleReturnToKiosk = useCallback(() => {
     sound.playTap();
     setActiveKidId(null);
     setIsKioskKidSession(false);
     setIsKioskMode(true);
+    saveKioskMode(true);
     setIsRewardStoreOpen(false);
     setIsSnackRequestOpen(false);
     setSnackRequestKid(null);
@@ -465,7 +489,7 @@ export default function App() {
           currentTheme={currentTheme}
           onThemeChange={handleThemeChange}
           onUpdateDatabase={handleUpdateDatabase}
-          onExitKiosk={() => setIsKioskMode(false)}
+          onExitKiosk={handleExitKiosk}
           onSelectKid={(kid) => {
             setActiveKidId(kid.id);
             setIsKioskKidSession(true);
@@ -529,7 +553,7 @@ export default function App() {
         onToggleCalendar={() => setIsCalendarOpen((prev) => !prev)}
         onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
         onToggleGrocery={() => setIsGroceryOpen((prev) => !prev)}
-        onToggleKiosk={() => setIsKioskMode(true)}
+        onToggleKiosk={handleEnterKiosk}
         onOpenGoalManager={() => setIsGoalModalOpen(true)}
       />
 

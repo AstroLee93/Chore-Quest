@@ -113,6 +113,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     soundEnabled: true,
     streakBonusStars: 5,
     requireParentApprovalForRewards: false,
+    kioskTimeout: '5m',
   },
   kids: [
     {
@@ -659,6 +660,46 @@ export const saveDatabase = (db: FamilyDatabase): void => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
   } catch (err) {
     console.error('Error saving database to localStorage:', err);
+  }
+};
+
+// Kiosk Mode Persistence: Prevents browser reload/refresh from bypassing Kiosk Mode
+const KIOSK_MODE_STORAGE_KEY = 'family_chores_kiosk_mode_locked';
+
+export const getSavedKioskMode = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(KIOSK_MODE_STORAGE_KEY) === 'true';
+  } catch (err) {
+    return false;
+  }
+};
+
+export const saveKioskMode = (enabled: boolean): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    if (enabled) {
+      localStorage.setItem(KIOSK_MODE_STORAGE_KEY, 'true');
+    } else {
+      localStorage.removeItem(KIOSK_MODE_STORAGE_KEY);
+    }
+  } catch (err) {
+    console.error('Error saving kiosk mode state:', err);
+  }
+};
+
+// Convert kioskTimeout setting into milliseconds or null (if off)
+export const getKioskTimeoutMs = (setting?: string): number | null => {
+  if (setting === 'off') return null;
+  switch (setting) {
+    case '1m': return 60 * 1000;
+    case '2m': return 2 * 60 * 1000;
+    case '3m': return 3 * 60 * 1000;
+    case '5m': return 5 * 60 * 1000;
+    case '10m': return 10 * 60 * 1000;
+    case '15m': return 15 * 60 * 1000;
+    case '30m': return 30 * 60 * 1000;
+    default: return 5 * 60 * 1000; // 5 minutes default
   }
 };
 

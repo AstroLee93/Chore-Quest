@@ -36,8 +36,17 @@ import {
   ThumbsDown,
   MessageSquare,
   FlameKindling,
+  Pencil,
+  DollarSign,
+  PiggyBank,
+  RotateCcw,
 } from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
+import {
+  estimateGroceryItemPriceApi,
+  estimateGroceryItemsBatchApi,
+  calculateGroceryBudgetSummary,
+} from '../utils/groceryPricing';
 import {
   FamilyDatabase,
   KidProfile,
@@ -144,6 +153,17 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
   const pantryStaples: PantryStapleItem[] = groceryList.pantryStaples || [];
   const spices: SpiceItem[] = groceryList.spices || [];
   const requests: GroceryRequest[] = groceryList.requests || [];
+
+  // Budget & Price Estimation State
+  const [isRefreshingPrices, setIsRefreshingPrices] = useState<boolean>(false);
+  const [editingBudget, setEditingBudget] = useState<boolean>(false);
+  const [budgetTargetInput, setBudgetTargetInput] = useState<string>(
+    groceryList.budgetTarget !== undefined ? String(groceryList.budgetTarget) : ''
+  );
+
+  const budgetSummary = useMemo(() => {
+    return calculateGroceryBudgetSummary(items, groceryList.budgetTarget);
+  }, [items, groceryList.budgetTarget]);
 
   const pendingRequests = useMemo(() => {
     return requests.filter((r) => r.status === 'pending');
@@ -268,6 +288,162 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     });
   };
 
+  // Auto-estimate any unpriced items on modal open
+  useEffect(() => {
+    if (!isOpen) return;
+    const unpriced = items.filter(
+      (it) => it.estimatedCost === undefined && it.actualCost === undefined
+    );
+    if (unpriced.length > 0) {
+      estimateGroceryItemsBatchApi(
+        unpriced.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity }))
+      ).then((estimates) => {
+        if (estimates && Object.keys(estimates).length > 0) {
+          applyPriceEstimates(estimates);
+        }
+      }).catch((err) => console.warn('Auto-estimate error:', err));
+    }
+  }, [isOpen]);
+
+  const applyPriceEstimates = (estimates: Record<string, number>) => {
+    if (!estimates || Object.keys(estimates).length === 0) return;
+    const currentList = database.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
+    const currentItems = currentList.items || [];
+    let changed = false;
+
+    const updatedItems = currentItems.map((item) => {
+      if (estimates[item.id] !== undefined && item.actualCost === undefined) {
+        changed = true;
+        return {
+          ...item,
+          estimatedCost: estimates[item.id],
+          currency: 'USD',
+          priceSource: 'ai' as const,
+        };
+      }
+      return item;
+    });
+
+    if (changed) {
+      handleUpdateGroceryList({
+        ...currentList,
+        items: updatedItems,
+        lastUpdated: new Date().toISOString(),
+      });
+    }
+  };
+
+  const applySinglePriceEstimate = (itemId: string, estimatedCost: number) => {
+    const currentList = database.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
+    const currentItems = currentList.items || [];
+    const updatedItems = currentItems.map((item) => {
+      if (item.id === itemId && item.actualCost === undefined) {
+        return {
+          ...item,
+          estimatedCost,
+          currency: 'USD',
+          priceSource: 'ai' as const,
+        };
+      }
+      return item;
+    });
+
+    handleUpdateGroceryList({
+      ...currentList,
+      items: updatedItems,
+      lastUpdated: new Date().toISOString(),
+    });
+  };
+
+  const handleUpdateItemPrice = (itemId: string, actualCost: number | undefined) => {
+    sound.playTap();
+    const updatedItems = items.map((item) => {
+      if (item.id === itemId) {
+        if (actualCost === undefined) {
+          // Revert to AI estimate
+          return {
+            ...item,
+            actualCost: undefined,
+            priceSource: item.estimatedCost !== undefined ? ('ai' as const) : undefined,
+          };
+        }
+        return {
+          ...item,
+          actualCost,
+          currency: 'USD',
+          priceSource: 'manual' as const,
+        };
+      }
+      return item;
+    });
+
+    handleUpdateGroceryList({
+      ...groceryList,
+      items: updatedItems,
+      lastUpdated: new Date().toISOString(),
+    });
+
+    if (actualCost !== undefined) {
+      showToast(`Saved price: $${actualCost.toFixed(2)}`);
+    } else {
+      showToast('Reverted to AI estimated price');
+    }
+  };
+
+  const handleRefreshPrices = async () => {
+    const itemsToRefresh = items.filter(
+      (it) => it.priceSource === 'ai' || (it.priceSource === undefined && it.actualCost === undefined)
+    );
+
+    if (itemsToRefresh.length === 0) {
+      showToast('All items already have manual prices or up-to-date estimates!');
+      return;
+    }
+
+    setIsRefreshingPrices(true);
+    sound.playTap();
+    try {
+      const estimates = await estimateGroceryItemsBatchApi(
+        itemsToRefresh.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity }))
+      );
+
+      const count = Object.keys(estimates).length;
+      if (count > 0) {
+        applyPriceEstimates(estimates);
+        sound.playRewardRedeemed();
+        fireConfetti({ mode: 'snappy' });
+        showToast(`Refreshed AI store prices for ${count} item${count !== 1 ? 's' : ''}! ✨`);
+      } else {
+        showToast('Could not fetch price estimates at this time.');
+      }
+    } catch (err) {
+      console.error('Failed to refresh prices:', err);
+      showToast('Error refreshing prices. Please try again.');
+    } finally {
+      setIsRefreshingPrices(false);
+    }
+  };
+
+  const handleSaveBudgetTarget = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    sound.playTap();
+    const val = parseFloat(budgetTargetInput.trim());
+    const newTarget = !isNaN(val) && val > 0 ? Number(val.toFixed(2)) : undefined;
+
+    handleUpdateGroceryList({
+      ...groceryList,
+      budgetTarget: newTarget,
+      lastUpdated: new Date().toISOString(),
+    });
+
+    setEditingBudget(false);
+    if (newTarget !== undefined) {
+      showToast(`Shopping budget target set to $${newTarget.toFixed(2)} 🎯`);
+    } else {
+      showToast('Budget target removed.');
+    }
+  };
+
   // 1. Toggle Item Acquired Status
   const handleToggleAcquired = (itemId: string) => {
     sound.playTap();
@@ -306,16 +482,22 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     if (!newItemName.trim()) return;
 
     sound.playChoreComplete();
+    const itemName = newItemName.trim();
+    const itemQty = newItemQuantity.trim() || undefined;
+    const itemId = `g-item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
     const newItem: GroceryItem = {
-      id: `g-item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      name: newItemName.trim(),
+      id: itemId,
+      name: itemName,
       category: newItemCategory,
-      quantity: newItemQuantity.trim() || undefined,
+      quantity: itemQty,
       importance: newItemImportance,
       acquired: false,
       isDepleted: false,
       addedBy: newItemAddedBy || 'Family',
       createdAt: getTodayDateString(),
+      currency: 'USD',
+      priceSource: 'ai',
     };
 
     const updatedList: WeeklyGroceryList = {
@@ -329,6 +511,15 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     setNewItemQuantity('');
     setUserManuallySelectedCategory(false);
     showToast(`Added "${newItem.name}" to grocery list!`);
+
+    // Asynchronously estimate cost using Gemini AI
+    estimateGroceryItemPriceApi(itemName, itemQty)
+      .then((res) => {
+        if (res && res.estimatedCost) {
+          applySinglePriceEstimate(itemId, res.estimatedCost);
+        }
+      })
+      .catch((err) => console.warn('Failed to estimate price on add:', err));
   };
 
   // 3. Delete Grocery Item permanently
@@ -425,6 +616,18 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     if (importedCount > 0) {
       fireConfetti({ mode: 'snappy' });
       showToast(`📥 Imported ${importedCount} depleted items into active grocery list!`);
+
+      // Automatically estimate prices for newly imported unpriced items
+      const newUnpriced = updatedList.items.filter(
+        (it) => it.estimatedCost === undefined && it.actualCost === undefined
+      );
+      if (newUnpriced.length > 0) {
+        estimateGroceryItemsBatchApi(
+          newUnpriced.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity }))
+        ).then((estimates) => {
+          applyPriceEstimates(estimates);
+        }).catch((err) => console.warn('Replenishment estimate error:', err));
+      }
     } else {
       showToast('All depleted items are already in your active grocery list.');
     }
@@ -554,6 +757,8 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       addedBy: 'Spice Rack Replenish',
       isReplenishItem: true,
       createdAt: getTodayDateString(),
+      currency: 'USD',
+      priceSource: 'ai',
     };
 
     handleUpdateGroceryList({
@@ -563,6 +768,15 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     });
 
     showToast(`Added "${spice.name}" to active grocery list! 🛒`);
+
+    // Estimate spice price
+    estimateGroceryItemPriceApi(`${spice.name} Seasoning`, '1 container')
+      .then((res) => {
+        if (res && res.estimatedCost) {
+          applySinglePriceEstimate(newItem.id, res.estimatedCost);
+        }
+      })
+      .catch((err) => console.warn('Spice estimate error:', err));
   };
 
   // 9. Kid Requests Handlers
@@ -611,6 +825,8 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       addedBy: `${req.kidName} ${req.kidAvatar || '⭐'} (Approved)`,
       notes: req.notes,
       createdAt: getTodayDateString(),
+      currency: 'USD',
+      priceSource: 'ai',
     };
 
     const updatedRequests = requests.map((r) => {
@@ -634,6 +850,15 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
 
     fireConfetti({ mode: 'snappy' });
     showToast(`✅ Approved "${req.name}" and added to grocery list!`);
+
+    // Estimate price for approved item
+    estimateGroceryItemPriceApi(req.name, req.quantity)
+      .then((res) => {
+        if (res && res.estimatedCost) {
+          applySinglePriceEstimate(newItem.id, res.estimatedCost);
+        }
+      })
+      .catch((err) => console.warn('Approved request price estimate error:', err));
   };
 
   const handleDenyRequest = (requestId: string) => {
@@ -695,6 +920,15 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
         ? `🛒 Started new week with ${count} items (replenishments & dinner menu included)!`
         : `🛒 Started a clean fresh weekly grocery list!`
     );
+
+    // Automatically estimate prices for items in the new week's list
+    if (newList.items.length > 0) {
+      estimateGroceryItemsBatchApi(
+        newList.items.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity }))
+      ).then((estimates) => {
+        applyPriceEstimates(estimates);
+      }).catch((err) => console.warn('Start week price estimate error:', err));
+    }
   };
 
   // 11. Import All Dinner Menu Ingredients
@@ -711,10 +945,19 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
 
     menuItems.forEach((m) => {
       if (!existingNames.has(m.name.toLowerCase().trim())) {
-        toAdd.push(m);
+        toAdd.push({
+          ...m,
+          currency: 'USD',
+          priceSource: 'ai',
+        });
         existingNames.add(m.name.toLowerCase().trim());
       }
     });
+
+    if (toAdd.length === 0) {
+      showToast('All dinner menu ingredients are already on your grocery list!');
+      return;
+    }
 
     const updatedList: WeeklyGroceryList = {
       ...groceryList,
@@ -725,6 +968,13 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     handleUpdateGroceryList(updatedList);
     fireConfetti({ mode: 'snappy' });
     showToast(`🍽️ Added ${toAdd.length} ingredients from this week's dinner menu!`);
+
+    // Automatically batch estimate prices for newly added menu ingredients
+    estimateGroceryItemsBatchApi(
+      toAdd.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity }))
+    ).then((estimates) => {
+      applyPriceEstimates(estimates);
+    }).catch((err) => console.warn('Dinner menu price estimate error:', err));
   };
 
   // 12. Copy Shareable Shopping List Text
@@ -1038,6 +1288,215 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
           {/* TAB 1: ACTIVE GROCERY TASK LIST */}
           {activeTab === 'list' && (
             <div className="space-y-4">
+              {/* TOP BUDGET & COST ESTIMATION SUMMARY CARD */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-white via-slate-50 to-emerald-50/40 dark:from-slate-800 dark:via-slate-800 dark:to-emerald-950/20 border-2 border-emerald-300 dark:border-slate-700 shadow-sm space-y-3">
+                {/* Header row with Title, Refresh Prices button, and Budget Target quick toggle */}
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-black shadow-2xs shrink-0">
+                      <DollarSign className="w-4 h-4 stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                        <span>Weekly Grocery Budget & Estimates</span>
+                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                          ✨ AI-Powered
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                        Typical US grocery store pricing with receipt actuals override
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions: Refresh Prices & Budget Target */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      id="btn-refresh-grocery-prices"
+                      type="button"
+                      onClick={handleRefreshPrices}
+                      disabled={isRefreshingPrices || items.length === 0}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                        isRefreshingPrices
+                          ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 border-slate-300 cursor-not-allowed'
+                          : 'bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-750 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 active:scale-95'
+                      }`}
+                      title="Re-estimate prices for all items that haven't been manually set"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingPrices ? 'animate-spin text-emerald-600' : ''}`} />
+                      <span>{isRefreshingPrices ? 'Estimating...' : 'Refresh prices'}</span>
+                    </button>
+
+                    {isParentMode && !editingBudget && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBudgetTargetInput(groceryList.budgetTarget !== undefined ? String(groceryList.budgetTarget) : '');
+                          setEditingBudget(true);
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-650 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+                        title="Set weekly budget target"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        <span>{groceryList.budgetTarget !== undefined ? 'Edit Target' : '+ Budget Target'}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Target Budget Inline Form (when editing) */}
+                {editingBudget && (
+                  <form onSubmit={handleSaveBudgetTarget} className="p-3 rounded-xl bg-emerald-50/80 dark:bg-slate-900/80 border border-emerald-300 dark:border-emerald-800 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-black text-slate-700 dark:text-slate-300">Set Shopping Budget Target:</span>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-2.5 text-xs font-bold text-slate-400">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={budgetTargetInput}
+                        onChange={(e) => setBudgetTargetInput(e.target.value)}
+                        placeholder="e.g. 150.00"
+                        className="w-28 pl-6 pr-2 py-1 text-xs font-black rounded-lg border-2 border-emerald-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                        autoFocus
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs cursor-pointer active:scale-95"
+                    >
+                      Save Target
+                    </button>
+                    {groceryList.budgetTarget !== undefined && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleUpdateGroceryList({
+                            ...groceryList,
+                            budgetTarget: undefined,
+                            lastUpdated: new Date().toISOString(),
+                          });
+                          setEditingBudget(false);
+                          showToast('Budget target removed.');
+                        }}
+                        className="px-2 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 dark:bg-rose-950 dark:text-rose-300 text-xs font-bold cursor-pointer"
+                      >
+                        Clear Target
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setEditingBudget(false)}
+                      className="px-2 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                )}
+
+                {/* Metrics Cards Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                  {/* Metric 1: Estimated Total */}
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                    <div className="text-[10px] uppercase tracking-wider font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      <span>Estimated Total</span>
+                    </div>
+                    <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                      ${budgetSummary.estimatedTotal.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-medium">
+                      {budgetSummary.itemsCount} total item{budgetSummary.itemsCount !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+
+                  {/* Metric 2: Actual Total (if any prices were overridden) */}
+                  {budgetSummary.hasOverriddenPrices && (
+                    <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-300 dark:border-emerald-700 shadow-2xs">
+                      <div className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>Actual Total</span>
+                      </div>
+                      <div className="text-base sm:text-lg font-black text-emerald-950 dark:text-emerald-200 mt-0.5">
+                        ${budgetSummary.effectiveTotal.toFixed(2)}
+                      </div>
+                      <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">
+                        {budgetSummary.overriddenCount} manual receipt price{budgetSummary.overriddenCount !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Metric 3: Budget Target (Optional) */}
+                  {groceryList.budgetTarget !== undefined && (
+                    <div className={`p-2.5 rounded-xl border shadow-2xs ${
+                      budgetSummary.isOverBudget
+                        ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-700'
+                        : 'bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700'
+                    }`}>
+                      <div className="text-[10px] uppercase tracking-wider font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <PiggyBank className="w-3 h-3 text-emerald-600" />
+                        <span>Budget Target</span>
+                      </div>
+                      <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                        ${groceryList.budgetTarget.toFixed(2)}
+                      </div>
+                      <div className="text-[10px] font-black">
+                        {budgetSummary.budgetDiff !== undefined && (
+                          budgetSummary.budgetDiff >= 0 ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              +${budgetSummary.budgetDiff.toFixed(2)} under target
+                            </span>
+                          ) : (
+                            <span className="text-rose-600 dark:text-rose-400">
+                              -${Math.abs(budgetSummary.budgetDiff).toFixed(2)} over target
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Metric 4: Acquired vs Needed Progress */}
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-2xs col-span-2 sm:col-span-1">
+                    <div className="text-[10px] uppercase tracking-wider font-extrabold text-slate-500 dark:text-slate-400">
+                      In Cart / Acquired
+                    </div>
+                    <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                      ${budgetSummary.acquiredTotal.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-medium">
+                      ${budgetSummary.neededTotal.toFixed(2)} still needed
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress Bar for Budget Target (if configured) */}
+                {groceryList.budgetTarget !== undefined && groceryList.budgetTarget > 0 && (
+                  <div className="space-y-1 pt-1">
+                    <div className="flex items-center justify-between text-[11px] font-extrabold">
+                      <span className="text-slate-600 dark:text-slate-400">
+                        Budget Utilization ({budgetSummary.budgetPercent}%)
+                      </span>
+                      <span className={budgetSummary.isOverBudget ? 'text-rose-600 font-black' : 'text-emerald-600'}>
+                        ${budgetSummary.effectiveTotal.toFixed(2)} of ${groceryList.budgetTarget.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                      <div
+                        className={`h-full transition-all rounded-full ${
+                          budgetSummary.isOverBudget
+                            ? 'bg-rose-500'
+                            : budgetSummary.budgetPercent > 85
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
+                        }`}
+                        style={{ width: `${Math.min(100, budgetSummary.budgetPercent)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Quick Add Bar with Importance Selection (Parent Only) */}
               {isParentMode ? (
                 <form
@@ -1320,6 +1779,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                               item={item}
                               onToggleAcquired={handleToggleAcquired}
                               onDeleteItem={handleDeleteItem}
+                              onUpdatePrice={handleUpdateItemPrice}
                               isParentMode={isParentMode}
                             />
                           ))}
@@ -1337,6 +1797,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                       item={item}
                       onToggleAcquired={handleToggleAcquired}
                       onDeleteItem={handleDeleteItem}
+                      onUpdatePrice={handleUpdateItemPrice}
                       isParentMode={isParentMode}
                     />
                   ))}
@@ -2346,6 +2807,7 @@ interface GroceryItemRowProps {
   item: GroceryItem;
   onToggleAcquired: (id: string) => void;
   onDeleteItem: (id: string) => void;
+  onUpdatePrice: (id: string, actualCost: number | undefined) => void;
   isParentMode?: boolean;
 }
 
@@ -2353,14 +2815,43 @@ const GroceryItemRow: React.FC<GroceryItemRowProps> = ({
   item,
   onToggleAcquired,
   onDeleteItem,
+  onUpdatePrice,
   isParentMode = false,
 }) => {
   const meta = GROCERY_CATEGORY_METADATA[item.category] || GROCERY_CATEGORY_METADATA.other;
   const impMeta = GROCERY_IMPORTANCE_METADATA[item.importance || 'common'];
 
+  const [isEditingPrice, setIsEditingPrice] = useState<boolean>(false);
+  const [priceInput, setPriceInput] = useState<string>(
+    item.actualCost !== undefined
+      ? item.actualCost.toFixed(2)
+      : item.estimatedCost !== undefined
+      ? item.estimatedCost.toFixed(2)
+      : ''
+  );
+
+  const displayPrice = item.actualCost !== undefined ? item.actualCost : item.estimatedCost;
+  const isManual = item.actualCost !== undefined;
+
+  const handleSavePrice = () => {
+    const val = parseFloat(priceInput.trim());
+    if (!isNaN(val) && val >= 0) {
+      onUpdatePrice(item.id, Number(val.toFixed(2)));
+    }
+    setIsEditingPrice(false);
+  };
+
+  const handleResetToEstimated = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onUpdatePrice(item.id, undefined);
+    if (item.estimatedCost !== undefined) {
+      setPriceInput(item.estimatedCost.toFixed(2));
+    }
+  };
+
   return (
     <div
-      className={`p-3 sm:px-4 flex items-center justify-between gap-3 transition-colors ${
+      className={`p-3 sm:px-4 flex items-center justify-between gap-2.5 sm:gap-3 transition-colors ${
         item.acquired
           ? 'bg-slate-50/60 dark:bg-slate-800/40 opacity-75'
           : 'hover:bg-slate-50/80 dark:hover:bg-slate-750/50'
@@ -2393,7 +2884,7 @@ const GroceryItemRow: React.FC<GroceryItemRowProps> = ({
             </span>
 
             {/* Importance Badge */}
-            <span className={`px-2 py-0.2 rounded-md text-[10px] font-extrabold border ${impMeta.bg} ${impMeta.color} ${impMeta.border}`}>
+            <span className={`px-2 py-0.2 rounded-md text-[10px] font-extrabold border ${(impMeta as any).badgeBg || (impMeta as any).bg} ${(impMeta as any).badgeText || (impMeta as any).color} ${(impMeta as any).badgeBorder || (impMeta as any).border}`}>
               {impMeta.icon} {impMeta.label}
             </span>
 
@@ -2419,14 +2910,125 @@ const GroceryItemRow: React.FC<GroceryItemRowProps> = ({
         </div>
       </div>
 
-      {/* Delete Item Action */}
-      <button
-        onClick={() => onDeleteItem(item.id)}
-        className="text-slate-300 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer shrink-0"
-        title="Delete item from list"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
+      {/* Cost Display & Inline Editing */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {isEditingPrice ? (
+          <div
+            className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border-2 border-emerald-500 shadow-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-xs font-black text-slate-500 pl-1">$</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={priceInput}
+              onChange={(e) => setPriceInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSavePrice();
+                if (e.key === 'Escape') setIsEditingPrice(false);
+              }}
+              autoFocus
+              className="w-16 sm:w-20 px-1 py-0.5 text-xs font-black text-slate-900 dark:text-white bg-transparent focus:outline-hidden"
+              placeholder="0.00"
+            />
+            <button
+              type="button"
+              onClick={handleSavePrice}
+              className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95"
+              title="Save price"
+            >
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditingPrice(false)}
+              className="p-1 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer"
+              title="Cancel"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            {displayPrice !== undefined ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (isParentMode) {
+                    setPriceInput(displayPrice.toFixed(2));
+                    setIsEditingPrice(true);
+                  }
+                }}
+                className={`group px-2 py-1 rounded-xl border text-xs font-black flex items-center gap-1.5 transition-all ${
+                  isManual
+                    ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                    : 'bg-slate-100 dark:bg-slate-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-650'
+                } ${isParentMode ? 'cursor-pointer hover:border-emerald-400 hover:shadow-2xs' : 'cursor-default'}`}
+                title={
+                  isParentMode
+                    ? isManual
+                      ? 'Receipt price (click to edit)'
+                      : 'AI estimated price (click to edit receipt price)'
+                    : 'Price'
+                }
+              >
+                <span>{isManual ? `$${displayPrice.toFixed(2)}` : `~$${displayPrice.toFixed(2)}`}</span>
+                <span
+                  className={`text-[9px] font-extrabold uppercase px-1 py-0.2 rounded-sm ${
+                    isManual
+                      ? 'bg-emerald-200/80 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200'
+                      : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
+                  }`}
+                >
+                  {isManual ? 'Actual' : 'AI Est.'}
+                </span>
+                {isParentMode && (
+                  <Pencil className="w-3 h-3 opacity-40 group-hover:opacity-100 transition-opacity" />
+                )}
+              </button>
+            ) : (
+              isParentMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPriceInput('');
+                    setIsEditingPrice(true);
+                  }}
+                  className="px-2 py-1 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 hover:border-emerald-500 text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-emerald-600 flex items-center gap-1 cursor-pointer transition-all"
+                  title="Add price"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Price</span>
+                </button>
+              )
+            )}
+
+            {/* If actual price is set, offer a button to revert to AI estimate if available */}
+            {isManual && item.estimatedCost !== undefined && isParentMode && (
+              <button
+                type="button"
+                onClick={handleResetToEstimated}
+                className="p-1 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                title={`Reset to AI estimate (~$${item.estimatedCost.toFixed(2)})`}
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Delete Item Action */}
+        {isParentMode && (
+          <button
+            onClick={() => onDeleteItem(item.id)}
+            className="text-slate-300 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer shrink-0"
+            title="Delete item from list"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
     </div>
   );
 };

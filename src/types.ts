@@ -167,6 +167,8 @@ export interface SnackStarTiers {
   luxury: number; // Gourmet/Specialty e.g. 35
 }
 
+export type KioskTimeoutOption = 'off' | '1m' | '2m' | '3m' | '5m' | '10m' | '15m' | '30m';
+
 export interface AppSettings {
   parentPin: string;
   isDefaultPin?: boolean; // true if default 1234 PIN is still in use, false once changed
@@ -177,6 +179,7 @@ export interface AppSettings {
   tempUnit?: 'F' | 'C';
   savedCalendarIcsUrl?: string;
   kioskTheme?: string;
+  kioskTimeout?: KioskTimeoutOption;
   snackStarTiers?: SnackStarTiers;
   customSnackStarOverrides?: Record<string, number>; // Individual snack item star cost overrides
 }
@@ -267,6 +270,10 @@ export interface GroceryItem {
   sourceMealDay?: DayOfWeekKey; // If imported from weekly dinner menu
   sourceRecipe?: string;
   createdAt: string;
+  estimatedCost?: number;
+  actualCost?: number;
+  currency?: string; // default "USD"
+  priceSource?: 'manual' | 'ai' | 'api';
 }
 
 export interface SpiceItem {
@@ -326,6 +333,7 @@ export interface WeeklyGroceryList {
   pantryStaples?: PantryStapleItem[];
   spices?: SpiceItem[];
   requests?: GroceryRequest[];
+  budgetTarget?: number; // Optional budget target for the weekly grocery trip
   lastUpdated?: string;
 }
 

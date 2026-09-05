@@ -48,6 +48,7 @@ import {
   DayOfWeek,
   GroceryRequest,
   GroceryItem,
+  GroceryImportance,
 } from '../types';
 import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON } from '../utils/storage';
 import { sound } from '../utils/sound';
@@ -137,6 +138,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   // Snack Requests State & Handlers
   const [editingSnackReq, setEditingSnackReq] = useState<GroceryRequest | null>(null);
   const [editingStarValue, setEditingStarValue] = useState<number>(0);
+  const [editingSnackImportance, setEditingSnackImportance] = useState<GroceryImportance>('treat');
   const [denyingSnackReqId, setDenyingSnackReqId] = useState<string | null>(null);
   const [snackDenyReason, setSnackDenyReason] = useState<string>('');
 
@@ -239,6 +241,11 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       lastUpdated: new Date().toISOString(),
     };
 
+    const costToDeduct = !req.starsDeducted && (req.starCost || 0) > 0 ? (req.starCost || 0) : 0;
+    const updatedKids = costToDeduct > 0 && req.kidId
+      ? database.kids.map((k) => (k.id === req.kidId ? { ...k, stars: Math.max(0, k.stars - costToDeduct) } : k))
+      : database.kids;
+
     const newItem: GroceryItem = {
       id: `g-req-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       name: req.name,
@@ -256,6 +263,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
         return {
           ...r,
           status: 'approved' as const,
+          starsDeducted: true,
+          needsAdminRating: false,
           reviewedBy: 'Admin (Parent)',
           reviewedAt: new Date().toISOString(),
         };
@@ -265,6 +274,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
     onUpdateDatabase({
       ...database,
+      kids: updatedKids,
       weeklyGroceryList: {
         ...groceryList,
         items: [newItem, ...(groceryList.items || [])],
@@ -312,7 +322,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
     setSnackDenyReason('');
   };
 
-  const handleSaveEditedStarCost = (req: GroceryRequest, newCost: number) => {
+  const handleSaveEditedStarCost = (req: GroceryRequest, newCost: number, newImportance?: GroceryImportance) => {
     if (newCost < 0) return;
     const oldCost = req.starCost || 0;
     const diff = newCost - oldCost;
@@ -338,7 +348,9 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
         return {
           ...r,
           starCost: newCost,
+          importance: newImportance || r.importance || 'treat',
           adminEditedStars: true,
+          needsAdminRating: false,
         };
       }
       return r;
@@ -881,9 +893,16 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                           </div>
                         </div>
 
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${imp.badgeBg} ${imp.badgeText} ${imp.badgeBorder} shrink-0`}>
-                          {imp.icon} {imp.label}
-                        </span>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          {req.needsAdminRating && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-150 text-purple-900 border border-purple-300">
+                              🛡️ Needs Admin Rating
+                            </span>
+                          )}
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${imp.badgeBg} ${imp.badgeText} ${imp.badgeBorder} shrink-0`}>
+                            {imp.icon} {imp.label}
+                          </span>
+                        </div>
                       </div>
 
                       {req.notes && (
@@ -896,7 +915,11 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       <div className="flex items-center justify-between bg-purple-50 p-2 rounded-xl border border-purple-200">
                         <div className="flex items-center gap-1 text-xs font-black text-purple-950">
                           <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
-                          <span>{req.starCost || 0} Stars Paid</span>
+                          <span>
+                            {req.starsDeducted
+                              ? `${req.starCost || 0} Stars Paid`
+                              : `${req.starCost || 0} Stars (To Deduct upon approval)`}
+                          </span>
                           {req.adminEditedStars && (
                             <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-purple-200 text-purple-800 font-bold">
                               Admin edited
@@ -908,12 +931,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                           onClick={() => {
                             setEditingSnackReq(req);
                             setEditingStarValue(req.starCost || 0);
+                            setEditingSnackImportance(req.importance || 'treat');
                           }}
                           className="min-h-[44px] px-3 py-1.5 rounded-xl bg-white hover:bg-purple-100 text-purple-800 font-black text-xs border border-purple-300 flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs active:scale-95"
-                          title="Edit stars required for this snack"
+                          title="Admin: Set expense rating tier and stars"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
-                          <span>Edit Stars</span>
+                          <span>{req.needsAdminRating ? 'Set Tier & Stars' : 'Edit Stars'}</span>
                         </button>
                       </div>
 
@@ -3267,14 +3291,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
         />
       )}
 
-      {/* Admin Edit Star Cost Modal */}
+      {/* Admin Edit Star Cost & Expense Rating Modal */}
       {editingSnackReq && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-5 border-2 border-purple-500 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between">
               <h3 className="font-black text-base text-slate-900 flex items-center gap-2">
                 <Star className="w-5 h-5 text-amber-500 fill-amber-400" />
-                <span>Edit Required Stars</span>
+                <span>Set Expense Rating & Stars</span>
               </h3>
               <button
                 onClick={() => setEditingSnackReq(null)}
@@ -3285,9 +3309,29 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             </div>
 
             <p className="text-xs text-slate-600 font-semibold">
-              Adjust how many stars <strong>{editingSnackReq.kidName}</strong> is charged for <strong>"{editingSnackReq.name}"</strong>.
-              Kid balance is automatically updated for the difference!
+              Set the expense rating tier and required stars for <strong>"{editingSnackReq.name}"</strong> requested by{' '}
+              <strong>{editingSnackReq.kidName}</strong>.
             </p>
+
+            <div className="space-y-1">
+              <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                Expense Rating / Tier:
+              </label>
+              <select
+                value={editingSnackImportance}
+                onChange={(e) => {
+                  const imp = e.target.value as GroceryImportance;
+                  setEditingSnackImportance(imp);
+                  setEditingStarValue(getStarCostForImportance(imp, database.settings));
+                }}
+                className="w-full px-3 py-2 rounded-xl border-2 border-purple-300 bg-white font-black text-xs text-slate-900 focus:border-purple-600 focus:outline-none cursor-pointer"
+              >
+                <option value="staple">🍏 Healthy Snack ({getStarCostForImportance('staple', database.settings)}⭐)</option>
+                <option value="common">📦 Everyday Snack ({getStarCostForImportance('common', database.settings)}⭐)</option>
+                <option value="treat">🍪 Sweet Treat ({getStarCostForImportance('treat', database.settings)}⭐)</option>
+                <option value="luxury">👑 Luxury / Gourmet ({getStarCostForImportance('luxury', database.settings)}⭐)</option>
+              </select>
+            </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
@@ -3317,6 +3361,11 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   +
                 </button>
               </div>
+              <span className="text-[10px] text-slate-500 font-bold block">
+                {editingSnackReq.starsDeducted
+                  ? "Kid's balance is automatically adjusted for the difference!"
+                  : "Stars will be deducted upon approval."}
+              </span>
             </div>
 
             <div className="flex items-center gap-2 pt-2">
@@ -3329,10 +3378,10 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => handleSaveEditedStarCost(editingSnackReq, editingStarValue)}
+                onClick={() => handleSaveEditedStarCost(editingSnackReq, editingStarValue, editingSnackImportance)}
                 className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs shadow-md cursor-pointer"
               >
-                Save Star Cost ⭐
+                Save Rating & Stars ⭐
               </button>
             </div>
           </div>

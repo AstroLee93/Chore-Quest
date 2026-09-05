@@ -4,7 +4,9 @@ export type AppThemeId =
   | 'midnight-charcoal'
   | 'soft-sky'
   | 'warm-sand'
-  | 'classic-sunshine';
+  | 'classic-sunshine'
+  | 'philadelphia-eagles'
+  | 'ohio-state-buckeyes';
 
 export interface AppThemeConfig {
   id: AppThemeId;
@@ -545,6 +547,160 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     secondaryBtn: 'bg-yellow-200 hover:bg-yellow-300 text-slate-900 border border-yellow-300 font-bold',
     accentPill: 'bg-yellow-200 text-slate-900 border border-yellow-300',
     progressGradient: 'from-yellow-400 via-orange-400 to-indigo-600',
+  },
+
+  // 🦅 PHILADELPHIA EAGLES: Midnight Green (#004C54), Metallic Silver (#A5ACAF), Charcoal Black (#0B1315), Crisp White
+  'philadelphia-eagles': {
+    id: 'philadelphia-eagles',
+    name: 'Philadelphia Eagles',
+    subtitle: 'Midnight Green & Metallic Silver',
+    description: 'Iconic Philadelphia Eagles midnight green, silver wings, and crisp charcoal tones.',
+    icon: '🦅',
+    swatches: ['#004C54', '#002C31', '#A5ACAF', '#48C07A', '#111827', '#FFFFFF'],
+    colorSwatch: '#004C54',
+    isDark: true,
+    bgGradient: 'bg-gradient-to-br from-[#0B1516] via-[#002C31] to-[#040C0E]',
+    pageBackground: '#0B1516',
+
+    // Animated Hero Banner
+    bannerGradient: 'bg-gradient-to-r from-[#004C54] via-[#00707B] to-[#A5ACAF]',
+    bannerBorder: 'border-[#48C07A]',
+    bannerGlow: 'shadow-[0_10px_30px_rgba(0,76,84,0.55)]',
+
+    // Header / Navbar
+    headerBg: 'bg-gradient-to-r from-[#0B1516]/95 via-[#002C31]/90 to-[#0B1516]/95 backdrop-blur-md',
+    headerBorder: 'border-[#004C54]/70',
+    headerLogoBg: 'bg-[#004C54] shadow-[#004C54]/50 border border-[#48C07A]/60',
+    headerLogoText: 'text-white font-black',
+    headerTextColor: 'text-white',
+
+    // Family Goal Banner
+    goalBannerBg: 'bg-gradient-to-r from-[#002C31]/95 via-[#004C54]/85 to-[#0B1516]/95 backdrop-blur-md',
+    goalBannerBorder: 'border-[#48C07A]/60',
+    goalBannerIconBg: 'bg-[#004C54] text-white border border-[#48C07A]/60',
+    goalBannerProgress: 'bg-gradient-to-r from-[#004C54] via-[#48C07A] to-[#A5ACAF]',
+    goalBadge: 'bg-[#004C54] text-[#A5ACAF] border border-[#48C07A]/50',
+    goalTitleColor: 'text-white',
+
+    // Kid Cards
+    kidCardBg: 'bg-gradient-to-b from-[#002C31]/90 to-[#0B1516]/90 backdrop-blur-md',
+    kidCardBorder: 'border-[#004C54]/70',
+    kidCardHover: 'hover:border-[#48C07A] hover:shadow-[0_16px_36px_rgba(0,76,84,0.6)]',
+    kidCardStatsBg: 'bg-[#041012]/90 border border-[#004C54]/60',
+    kidCardNameColor: 'text-white',
+    kidCardSubtextColor: 'text-[#A5ACAF]',
+    kidCardProgress: 'bg-gradient-to-r from-[#004C54] via-[#48C07A] to-[#A5ACAF]',
+    kidCardAvatarBorder: 'border-[#48C07A]/70',
+
+    // Kiosk Theme Tokens
+    kioskBg: 'bg-gradient-to-br from-[#040C0E] via-[#002C31] to-[#0B1516] text-white',
+    kioskHeaderBg: 'bg-[#040C0E]/90 backdrop-blur-md',
+    kioskHeaderBorder: 'border-[#004C54]/60',
+    kioskHeaderLogoBg: 'bg-[#004C54] border border-[#48C07A]/70',
+    kioskHeaderLogoText: 'text-white font-black',
+    kioskHeaderTextColor: 'text-white',
+    kioskClockBg: 'bg-[#002C31]/90 border border-[#004C54]/60 shadow-md',
+    kioskClockText: 'text-[#48C07A]',
+    kioskMvpSpotlightBg: 'bg-gradient-to-r from-[#002C31]/95 via-[#004C54]/90 to-[#0B1516]/95',
+    kioskMvpSpotlightBorder: 'border-[#48C07A] shadow-[0_10px_30px_rgba(0,76,84,0.6)]',
+    kioskCardBg: 'bg-[#002C31]/85 backdrop-blur-md shadow-xl',
+    kioskCardBorder: 'border-[#004C54]/65',
+    kioskCardMvpBorder: 'border-[#48C07A] ring-4 ring-[#48C07A]/35 shadow-2xl shadow-[#004C54]/60',
+    kioskCardMvpBg: 'bg-gradient-to-b from-[#004C54]/90 via-[#002C31]/95 to-[#040C0E]/95',
+    kioskCardItemBg: 'bg-[#040C0E]/80 border border-[#004C54]/50 text-white hover:border-[#48C07A]',
+    kioskCardItemDone: 'bg-[#004C54]/50 border border-[#48C07A]/70 text-[#A5ACAF]',
+    kioskSummaryCardBg: 'bg-[#002C31]/85 backdrop-blur-md',
+    kioskSummaryCardBorder: 'border-[#004C54]/60',
+    kioskFooterBorder: 'border-[#004C54]/50',
+    kioskFooterSlateBg: 'bg-[#002C31]/85 backdrop-blur-md hover:bg-[#004C54]/70 transition-all',
+    kioskFooterSlateBorder: 'border-[#004C54]/50 hover:border-[#48C07A]',
+    kioskFooterPillBg: 'bg-[#004C54] border border-[#48C07A]/70',
+    kioskFooterPillText: 'text-white font-extrabold',
+    kioskFooterPillSecondaryBg: 'bg-[#040C0E]/80 border border-[#A5ACAF]/40',
+    kioskFooterPillSecondaryText: 'text-[#A5ACAF] font-extrabold',
+
+    // Buttons
+    primaryBtn: 'bg-[#004C54] hover:bg-[#00383E] text-white shadow-sm font-black border border-[#48C07A]/50',
+    secondaryBtn: 'bg-[#A5ACAF]/20 hover:bg-[#A5ACAF]/35 text-white border border-[#A5ACAF]/50 font-bold',
+    accentPill: 'bg-[#004C54] text-[#A5ACAF] border border-[#48C07A]/50',
+    progressGradient: 'from-[#004C54] via-[#48C07A] to-[#A5ACAF]',
+  },
+
+  // 🌰 OHIO STATE BUCKEYES: Scarlet (#BB0000), Buckeye Gray (#A7A9AC), Stadium Silver (#D0D0CE), Black (#18181B)
+  'ohio-state-buckeyes': {
+    id: 'ohio-state-buckeyes',
+    name: 'Ohio State Buckeyes',
+    subtitle: 'Scarlet, Gray & Stadium Silver',
+    description: 'Legendary Ohio State scarlet red, silver-gray stripes, and stadium charcoal.',
+    icon: '🌰',
+    swatches: ['#BB0000', '#800000', '#A7A9AC', '#D0D0CE', '#18181B', '#FFFFFF'],
+    colorSwatch: '#BB0000',
+    isDark: true,
+    bgGradient: 'bg-gradient-to-br from-[#18181B] via-[#2A1518] to-[#121214]',
+    pageBackground: '#18181B',
+
+    // Animated Hero Banner
+    bannerGradient: 'bg-gradient-to-r from-[#BB0000] via-[#800000] to-[#555555]',
+    bannerBorder: 'border-[#BB0000]',
+    bannerGlow: 'shadow-[0_10px_30px_rgba(187,0,0,0.5)]',
+
+    // Header / Navbar
+    headerBg: 'bg-gradient-to-r from-[#18181B]/95 via-[#2A1518]/90 to-[#18181B]/95 backdrop-blur-md',
+    headerBorder: 'border-[#BB0000]/60',
+    headerLogoBg: 'bg-[#BB0000] shadow-[#BB0000]/50 border border-[#D0D0CE]/60',
+    headerLogoText: 'text-white font-black',
+    headerTextColor: 'text-white',
+
+    // Family Goal Banner
+    goalBannerBg: 'bg-gradient-to-r from-[#2A1518]/95 via-[#BB0000]/80 to-[#18181B]/95 backdrop-blur-md',
+    goalBannerBorder: 'border-[#BB0000]/60',
+    goalBannerIconBg: 'bg-[#BB0000] text-white border border-[#D0D0CE]/60',
+    goalBannerProgress: 'bg-gradient-to-r from-[#BB0000] via-[#DC2626] to-[#D0D0CE]',
+    goalBadge: 'bg-[#BB0000] text-[#D0D0CE] border border-[#A7A9AC]/50',
+    goalTitleColor: 'text-white',
+
+    // Kid Cards
+    kidCardBg: 'bg-gradient-to-b from-[#2A1518]/90 to-[#18181B]/90 backdrop-blur-md',
+    kidCardBorder: 'border-[#BB0000]/60',
+    kidCardHover: 'hover:border-[#DC2626] hover:shadow-[0_16px_36px_rgba(187,0,0,0.55)]',
+    kidCardStatsBg: 'bg-[#111113]/90 border border-[#BB0000]/50',
+    kidCardNameColor: 'text-white',
+    kidCardSubtextColor: 'text-[#D0D0CE]',
+    kidCardProgress: 'bg-gradient-to-r from-[#BB0000] via-[#DC2626] to-[#D0D0CE]',
+    kidCardAvatarBorder: 'border-[#BB0000]/70',
+
+    // Kiosk Theme Tokens
+    kioskBg: 'bg-gradient-to-br from-[#121214] via-[#2A1518] to-[#18181B] text-white',
+    kioskHeaderBg: 'bg-[#121214]/90 backdrop-blur-md',
+    kioskHeaderBorder: 'border-[#BB0000]/50',
+    kioskHeaderLogoBg: 'bg-[#BB0000] border border-[#D0D0CE]/60',
+    kioskHeaderLogoText: 'text-white font-black',
+    kioskHeaderTextColor: 'text-white',
+    kioskClockBg: 'bg-[#2A1518]/90 border border-[#BB0000]/50 shadow-md',
+    kioskClockText: 'text-[#EF4444]',
+    kioskMvpSpotlightBg: 'bg-gradient-to-r from-[#2A1518]/95 via-[#800000]/90 to-[#18181B]/95',
+    kioskMvpSpotlightBorder: 'border-[#BB0000] shadow-[0_10px_30px_rgba(187,0,0,0.55)]',
+    kioskCardBg: 'bg-[#2A1518]/85 backdrop-blur-md shadow-xl',
+    kioskCardBorder: 'border-[#BB0000]/60',
+    kioskCardMvpBorder: 'border-[#EF4444] ring-4 ring-[#EF4444]/35 shadow-2xl shadow-[#BB0000]/50',
+    kioskCardMvpBg: 'bg-gradient-to-b from-[#BB0000]/90 via-[#2A1518]/95 to-[#121214]/95',
+    kioskCardItemBg: 'bg-[#121214]/80 border border-[#BB0000]/40 text-white hover:border-[#DC2626]',
+    kioskCardItemDone: 'bg-[#800000]/50 border border-[#BB0000]/70 text-[#D0D0CE]',
+    kioskSummaryCardBg: 'bg-[#2A1518]/85 backdrop-blur-md',
+    kioskSummaryCardBorder: 'border-[#BB0000]/50',
+    kioskFooterBorder: 'border-[#BB0000]/45',
+    kioskFooterSlateBg: 'bg-[#2A1518]/85 backdrop-blur-md hover:bg-[#800000]/60 transition-all',
+    kioskFooterSlateBorder: 'border-[#BB0000]/45 hover:border-[#DC2626]',
+    kioskFooterPillBg: 'bg-[#BB0000] border border-[#D0D0CE]/60',
+    kioskFooterPillText: 'text-white font-extrabold',
+    kioskFooterPillSecondaryBg: 'bg-[#121214]/80 border border-[#A7A9AC]/40',
+    kioskFooterPillSecondaryText: 'text-[#D0D0CE] font-extrabold',
+
+    // Buttons
+    primaryBtn: 'bg-[#BB0000] hover:bg-[#990000] text-white shadow-sm font-black border border-[#DC2626]/50',
+    secondaryBtn: 'bg-[#A7A9AC]/20 hover:bg-[#A7A9AC]/35 text-white border border-[#A7A9AC]/50 font-bold',
+    accentPill: 'bg-[#BB0000] text-[#D0D0CE] border border-[#DC2626]/50',
+    progressGradient: 'from-[#BB0000] via-[#DC2626] to-[#D0D0CE]',
   },
 };
 

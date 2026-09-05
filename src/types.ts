@@ -292,6 +292,7 @@ export interface GroceryRequest {
   starsDeducted?: boolean; // Whether the stars were deducted from kid's balance
   originalStarCost?: number; // Original star cost before admin adjustment
   adminEditedStars?: boolean; // True if admin explicitly edited the star cost
+  needsAdminRating?: boolean; // True if custom snack request awaits admin expense rating
   notes?: string;
   kidId: string;
   kidName: string;

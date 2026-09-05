@@ -172,7 +172,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
 
           {/* Footer */}
           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 px-2 py-1 text-[10px] text-slate-400 dark:text-slate-500 font-bold flex items-center justify-between">
-            <span>✨ Includes uploaded color palettes</span>
+            <span>✨ Sports & Inspired Color Palettes</span>
             <span>Saved automatically</span>
           </div>
         </div>

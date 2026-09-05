@@ -12,7 +12,6 @@ import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { ChoreTimerModal } from './ChoreTimerModal';
 import { FamilyGoalModal } from './FamilyGoalModal';
 import { WeeklyMenuModal } from './WeeklyMenuModal';
-import { ThemeSelector } from './ThemeSelector';
 import { ParentPinModal } from './ParentPinModal';
 import { KidPinModal } from './KidPinModal';
 import { ActionMenu } from './ActionMenu';
@@ -297,12 +296,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           </div>
         </div>
 
-        {/* Right: Actions, Theme Switcher, Menu, Calendar, Fullscreen & Exit */}
+        {/* Right: Dinner Menu, Calendar, Fullscreen & Exit */}
         <div className="flex items-center gap-2 flex-wrap self-end lg:self-center relative z-50">
-          {onThemeChange && (
-            <ThemeSelector currentTheme={currentTheme} onThemeChange={onThemeChange} />
-          )}
-
           {/* Dinner Menu Button */}
           <button
             id="btn-kiosk-dinner-menu"
@@ -458,7 +453,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
             <div
               key={kid.id}
               id={`kiosk-kid-card-${kid.id}`}
-              className={`rounded-3xl border-2 p-4 sm:p-6 flex flex-col justify-between transition-all relative overflow-hidden min-h-[420px] ${
+              className={`rounded-3xl border-2 p-4 sm:p-5 flex flex-col justify-between transition-all relative min-h-[420px] ${
                 isMvp
                   ? `${theme.kioskCardMvpBg} ${theme.kioskCardMvpBorder}`
                   : isAllDone
@@ -466,32 +461,18 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     : `${theme.kioskCardBg} ${theme.kioskCardBorder}`
               }`}
             >
-              {/* MVP Top Ribbon */}
-              {isMvp && (
-                <div className="flex items-center justify-between bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 px-4 py-1.5 -mt-2 -mx-2 mb-4 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg">
-                  <span className="flex items-center gap-1.5 font-black">
-                    <span className="text-base animate-pulse">👑</span>
-                    <span className="font-extrabold text-sm tracking-widest">MVP LEADER</span>
-                    <span className="text-[10px] font-black opacity-80 hidden sm:inline">• MOST POINTS</span>
-                  </span>
-                  <span className="text-xs font-black bg-amber-950/20 px-2.5 py-0.5 rounded-full">
-                    ⭐ {kid.stars} Pts
-                  </span>
-                </div>
-              )}
-
               <div>
-                {/* Header */}
-                <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/15">
+                {/* Header Row: Kid Profile on Left, Prominent Action Menu on Right */}
+                <div className="flex items-center justify-between gap-2 pb-3 border-b border-white/15">
                   <div
                     onClick={() => {
                       sound.playTap();
                       setSelectedKidForPin(kid);
                     }}
-                    className="flex items-center gap-3 cursor-pointer group/header p-1 -m-1 rounded-2xl hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group/header p-1 -m-1 rounded-2xl hover:bg-white/10 transition-colors min-w-0 flex-1"
                     title={`Tap to unlock ${kid.name}'s Profile Dashboard (PIN required)`}
                   >
-                    <div className="relative">
+                    <div className="relative shrink-0">
                       {isMvp && (
                         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 text-2xl filter drop-shadow-[0_3px_6px_rgba(245,158,11,0.9)] animate-bounce select-none pointer-events-none">
                           👑
@@ -502,7 +483,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                           backgroundColor: isMvp ? `${kid.color || '#3b82f6'}40` : `${kid.color || '#3b82f6'}25`,
                           borderColor: isMvp ? '#fbbf24' : (kid.color || '#3b82f6'),
                         }}
-                        className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-3xl shrink-0 shadow-inner group-hover/header:scale-105 transition-transform ${
+                        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border-2 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-inner group-hover/header:scale-105 transition-transform ${
                           isMvp ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-900' : ''
                         }`}
                       >
@@ -510,34 +491,86 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                       </div>
                     </div>
 
-                    <div>
-                      <h2 className="text-xl font-black text-white flex items-center gap-2 flex-wrap group-hover/header:text-amber-200 transition-colors">
-                        <span>{kid.name}</span>
-                        <Lock className="w-3.5 h-3.5 text-white/50 group-hover/header:text-amber-300" />
-                        {isMvp && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 font-black text-xs shadow-md tracking-wider uppercase border border-amber-300">
-                            👑 MVP
-                          </span>
-                        )}
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-1.5 flex-wrap group-hover/header:text-amber-200 transition-colors">
+                        <span className="truncate">{kid.name}</span>
+                        <Lock className="w-3.5 h-3.5 text-white/50 shrink-0 group-hover/header:text-amber-300" />
                         {isAllDone && (
-                          <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500 text-white font-extrabold animate-bounce">
-                            All Done! 🎉
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500 text-white font-extrabold animate-bounce shrink-0">
+                            Done! 🎉
                           </span>
                         )}
                       </h2>
                       <div className="flex items-center gap-2 text-xs font-bold text-white/80 mt-0.5">
-                        <span>{level.icon} {level.title}</span>
-                        <span className="text-[10px] text-amber-300 font-extrabold underline opacity-0 group-hover/header:opacity-100 transition-opacity">
+                        <span className="truncate">{level.icon} {level.title}</span>
+                        <span className="text-[10px] text-amber-300 font-extrabold underline opacity-0 group-hover/header:opacity-100 transition-opacity shrink-0">
                           Enter PIN
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5 shrink-0">
-                    <div className="text-right">
+                  {/* Kid Card Action Menu - Top Right, High Contrast, Prominent & Uncut on Tablets */}
+                  <div onClick={(e) => e.stopPropagation()} className="shrink-0 relative z-20">
+                    <ActionMenu
+                      id={`kiosk-menu-kid-${kid.id}`}
+                      label="Menu"
+                      align="right"
+                      buttonClassName="min-h-[44px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 active:bg-white/35 text-white border border-white/30 font-black text-xs transition-all shadow-md cursor-pointer active:scale-95"
+                      menuClassName="w-60 shadow-2xl z-50"
+                      items={[
+                        {
+                          id: 'enter',
+                          label: '🎮 Enter Profile & Play',
+                          variant: 'primary',
+                          onClick: () => {
+                            setSelectedKidForPin(kid);
+                          },
+                        },
+                        {
+                          id: 'avatar',
+                          label: '🎨 Change Avatar & Color',
+                          onClick: () => setEditingAvatarKid(kid),
+                        },
+                        {
+                          id: 'rewards',
+                          label: '🎁 Rewards Store',
+                          onClick: () => {
+                            setRewardStoreKid(kid);
+                            setIsRewardStoreOpen(true);
+                          },
+                        },
+                        {
+                          id: 'snack_request',
+                          label: '🍪 Kids Grocery & Snack Request',
+                          variant: 'primary',
+                          onClick: () => {
+                            setSnackKid(kid);
+                            setIsSnackModalOpen(true);
+                          },
+                        },
+                        {
+                          id: 'goal',
+                          label: '🏆 Family Team Goal',
+                          onClick: () => setIsGoalModalOpen(true),
+                        },
+                        {
+                          id: 'parent',
+                          label: '🛡️ Exit Kiosk (Parent PIN)',
+                          onClick: () => setIsExitPinOpen(true),
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
+
+                {/* Dedicated Stats & Missions Progress Header */}
+                <div className="my-3">
+                  <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                    {/* Points & Streak Badges */}
+                    <div className="flex items-center gap-2 shrink-0">
                       <div
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black shadow-xs ${
                           isMvp
                             ? 'bg-amber-400 text-slate-950 shadow-md ring-1 ring-amber-300'
                             : `${theme.kioskFooterPillSecondaryBg} ${theme.kioskFooterPillSecondaryText}`
@@ -546,73 +579,22 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         <Star className={`w-3.5 h-3.5 ${isMvp ? 'fill-slate-950 text-slate-950' : 'fill-amber-400 text-amber-400'}`} />
                         <span>{kid.stars} Pts</span>
                       </div>
-                      <div className="flex items-center justify-end gap-1 text-[11px] font-black text-amber-400 mt-1">
+                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black text-amber-300 bg-amber-500/20 border border-amber-400/30">
                         <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                        <span>{kid.streakDays} Day Streak</span>
+                        <span>{kid.streakDays}d Streak</span>
                       </div>
                     </div>
 
-                    {/* Kid Card Action Menu on Kiosk Screen */}
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <ActionMenu
-                        id={`kiosk-menu-kid-${kid.id}`}
-                        label="Menu"
-                        buttonClassName="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-black text-xs transition-all shadow-xs cursor-pointer active:scale-95"
-                        items={[
-                          {
-                            id: 'enter',
-                            label: '🎮 Enter Profile & Play',
-                            variant: 'primary',
-                            onClick: () => {
-                              setSelectedKidForPin(kid);
-                            },
-                          },
-                          {
-                            id: 'avatar',
-                            label: '🎨 Change Avatar & Color',
-                            onClick: () => setEditingAvatarKid(kid),
-                          },
-                          {
-                            id: 'rewards',
-                            label: '🎁 Rewards Store',
-                            onClick: () => {
-                              setRewardStoreKid(kid);
-                              setIsRewardStoreOpen(true);
-                            },
-                          },
-                          {
-                            id: 'snack_request',
-                            label: '🍪 Kids Grocery & Snack Request',
-                            variant: 'primary',
-                            onClick: () => {
-                              setSnackKid(kid);
-                              setIsSnackModalOpen(true);
-                            },
-                          },
-                          {
-                            id: 'goal',
-                            label: '🏆 Family Team Goal',
-                            onClick: () => setIsGoalModalOpen(true),
-                          },
-                          {
-                            id: 'parent',
-                            label: '🛡️ Exit Kiosk (Parent PIN)',
-                            onClick: () => setIsExitPinOpen(true),
-                          },
-                        ]}
-                      />
+                    {/* Today's Missions Count */}
+                    <div className="text-xs font-black text-white/90 shrink-0">
+                      <span className="text-white/70 mr-1.5">Missions:</span>
+                      <span className={isAllDone ? 'text-emerald-400 font-extrabold' : 'text-white'}>
+                        {completedCount} / {totalChores} ({percent}%)
+                      </span>
                     </div>
                   </div>
-                </div>
 
-                {/* Progress Bar */}
-                <div className="my-3">
-                  <div className="flex items-center justify-between text-xs font-black text-white/80 mb-1.5">
-                    <span>Today's Missions</span>
-                    <span className={isAllDone ? 'text-emerald-400 font-extrabold' : 'text-white'}>
-                      {completedCount} / {totalChores} ({percent}%)
-                    </span>
-                  </div>
+                  {/* Progress Bar */}
                   <div className="w-full h-3.5 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/10">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${

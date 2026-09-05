@@ -178,53 +178,42 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
 
           {/* Mini Action Badges: Chore Roulette Button, Snack Request & Progress Count */}
-          <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-center flex-wrap justify-end">
-            {onOpenSnackRequest && (
+          <div className="flex items-center gap-2.5 sm:gap-4 self-stretch sm:self-center flex-wrap sm:flex-nowrap justify-between sm:justify-end shrink-0">
+            <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+              {onOpenSnackRequest && (
+                <button
+                  onClick={() => {
+                    sound.playTap();
+                    onOpenSnackRequest(kid);
+                  }}
+                  className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
+                  title="Spend your stars to request delicious snacks & treats!"
+                >
+                  <span>🍪 Snacks ({kid.stars}⭐)</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   sound.playTap();
-                  onOpenSnackRequest(kid);
+                  setIsWheelOpen(true);
                 }}
-                className="px-3.5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
-                title="Spend your stars to request delicious snacks & treats!"
+                className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-pink-500 hover:from-amber-500 hover:to-pink-600 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer shrink-0"
+                title="Spin the Chore Wheel for a surprise mission!"
               >
-                <span>🍪 Snacks ({kid.stars}⭐)</span>
+                <RotateCw className="w-4 h-4" />
+                <span>Chore Roulette 🎡</span>
               </button>
-            )}
+            </div>
 
-            <button
-              onClick={() => {
-                sound.playTap();
-                setIsWheelOpen(true);
-              }}
-              className="px-3.5 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-pink-500 hover:from-amber-500 hover:to-pink-600 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
-              title="Spin the Chore Wheel for a surprise mission!"
-            >
-              <RotateCw className="w-4 h-4" />
-              <span>Chore Roulette 🎡</span>
-            </button>
-
-            {onReturnToKiosk && (
-              <button
-                id="btn-kid-return-to-kiosk-top"
-                onClick={() => {
-                  sound.playTap();
-                  onReturnToKiosk();
-                }}
-                className="min-h-[48px] px-4 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer border-2 border-amber-500 shrink-0"
-                title="Finish up and return to Kiosk screen"
-              >
-                <Home className="w-4 h-4 text-slate-950" />
-                <span>Done / Return to Kiosk</span>
-              </button>
-            )}
-
-            <div className="text-right pl-2">
-              <div className="text-2xl sm:text-3xl font-black text-indigo-950">
-                {completedTasksCount}/{totalTasksCount}
-              </div>
-              <div className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                Completed
+            <div className="flex items-center gap-3 pl-3 sm:pl-4 border-l border-slate-200 dark:border-slate-700/60 text-right shrink-0">
+              <div>
+                <div className="text-2xl sm:text-3xl font-black text-indigo-950 dark:text-white leading-none">
+                  {completedTasksCount}/{totalTasksCount}
+                </div>
+                <div className="text-[10px] sm:text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider mt-1">
+                  Completed
+                </div>
               </div>
             </div>
           </div>

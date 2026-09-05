@@ -48,17 +48,60 @@
   scrollbar-width: none;
 }
 
-/* Ensure inputs always have high-contrast text and explicit colors across all mobile browsers */
+/* Ensure inputs always have high-contrast text and explicit colors across all mobile browsers and themes */
 input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
 textarea,
 select {
-  color: #0f172a !important;
+  color: #0f172a;
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+.dark textarea,
+.dark select {
+  color: #f8fafc;
+}
+
+/* Explicit class-level overrides when Tailwind dark/light text colors are specified */
+input[class*="text-slate-900"],
+textarea[class*="text-slate-900"],
+select[class*="text-slate-900"],
+input[class*="text-slate-800"],
+textarea[class*="text-slate-800"],
+select[class*="text-slate-800"] {
+  color: #0f172a;
+}
+
+.dark input[class*="dark:text-white"],
+.dark textarea[class*="dark:text-white"],
+.dark select[class*="dark:text-white"],
+input[class*="text-white"],
+textarea[class*="text-white"],
+select[class*="text-white"] {
+  color: #ffffff;
+}
+
+.dark input[class*="dark:text-slate-100"],
+.dark textarea[class*="dark:text-slate-100"],
+.dark select[class*="dark:text-slate-100"] {
+  color: #f1f5f9;
+}
+
+.dark input[class*="dark:text-slate-200"],
+.dark textarea[class*="dark:text-slate-200"],
+.dark select[class*="dark:text-slate-200"] {
+  color: #e2e8f0;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #94a3b8 !important;
-  opacity: 1 !important;
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+  opacity: 1;
 }
 
 /* Printable Guide Styles */

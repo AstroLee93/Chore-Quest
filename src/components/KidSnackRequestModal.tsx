@@ -81,6 +81,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
   // Admin star cost editing modal state
   const [editingRequestStarCost, setEditingRequestStarCost] = useState<GroceryRequest | null>(null);
   const [newStarCostInput, setNewStarCostInput] = useState<number>(0);
+  const [newImportanceInput, setNewImportanceInput] = useState<GroceryImportance>('treat');
 
   // Admin denial state
   const [denyingRequest, setDenyingRequest] = useState<GroceryRequest | null>(null);
@@ -114,13 +115,16 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
   // Calculate current item star cost
   const currentStarCost = useMemo(() => {
     if (isCustomMode) {
+      if (!isParentMode) {
+        return 0; // Kids do not set expense rating; star tier is determined by Admin
+      }
       return getStarCostForImportance(customImportance, database.settings);
     }
     if (selectedPreset) {
       return getSnackItemStarCost(selectedPreset, database.settings);
     }
     return 0;
-  }, [isCustomMode, customImportance, selectedPreset, database.settings]);
+  }, [isCustomMode, isParentMode, customImportance, selectedPreset, database.settings]);
 
   // Filter catalog
   const filteredCatalog = useMemo(() => {
@@ -146,6 +150,64 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
   ) => {
     if (!activeKid) {
       showToast('Please choose a child profile first.', 'error');
+      return;
+    }
+
+    // Special flow: Kid requesting a custom snack item
+    // Only Admins have access to determine the expense rating & star cost
+    if (isCustomMode && !isParentMode) {
+      sound.playRewardRedeemed();
+
+      const newRequest: GroceryRequest = {
+        id: `snack-req-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: itemName,
+        quantity: quantity || '1',
+        category: 'snacks',
+        importance: 'treat', // placeholder until Admin determines expense rating
+        starCost: 0,
+        originalStarCost: 0,
+        starsDeducted: false,
+        needsAdminRating: true,
+        notes: notes || undefined,
+        kidId: activeKid.id,
+        kidName: activeKid.name,
+        kidAvatar: activeKid.avatar || '⭐',
+        status: 'pending',
+        createdAt: getTodayDateString(),
+      };
+
+      const updatedGroceryList: WeeklyGroceryList = {
+        ...groceryList,
+        requests: [newRequest, ...allRequests],
+        lastUpdated: new Date().toISOString(),
+      };
+
+      onUpdateDatabase({
+        ...database,
+        weeklyGroceryList: updatedGroceryList,
+      });
+
+      confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+      if (onPostActionComplete) {
+        showToast(
+          `🎉 Custom request for "${itemName}" submitted! Mom & Dad will review and set the star rating. Returning...`,
+          'success'
+        );
+        setTimeout(() => {
+          onPostActionComplete();
+        }, 1200);
+      } else {
+        showToast(
+          `🎉 Custom request for "${itemName}" sent! Mom & Dad will assign the expense rating and review it.`,
+          'success'
+        );
+      }
+
+      setSelectedPreset(null);
+      setIsCustomMode(false);
+      setCustomName('');
+      setCustomNotes('');
+      setActiveTab('my_requests');
       return;
     }
 
@@ -178,6 +240,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
       starCost: starCost,
       originalStarCost: starCost,
       starsDeducted: true,
+      needsAdminRating: false,
       notes: notes || undefined,
       kidId: activeKid.id,
       kidName: activeKid.name,
@@ -255,9 +318,23 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
     showToast(`Cancelled request for "${req.name}". ${req.starCost || 0} ⭐ refunded back to ${req.kidName}!`, 'info');
   };
 
-  // 3. Admin Approve Request (Adds to weekly shopping list, stars remain spent)
+  // 3. Admin Approve Request (Adds to weekly shopping list, stars remain spent or deducted)
   const handleAdminApprove = (req: GroceryRequest) => {
     sound.playRewardRedeemed();
+
+    let updatedKids = database.kids;
+    // If stars were not deducted yet and there is a starCost, deduct them upon approval
+    if (!req.starsDeducted && (req.starCost || 0) > 0) {
+      updatedKids = database.kids.map((k) => {
+        if (k.id === req.kidId) {
+          return {
+            ...k,
+            stars: Math.max(0, k.stars - (req.starCost || 0)),
+          };
+        }
+        return k;
+      });
+    }
 
     const newItem: GroceryItem = {
       id: `g-snack-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -266,7 +343,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
       quantity: req.quantity || '1',
       importance: req.importance || 'treat',
       acquired: false,
-      addedBy: `${req.kidName} ${req.kidAvatar || '⭐'} (${req.starCost || 0}⭐ Paid)`,
+      addedBy: `${req.kidName} ${req.kidAvatar || '⭐'} (${req.starCost || 0}⭐ ${req.starCost ? 'Paid' : 'Approved'})`,
       notes: req.notes,
       createdAt: getTodayDateString(),
     };
@@ -276,6 +353,8 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
         return {
           ...r,
           status: 'approved' as const,
+          starsDeducted: true,
+          needsAdminRating: false,
           reviewedBy: isParentMode ? 'Mom & Dad' : 'Admin',
           reviewedAt: new Date().toISOString(),
         };
@@ -285,6 +364,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
 
     onUpdateDatabase({
       ...database,
+      kids: updatedKids,
       weeklyGroceryList: {
         ...groceryList,
         items: [newItem, ...(groceryList.items || [])],
@@ -297,7 +377,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
     showToast(`✅ Approved "${req.name}"! Added to weekly family grocery list.`, 'success');
   };
 
-  // 4. Admin Deny Request (Refunds stars back to kid)
+  // 4. Admin Deny Request (Refunds stars back to kid if already deducted)
   const handleAdminConfirmDenial = () => {
     if (!denyingRequest) return;
     sound.playTap();
@@ -339,14 +419,47 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
     });
 
     showToast(
-      `Denied request for "${denyingRequest.name}". ${starRefund} ⭐ refunded to ${denyingRequest.kidName}!`,
+      `Denied request for "${denyingRequest.name}". ${starRefund > 0 && denyingRequest.starsDeducted ? `${starRefund} ⭐ refunded to ${denyingRequest.kidName}!` : ''}`,
       'info'
     );
     setDenyingRequest(null);
     setDenyReasonText('');
   };
 
-  // 5. Admin Edit Star Cost Required for a Request (adjusts kid star balance accordingly)
+  // 5. Admin Quick Rate Tier for Request
+  const handleAdminQuickRate = (req: GroceryRequest, importance: GroceryImportance) => {
+    sound.playTap();
+    const newCost = getStarCostForImportance(importance, database.settings);
+    const updatedRequests = allRequests.map((r) => {
+      if (r.id === req.id) {
+        return {
+          ...r,
+          importance,
+          starCost: newCost,
+          originalStarCost: newCost,
+          adminEditedStars: true,
+          needsAdminRating: false,
+        };
+      }
+      return r;
+    });
+
+    onUpdateDatabase({
+      ...database,
+      weeklyGroceryList: {
+        ...groceryList,
+        requests: updatedRequests,
+        lastUpdated: new Date().toISOString(),
+      },
+    });
+
+    showToast(
+      `Set "${req.name}" to ${importance.toUpperCase()} tier (${newCost} ⭐)!`,
+      'success'
+    );
+  };
+
+  // 6. Admin Edit Star Cost & Tier Required for a Request (adjusts kid star balance accordingly)
   const handleSaveEditedStarCost = () => {
     if (!editingRequestStarCost) return;
     const oldCost = editingRequestStarCost.starCost || 0;
@@ -372,8 +485,10 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
       if (r.id === editingRequestStarCost.id) {
         return {
           ...r,
+          importance: newImportanceInput,
           starCost: newCost,
           adminEditedStars: true,
+          needsAdminRating: false,
         };
       }
       return r;
@@ -390,12 +505,14 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
     });
 
     showToast(
-      `Updated star cost for "${editingRequestStarCost.name}" to ${newCost} ⭐! ${
-        starDiff < 0
-          ? `${Math.abs(starDiff)} ⭐ refunded to ${editingRequestStarCost.kidName}.`
-          : starDiff > 0
-          ? `${starDiff} ⭐ additional deducted from ${editingRequestStarCost.kidName}.`
-          : 'No balance change.'
+      `Updated "${editingRequestStarCost.name}" to ${newImportanceInput.toUpperCase()} tier (${newCost} ⭐)! ${
+        editingRequestStarCost.starsDeducted
+          ? starDiff < 0
+            ? `${Math.abs(starDiff)} ⭐ refunded to ${editingRequestStarCost.kidName}.`
+            : starDiff > 0
+            ? `${starDiff} ⭐ additional deducted from ${editingRequestStarCost.kidName}.`
+            : 'No balance change.'
+          : 'Stars will be deducted upon approval.'
       }`,
       'success'
     );
@@ -638,7 +755,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                     placeholder="Search snacks..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full sm:w-44 pl-7 pr-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200"
+                    className="w-full sm:w-44 pl-7 pr-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
                   />
                 </div>
               </div>
@@ -653,15 +770,15 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                     </h3>
                     <button
                       onClick={() => setIsCustomMode(false)}
-                      className="text-xs font-black text-slate-400 hover:text-slate-600 cursor-pointer"
+                      className="text-xs font-black text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
                     >
                       Back to Catalog
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
                     <div className="sm:col-span-6">
-                      <label className="block text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 mb-0.5">
+                      <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
                         Item Name:
                       </label>
                       <input
@@ -669,13 +786,13 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                         placeholder="e.g. Takis Fuego, Chocolate Croissants, Blueberry Bagels..."
                         value={customName}
                         onChange={(e) => setCustomName(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-xs sm:text-sm font-black text-slate-900 dark:text-white"
+                        className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs sm:text-sm font-black text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 focus:outline-none transition-all shadow-2xs"
                         autoFocus
                       />
                     </div>
 
                     <div className="sm:col-span-3">
-                      <label className="block text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 mb-0.5">
+                      <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
                         Quantity:
                       </label>
                       <input
@@ -683,29 +800,55 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                         placeholder="e.g. 1 bag, 2 boxes"
                         value={customQty}
                         onChange={(e) => setCustomQty(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
+                        className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 focus:outline-none transition-all shadow-2xs"
                       />
                     </div>
 
                     <div className="sm:col-span-3">
-                      <label className="block text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 mb-0.5">
-                        Expense Rating / Tier:
-                      </label>
-                      <select
-                        value={customImportance}
-                        onChange={(e) => setCustomImportance(e.target.value as GroceryImportance)}
-                        className="w-full px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-xs font-black text-slate-900 dark:text-white"
-                      >
-                        <option value="staple">🍏 Healthy Snack ({getStarCostForImportance('staple', database.settings)}⭐)</option>
-                        <option value="common">📦 Everyday Snack ({getStarCostForImportance('common', database.settings)}⭐)</option>
-                        <option value="treat">🍪 Sweet Treat ({getStarCostForImportance('treat', database.settings)}⭐)</option>
-                        <option value="luxury">👑 Luxury / Gourmet ({getStarCostForImportance('luxury', database.settings)}⭐)</option>
-                      </select>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300">
+                          Expense Rating / Tier:
+                        </label>
+                        {isParentMode && (
+                          <span className="text-[9px] font-black text-purple-600 dark:text-purple-400 uppercase">
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                      {isParentMode ? (
+                        <select
+                          value={customImportance}
+                          onChange={(e) => setCustomImportance(e.target.value as GroceryImportance)}
+                          className="w-full px-2.5 py-2 rounded-xl border-2 border-purple-300 dark:border-purple-600 bg-white dark:bg-slate-900 text-xs font-black text-slate-900 dark:text-white focus:border-purple-500 focus:outline-none cursor-pointer shadow-2xs"
+                        >
+                          <option value="staple" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">🍏 Healthy ({getStarCostForImportance('staple', database.settings)}⭐)</option>
+                          <option value="common" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">📦 Everyday ({getStarCostForImportance('common', database.settings)}⭐)</option>
+                          <option value="treat" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">🍪 Sweet Treat ({getStarCostForImportance('treat', database.settings)}⭐)</option>
+                          <option value="luxury" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">👑 Luxury ({getStarCostForImportance('luxury', database.settings)}⭐)</option>
+                        </select>
+                      ) : (
+                        <div>
+                          <div className="w-full px-2.5 py-2 rounded-xl border-2 border-purple-200 dark:border-purple-800/80 bg-purple-50 dark:bg-purple-950/40 flex items-center justify-between gap-1 shadow-2xs">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Shield className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
+                              <span className="text-[11px] font-black text-purple-950 dark:text-purple-200 truncate">
+                                Set by Admin
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-purple-200 dark:bg-purple-900 text-purple-900 dark:text-purple-200 shrink-0">
+                              Admin Only
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-purple-700 dark:text-purple-400 font-bold mt-1">
+                            Mom & Dad determine the expense rating upon review.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 mb-0.5">
+                    <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
                       Why do you want it? (Optional note for Mom & Dad):
                     </label>
                     <input
@@ -713,7 +856,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                       placeholder="e.g. For Friday movie night treat, lunchbox snack..."
                       value={customNotes}
                       onChange={(e) => setCustomNotes(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-xs text-slate-800 dark:text-slate-200"
+                      className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 focus:outline-none transition-all shadow-2xs"
                     />
                   </div>
                 </div>
@@ -796,13 +939,15 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                       </div>
                       <div className="flex items-center gap-2 text-xs mt-0.5">
                         <span className="font-black text-amber-900 dark:text-amber-300">
-                          Cost: {currentStarCost} ⭐
+                          {isCustomMode && !isParentMode
+                            ? '🛡️ Tier set by Admin upon review (0⭐ upfront)'
+                            : `Cost: ${currentStarCost} ⭐`}
                         </span>
                         <span className="text-slate-400">•</span>
                         <span className="font-bold text-slate-600 dark:text-slate-300">
                           {activeKid?.name}'s Balance: {activeKid?.stars || 0} ⭐
                         </span>
-                        {activeKid && activeKid.stars >= currentStarCost && (
+                        {activeKid && (!isCustomMode || isParentMode) && activeKid.stars >= currentStarCost && currentStarCost > 0 && (
                           <>
                             <span className="text-slate-400">•</span>
                             <span className="font-bold text-emerald-700 dark:text-emerald-400">
@@ -814,7 +959,24 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                     </div>
                   </div>
 
-                  {activeKid && activeKid.stars >= currentStarCost ? (
+                  {/* Submission Buttons */}
+                  {isCustomMode && !isParentMode ? (
+                    <button
+                      onClick={() => {
+                        handlePayAndSubmitRequest(
+                          customName.trim(),
+                          customQty.trim() || '1 box',
+                          'treat',
+                          0,
+                          customNotes.trim()
+                        );
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>Send Custom Request for Admin Review 🚀</span>
+                    </button>
+                  ) : activeKid && activeKid.stars >= currentStarCost ? (
                     <button
                       onClick={() => {
                         if (isCustomMode) {
@@ -838,7 +1000,11 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                       className="px-5 py-2.5 rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
                     >
                       <Sparkles className="w-4 h-4 text-amber-300" />
-                      <span>Pay {currentStarCost} ⭐ & Request Snack!</span>
+                      <span>
+                        {isCustomMode
+                          ? `Add Custom Snack (${currentStarCost} ⭐)`
+                          : `Pay ${currentStarCost} ⭐ & Request Snack!`}
+                      </span>
                     </button>
                   ) : (
                     <div className="flex items-center gap-2 shrink-0">
@@ -941,25 +1107,33 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                         )}
 
                         {/* STATUS BADGE & ADMIN / KID ACTIONS */}
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700">
-                          {isPending && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                              <Clock className="w-2.5 h-2.5 animate-spin" />
-                              Pending Review
-                            </span>
-                          )}
-                          {isApproved && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
-                              <Check className="w-2.5 h-2.5" />
-                              Approved on Grocery List!
-                            </span>
-                          )}
-                          {isDenied && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-900 border border-rose-300">
-                              <X className="w-2.5 h-2.5" />
-                              Denied • Stars Refunded
-                            </span>
-                          )}
+                        <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-700">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {req.needsAdminRating && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-900 dark:text-purple-200 border border-purple-300 dark:border-purple-700">
+                                <Shield className="w-2.5 h-2.5" />
+                                Needs Admin Rating
+                              </span>
+                            )}
+                            {isPending && !req.needsAdminRating && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                                <Clock className="w-2.5 h-2.5 animate-spin" />
+                                Pending Review
+                              </span>
+                            )}
+                            {isApproved && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                <Check className="w-2.5 h-2.5" />
+                                Approved on Grocery List!
+                              </span>
+                            )}
+                            {isDenied && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-900 border border-rose-300">
+                                <X className="w-2.5 h-2.5" />
+                                Denied
+                              </span>
+                            )}
+                          </div>
 
                           <div className="flex items-center gap-1.5">
                             {/* Kid action: Cancel pending request and refund stars */}
@@ -969,23 +1143,24 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                                 className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-[10px] flex items-center gap-1 cursor-pointer"
                               >
                                 <RotateCcw className="w-2.5 h-2.5" />
-                                <span>Cancel & Refund {req.starCost}⭐</span>
+                                <span>Cancel{req.starsDeducted && (req.starCost || 0) > 0 ? ` & Refund ${req.starCost}⭐` : ''}</span>
                               </button>
                             )}
 
-                            {/* Admin actions: Edit star cost, Approve, Deny */}
+                            {/* Admin actions: Edit tier/stars, Approve, Deny */}
                             {isParentMode && (
                               <>
                                 <button
                                   onClick={() => {
                                     setEditingRequestStarCost(req);
                                     setNewStarCostInput(req.starCost || 0);
+                                    setNewImportanceInput(req.importance || 'treat');
                                   }}
                                   className="px-2 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 font-black text-[10px] flex items-center gap-1 cursor-pointer border border-purple-300"
-                                  title="Edit required stars for this request"
+                                  title="Admin: Set expense tier and stars required"
                                 >
                                   <Edit2 className="w-2.5 h-2.5" />
-                                  <span>Edit Stars</span>
+                                  <span>{req.needsAdminRating ? 'Set Tier & Stars' : 'Edit Stars'}</span>
                                 </button>
 
                                 {isPending && (
@@ -1013,6 +1188,26 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                             )}
                           </div>
                         </div>
+
+                        {/* Admin Quick Tier Setter if needsAdminRating */}
+                        {isParentMode && req.needsAdminRating && (
+                          <div className="pt-1.5 pb-0.5 border-t border-purple-100 dark:border-purple-900 flex items-center gap-1">
+                            <span className="text-[9px] font-black text-purple-700 dark:text-purple-300 uppercase shrink-0">
+                              Quick Tier:
+                            </span>
+                            <div className="flex items-center gap-1 overflow-x-auto">
+                              {(['staple', 'common', 'treat', 'luxury'] as const).map((tier) => (
+                                <button
+                                  key={tier}
+                                  onClick={() => handleAdminQuickRate(req, tier)}
+                                  className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-purple-50 hover:bg-purple-200 text-purple-800 border border-purple-200 cursor-pointer whitespace-nowrap"
+                                >
+                                  {tier} ({getStarCostForImportance(tier, database.settings)}⭐)
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1125,7 +1320,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
                   <Edit2 className="w-4 h-4 text-purple-600" />
-                  <span>Edit Star Requirement</span>
+                  <span>Admin: Set Expense Rating & Stars</span>
                 </h3>
                 <button
                   onClick={() => setEditingRequestStarCost(null)}
@@ -1136,9 +1331,29 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
               </div>
 
               <p className="text-xs text-slate-500 font-medium">
-                Adjust required stars for <strong>{editingRequestStarCost.name}</strong> requested by{' '}
+                Set the expense rating tier and required stars for <strong>{editingRequestStarCost.name}</strong> requested by{' '}
                 <strong>{editingRequestStarCost.kidName}</strong>.
               </p>
+
+              <div>
+                <label className="block text-xs font-black text-slate-700 dark:text-slate-300 uppercase mb-1">
+                  Expense Rating / Tier:
+                </label>
+                <select
+                  value={newImportanceInput}
+                  onChange={(e) => {
+                    const imp = e.target.value as GroceryImportance;
+                    setNewImportanceInput(imp);
+                    setNewStarCostInput(getStarCostForImportance(imp, database.settings));
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border-2 border-purple-300 dark:border-purple-600 bg-white dark:bg-slate-900 font-black text-xs text-slate-900 dark:text-white focus:border-purple-500 focus:outline-none cursor-pointer"
+                >
+                  <option value="staple" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">🍏 Healthy Snack ({getStarCostForImportance('staple', database.settings)}⭐)</option>
+                  <option value="common" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">📦 Everyday Snack ({getStarCostForImportance('common', database.settings)}⭐)</option>
+                  <option value="treat" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">🍪 Sweet Treat ({getStarCostForImportance('treat', database.settings)}⭐)</option>
+                  <option value="luxury" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">👑 Luxury / Gourmet ({getStarCostForImportance('luxury', database.settings)}⭐)</option>
+                </select>
+              </div>
 
               <div>
                 <label className="block text-xs font-black text-slate-700 dark:text-slate-300 uppercase mb-1">
@@ -1150,11 +1365,13 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                   max={200}
                   value={newStarCostInput}
                   onChange={(e) => setNewStarCostInput(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl border-2 border-purple-300 bg-white dark:bg-slate-900 font-black text-base text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 rounded-xl border-2 border-purple-300 dark:border-purple-600 bg-white dark:bg-slate-900 font-black text-base text-slate-900 dark:text-white focus:border-purple-500 focus:outline-none"
                   autoFocus
                 />
                 <span className="text-[10px] text-slate-400 font-bold block mt-1">
-                  Kid's star balance will be automatically adjusted to match the difference.
+                  {editingRequestStarCost.starsDeducted
+                    ? "Kid's star balance will be automatically adjusted for the difference."
+                    : "Stars will be deducted from kid upon approval."}
                 </span>
               </div>
 

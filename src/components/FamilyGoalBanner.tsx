@@ -1,5 +1,5 @@
 import React from 'react';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 import { FamilyDatabase } from '../types';
 import { getFamilyWeeklyGoalProgress } from '../utils/storage';
 import { sound } from '../utils/sound';
@@ -29,11 +29,9 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
   const handleCelebrate = (e: React.MouseEvent) => {
     e.stopPropagation();
     sound.playLevelUp();
-    confetti({
-      particleCount: 80,
-      spread: 90,
+    fireConfetti({
       origin: { y: 0.5 },
-      colors: ['#f59e0b', '#ec4899', '#3b82f6', '#10b981'],
+      mode: 'celebration',
     });
   };
 

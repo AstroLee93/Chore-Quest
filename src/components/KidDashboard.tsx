@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { KidProfile, ChoreItem, ChoreCategory, ChoreLog, AppSettings, RewardItem, CalendarEvent, FamilyDatabase } from '../types';
 import { ChoreCard } from './ChoreCard';
 import { SkipReasonModal } from './SkipReasonModal';

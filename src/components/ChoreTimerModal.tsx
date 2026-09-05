@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Plus, Check, X, Bell, Sparkles, Volume2 } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 import { ChoreItem } from '../types';
 import { sound } from '../utils/sound';
 
@@ -60,11 +60,9 @@ export const ChoreTimerModal: React.FC<ChoreTimerModalProps> = ({
             sound.playChoreComplete();
             sound.playFanfare();
 
-            confetti({
-              particleCount: 70,
-              spread: 80,
+            fireConfetti({
               origin: { y: 0.6 },
-              colors: ['#3b82f6', '#ec4899', '#10b981', '#f59e0b'],
+              mode: 'celebration',
             });
             return 0;
           }

@@ -3,7 +3,7 @@ import { X, Sparkles, Check, Smile } from 'lucide-react';
 import { KidProfile, FamilyDatabase } from '../types';
 import { EmojiPicker } from './EmojiPicker';
 import { sound } from '../utils/sound';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 
 interface KidAvatarModalProps {
   isOpen: boolean;
@@ -40,10 +40,9 @@ export const KidAvatarModal: React.FC<KidAvatarModalProps> = ({
 
   const handleSave = () => {
     sound.playLevelUp();
-    confetti({
-      particleCount: 60,
-      spread: 70,
+    fireConfetti({
       origin: { y: 0.6 },
+      mode: 'snappy',
     });
 
     const updatedKids = database.kids.map((k) => {

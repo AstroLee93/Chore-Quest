@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Star, X, Gift, Check, Clock, Sparkles, Award, ShoppingBag, AlertCircle } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 import { KidProfile, RewardItem, RewardRedemption, AppSettings } from '../types';
 import { sound } from '../utils/sound';
 
@@ -37,11 +37,9 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
   const handleConfirmRedeem = (reward: RewardItem) => {
     if (activeKid.stars < reward.starCost) return;
 
-    confetti({
-      particleCount: 70,
-      spread: 80,
+    fireConfetti({
       origin: { y: 0.6 },
-      colors: ['#3b82f6', '#ec4899', '#f59e0b', '#10b981'],
+      mode: 'celebration',
     });
 
     sound.playRewardRedeemed();

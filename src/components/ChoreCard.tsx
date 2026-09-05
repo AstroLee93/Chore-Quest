@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Check, Clock, AlertTriangle, Undo2, Star, HelpCircle, Sun, Moon, Sparkles, ChevronRight, Play, CheckSquare, Square, Target, Timer, Lock } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 import { ChoreItem, ChoreLog, ChoreCategory } from '../types';
 import { sound } from '../utils/sound';
 import { ActionMenu } from './ActionMenu';
@@ -69,12 +69,10 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
     const x = (rect.left + rect.width / 2) / window.innerWidth;
     const y = (rect.top + rect.height / 2) / window.innerHeight;
 
-    confetti({
-      particleCount: 45,
-      spread: 60,
+    fireConfetti({
       origin: { x, y },
-      colors: ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6'],
-      ticks: 180,
+      spread: 50,
+      mode: 'snappy',
     });
 
     sound.playChoreComplete();

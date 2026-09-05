@@ -38,7 +38,7 @@ import {
 import { CalendarEvent, CalendarEventCategory, FamilyDatabase, KidProfile } from '../../types';
 import { EVENT_CATEGORIES } from '../../utils/calendar';
 import { sound } from '../../utils/sound';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../../utils/confetti';
 
 interface GoogleCalendarImportModalProps {
   isOpen: boolean;
@@ -388,7 +388,7 @@ export const GoogleCalendarImportModal: React.FC<GoogleCalendarImportModalProps>
     if (toImport.length === 0) return;
 
     sound.playLevelUp();
-    confetti({ particleCount: 75, spread: 70, origin: { y: 0.6 } });
+    fireConfetti({ mode: 'snappy' });
 
     const existingMap = new Map<string, CalendarEvent>((database.events || []).map((e) => [e.id, e]));
     toImport.forEach((evt) => existingMap.set(evt.id, evt));

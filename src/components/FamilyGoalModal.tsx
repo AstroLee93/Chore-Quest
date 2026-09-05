@@ -19,7 +19,7 @@ import {
   Calendar,
   Compass,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 import { FamilyDatabase, FamilyGoal } from '../types';
 import {
   DEFAULT_FAMILY_GOAL_PRESETS,
@@ -145,11 +145,9 @@ export const FamilyGoalModal: React.FC<FamilyGoalModalProps> = ({
   ) => {
     requireAdminAction(() => {
       sound.playStarEarned();
-      confetti({
-        particleCount: 60,
-        spread: 80,
+      fireConfetti({
         origin: { y: 0.5 },
-        colors: ['#f59e0b', '#ec4899', '#3b82f6', '#10b981'],
+        mode: 'snappy',
       });
 
       const updatedGoal: FamilyGoal = {
@@ -187,11 +185,9 @@ export const FamilyGoalModal: React.FC<FamilyGoalModalProps> = ({
 
     requireAdminAction(() => {
       sound.playStarEarned();
-      confetti({
-        particleCount: 75,
-        spread: 85,
+      fireConfetti({
         origin: { y: 0.5 },
-        colors: ['#f59e0b', '#ec4899', '#3b82f6', '#10b981'],
+        mode: 'snappy',
       });
 
       const newGoalId = `custom-goal-${Date.now()}`;
@@ -277,11 +273,9 @@ export const FamilyGoalModal: React.FC<FamilyGoalModalProps> = ({
 
   const handleCelebrate = () => {
     sound.playLevelUp();
-    confetti({
-      particleCount: 100,
-      spread: 100,
+    fireConfetti({
       origin: { y: 0.4 },
-      colors: ['#f59e0b', '#ec4899', '#3b82f6', '#10b981', '#a855f7'],
+      mode: 'celebration',
     });
   };
 

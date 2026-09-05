@@ -37,7 +37,7 @@ import {
   MessageSquare,
   FlameKindling,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 import {
   FamilyDatabase,
   KidProfile,
@@ -289,11 +289,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     const acquiredCount = updatedItems.filter((i) => i.acquired).length;
     if (willBeAcquired && totalCount > 0 && acquiredCount === totalCount) {
       sound.playRewardRedeemed();
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 },
-      });
+      fireConfetti({ mode: 'celebration' });
       showToast('🎉 All groceries acquired! Shopping trip complete!');
     }
 
@@ -427,7 +423,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     handleUpdateGroceryList(updatedList);
 
     if (importedCount > 0) {
-      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      fireConfetti({ mode: 'snappy' });
       showToast(`📥 Imported ${importedCount} depleted items into active grocery list!`);
     } else {
       showToast('All depleted items are already in your active grocery list.');
@@ -599,7 +595,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     setKidReqName('');
     setKidReqNotes('');
     setIsAddingKidReqOpen(false);
-    confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
+    fireConfetti({ mode: 'mini' });
     showToast(`🚀 Sent grocery request for "${newReq.name}" to Mom & Dad!`);
   };
 
@@ -636,7 +632,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       lastUpdated: new Date().toISOString(),
     });
 
-    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    fireConfetti({ mode: 'snappy' });
     showToast(`✅ Approved "${req.name}" and added to grocery list!`);
   };
 
@@ -693,7 +689,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     handleUpdateGroceryList(newList);
 
     const count = newList.items.length;
-    confetti({ particleCount: 60, spread: 60, origin: { y: 0.5 } });
+    fireConfetti({ mode: 'celebration' });
     showToast(
       includeReplenish
         ? `🛒 Started new week with ${count} items (replenishments & dinner menu included)!`
@@ -727,7 +723,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     };
 
     handleUpdateGroceryList(updatedList);
-    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    fireConfetti({ mode: 'snappy' });
     showToast(`🍽️ Added ${toAdd.length} ingredients from this week's dinner menu!`);
   };
 

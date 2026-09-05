@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Sparkles, Trophy, RotateCw, Play, Check } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 import { ChoreItem, KidProfile } from '../types';
 import { sound } from '../utils/sound';
 
@@ -141,11 +141,9 @@ export const ChoreWheelModal: React.FC<ChoreWheelModalProps> = ({
       setIsSpinning(false);
       sound.playFanfare();
 
-      confetti({
-        particleCount: 60,
-        spread: 70,
+      fireConfetti({
         origin: { y: 0.6 },
-        colors: ['#f59e0b', '#ec4899', '#3b82f6', '#10b981'],
+        mode: 'celebration',
       });
     }, 3600);
   };

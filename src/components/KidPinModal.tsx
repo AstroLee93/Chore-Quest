@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Lock, Delete, X, Sparkles, ShieldCheck, HelpCircle } from 'lucide-react';
 import { KidProfile } from '../types';
 import { sound } from '../utils/sound';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 
 interface KidPinModalProps {
   isOpen: boolean;
@@ -46,16 +46,11 @@ export const KidPinModal: React.FC<KidPinModalProps> = ({
         if (nextPin.length === 4) {
           if (nextPin === correctPin) {
             sound.playChoreComplete();
-            try {
-              confetti({
-                particleCount: 40,
-                spread: 60,
-                origin: { y: 0.6 },
-                colors: [kid?.color || '#f59e0b', '#ec4899', '#38bdf8', '#10b981'],
-              });
-            } catch (e) {
-              // ignore
-            }
+            fireConfetti({
+              origin: { y: 0.6 },
+              colors: [kid?.color || '#f59e0b', '#ec4899', '#38bdf8', '#10b981'],
+              mode: 'snappy',
+            });
             setTimeout(() => {
               onSuccess();
             }, 100);

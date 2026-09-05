@@ -15,7 +15,7 @@ import {
   Star,
   Search,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 import {
   FamilyDatabase,
   KidProfile,
@@ -187,7 +187,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
         weeklyGroceryList: updatedGroceryList,
       });
 
-      confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+      fireConfetti({ mode: 'snappy' });
       if (onPostActionComplete) {
         showToast(
           `🎉 Custom request for "${itemName}" submitted! Mom & Dad will review and set the star rating. Returning...`,
@@ -261,7 +261,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
       weeklyGroceryList: updatedGroceryList,
     });
 
-    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    fireConfetti({ mode: 'snappy' });
     if (onPostActionComplete) {
       showToast(
         `🎉 Paid ${starCost} ⭐! Request for "${itemName}" sent! Returning to Kiosk...`,
@@ -373,7 +373,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
       },
     });
 
-    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    fireConfetti({ mode: 'snappy' });
     showToast(`✅ Approved "${req.name}"! Added to weekly family grocery list.`, 'success');
   };
 

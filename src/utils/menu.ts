@@ -268,6 +268,127 @@ export const RECIPE_PRESETS_DATABASE: Record<string, MealRecipe> = {
     ],
     notes: 'Quick, zero-fuss family comfort food for low-energy open nights.',
   },
+  'Classic Spaghetti & Homestyle Meatballs': {
+    prepTime: '20 mins',
+    cookTime: '25 mins',
+    servings: '4-6 servings',
+    difficulty: 'Easy',
+    ingredients: [
+      '1 lb Spaghetti or linguine pasta',
+      '1 lb Lean ground beef (or 50/50 mix of ground beef and mild Italian sausage)',
+      '1/2 cup Italian seasoned breadcrumbs',
+      '1/3 cup Freshly grated Parmesan cheese',
+      '1 large Egg, beaten',
+      '3 cloves Garlic, minced',
+      '2 tbsp Fresh Italian parsley, finely chopped',
+      '1 jar (24-28 oz) Marinara or crushed San Marzano tomato sauce (e.g. Rao\'s)',
+      '2 tbsp Extra virgin olive oil',
+      '1 tsp Dried Italian oregano & basil',
+      'Salt and freshly ground black pepper to taste',
+      'Fresh basil leaves and extra grated Parmesan for serving',
+    ],
+    instructions: [
+      'In a large mixing bowl, gently combine ground meat, breadcrumbs, grated Parmesan, beaten egg, minced garlic, parsley, 1/2 tsp salt, and 1/4 tsp pepper. Mix gently until combined (gentle handling keeps meatballs juicy and tender).',
+      'Roll meat mixture into 1.5-inch round meatballs (yields about 12-16 meatballs).',
+      'Heat olive oil in a large deep skillet or Dutch oven over medium-high heat. Brown meatballs on all sides for 5-6 minutes.',
+      'Pour marinara sauce over the browned meatballs. Bring to a gentle simmer, cover, and cook on low heat for 15-20 minutes until meatballs are thoroughly cooked (internal temperature 165°F).',
+      'Meanwhile, bring a large pot of salted water to a boil. Cook spaghetti according to package instructions until al dente. Reserve 1/2 cup pasta water, then drain.',
+      'Toss spaghetti with a ladle of warm marinara sauce. Serve in bowls topped with generous meatballs and sauce, freshly grated Parmesan, and fresh basil leaves!',
+    ],
+    substitutions: [
+      'Turkey Meatballs: Swap beef with lean ground turkey or ground chicken.',
+      'Gluten-Free: Use certified gluten-free spaghetti and gluten-free breadcrumbs.',
+      'Vegetarian: Use plant-based meatballs or sautéed portobello mushrooms simmered in marinara sauce.',
+      'Oven-Baked: Bake meatballs on a parchment-lined baking sheet at 400°F (200°C) for 15 minutes before simmering in sauce.',
+    ],
+    notes: 'A timeless family favorite! Delicious paired with toasted garlic bread and a fresh Caesar salad.',
+  },
+  'Classic Homestyle Baked Meat Lasagna': {
+    prepTime: '25 mins',
+    cookTime: '45 mins',
+    servings: '6-8 servings',
+    difficulty: 'Medium',
+    ingredients: [
+      '12 Lasagna noodles (boiled or oven-ready)',
+      '1 lb Ground beef and 1/2 lb Italian pork sausage',
+      '1 medium Yellow onion & 3 cloves garlic, minced',
+      '1 jar (28 oz) Marinara sauce & 1 can (15 oz) crushed tomatoes',
+      '15 oz Whole milk Ricotta cheese',
+      '1 large Egg, beaten',
+      '3 cups Shredded whole-milk Mozzarella cheese',
+      '1 cup Freshly grated Parmesan cheese',
+      '2 tbsp Fresh chopped parsley, 1 tsp Italian herb seasoning, salt and black pepper',
+    ],
+    instructions: [
+      'Preheat oven to 375°F (190°C). In a large pot, brown ground beef, sausage, onion, and garlic over medium heat. Drain excess fat.',
+      'Stir in marinara sauce, crushed tomatoes, and Italian herbs. Simmer meat sauce on low for 10 minutes.',
+      'In a bowl, mix ricotta cheese, beaten egg, 1/2 cup grated Parmesan, chopped parsley, and a pinch of salt and pepper.',
+      'In a 9x13-inch baking dish, spread 1 cup meat sauce on the bottom. Layer: 4 lasagna noodles, 1/3 of the ricotta mixture, 1 cup shredded mozzarella, and meat sauce.',
+      'Repeat layers twice more, finishing with noodles topped with remaining meat sauce, mozzarella, and Parmesan.',
+      'Cover loosely with foil (tented so cheese does not stick) and bake for 25 minutes. Uncover and bake 15-20 minutes until bubbling and golden. Rest 10 minutes before slicing!',
+    ],
+    substitutions: [
+      'Vegetarian: Swap meat sauce with rich mushroom, spinach, and zucchini marinara.',
+      'Gluten-Free: Use certified gluten-free lasagna sheets.',
+    ],
+    notes: 'Letting it rest for 10-15 minutes after baking makes cutting neat, square family slices easy.',
+  },
+  'Cheesy Baked Ziti with Mozzarella': {
+    prepTime: '15 mins',
+    cookTime: '25 mins',
+    servings: '6 servings',
+    difficulty: 'Easy',
+    ingredients: [
+      '1 lb Ziti or Penne rigate pasta',
+      '1 lb Italian sausage or lean ground beef',
+      '1 jar (28 oz) Marinara sauce',
+      '15 oz Ricotta cheese or small curd cottage cheese',
+      '2.5 cups Shredded Mozzarella cheese',
+      '1/2 cup Grated Parmesan cheese',
+      '1 tsp Italian seasoning, salt and black pepper',
+      'Fresh chopped basil or parsley for garnish',
+    ],
+    instructions: [
+      'Preheat oven to 375°F (190°C). Boil ziti in salted water until 1-2 minutes shy of al dente; drain.',
+      'Brown sausage or ground beef in a skillet, drain fat, and stir in marinara sauce and Italian herbs.',
+      'In a large bowl, combine cooked pasta, meat sauce, ricotta cheese, and 1 cup of mozzarella.',
+      'Transfer mixture into a 9x13-inch baking dish. Top evenly with remaining 1.5 cups mozzarella and 1/2 cup Parmesan cheese.',
+      'Bake uncovered for 20-25 minutes until the cheese is completely melted, bubbly, and lightly golden brown.',
+      'Garnish with fresh chopped basil and serve hot with garlic knots!',
+    ],
+    substitutions: [
+      'Vegetarian: Omit meat and add sautéed bell peppers, spinach, and mushrooms.',
+      'Gluten-Free: Use gluten-free ziti or penne pasta.',
+    ],
+    notes: 'Perfect make-ahead family meal that reheats wonderfully the next day.',
+  },
+  'Warm Italian Meatball Subs with Provolone': {
+    prepTime: '10 mins',
+    cookTime: '15 mins',
+    servings: '4 hearty subs',
+    difficulty: 'Easy',
+    ingredients: [
+      '4 Bakery fresh Italian sub rolls or hoagie buns',
+      '16 Prepared homestyle meatballs (beef, turkey, or pork)',
+      '2 cups Warm marinara sauce',
+      '8 slices Provolone cheese or shredded mozzarella',
+      '2 tbsp Melted butter mixed with 1/4 tsp garlic powder',
+      '2 tbsp Grated Parmesan and dried oregano',
+    ],
+    instructions: [
+      'Preheat oven or toaster oven to 375°F (190°C).',
+      'Simmer meatballs in warm marinara sauce until thoroughly heated through.',
+      'Slice sub rolls lengthwise (without cutting all the way through). Brush inside with garlic butter.',
+      'Nestle 4 saucy meatballs inside each roll. Spoon extra marinara over the top.',
+      'Layer 2 slices of provolone cheese over each sub, and sprinkle with Parmesan and oregano.',
+      'Bake on a baking sheet for 6-8 minutes until rolls are toasted and cheese is melted and bubbling.',
+      'Serve warm with kettle chips or a fresh Italian chopped salad!',
+    ],
+    substitutions: [
+      'Garlic Bread Style: Toast the buns under the broiler with garlic butter before stuffing.',
+    ],
+    notes: 'A stadium and pizzeria comfort food favorite made in under 20 minutes!',
+  },
   'Creamy Garlic Chicken Alfredo Pasta': {
     prepTime: '15 mins',
     cookTime: '20 mins',
@@ -957,8 +1078,70 @@ export const searchRecipeForDish = (query: string, currentTheme?: string): Recip
     };
   }
 
-  // Alfredo & Pasta
-  if (lower.includes('alfredo') || lower.includes('pasta') || lower.includes('spaghetti') || lower.includes('lasagna') || lower.includes('carbonara') || lower.includes('ziti')) {
+  // Spaghetti, Meatballs & Bolognese
+  if (
+    lower.includes('spaghetti') ||
+    (lower.includes('meatball') && !lower.includes('sub') && !lower.includes('sandwich') && !lower.includes('hoagie') && !lower.includes('hero') && !lower.includes('slider')) ||
+    lower.includes('bolognese') ||
+    lower.includes('marinara') ||
+    lower.includes('meat sauce') ||
+    (lower.includes('pasta') && lower.includes('meat'))
+  ) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Classic Spaghetti & Homestyle Meatballs'],
+      matchedTitle: 'Classic Spaghetti & Homestyle Meatballs',
+      suggestedSides: 'Warm Garlic Bread & Garden Caesar Salad',
+      suggestedDessert: 'Italian Gelato or Tiramisu',
+      suggestedTheme: 'Italian Spaghetti Feast 🍝',
+      suggestedIcon: '🍝',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Meatball Subs & Sandwiches
+  if (
+    lower.includes('meatball') &&
+    (lower.includes('sub') || lower.includes('sandwich') || lower.includes('hoagie') || lower.includes('hero') || lower.includes('slider') || lower.includes('roll'))
+  ) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Warm Italian Meatball Subs with Provolone'],
+      matchedTitle: 'Warm Italian Meatball Subs with Provolone',
+      suggestedSides: 'Crispy Kettle Potato Chips & Caesar Salad',
+      suggestedDessert: 'Chocolate Chip Cookies',
+      suggestedTheme: 'Warm Meatball Sub Night 🥪',
+      suggestedIcon: '🥪',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Lasagna
+  if (lower.includes('lasagna') || lower.includes('lasagne')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Classic Homestyle Baked Meat Lasagna'],
+      matchedTitle: 'Classic Homestyle Baked Meat Lasagna',
+      suggestedSides: 'Toasted Garlic Herb Focaccia & Italian Garden Salad',
+      suggestedDessert: 'Crispy Cinnamon Cannoli',
+      suggestedTheme: 'Homestyle Lasagna Night 🍝',
+      suggestedIcon: '🍝',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Baked Ziti & Penne
+  if (lower.includes('ziti') || lower.includes('penne') || lower.includes('baked pasta') || lower.includes('mostaccioli')) {
+    return {
+      recipe: RECIPE_PRESETS_DATABASE['Cheesy Baked Ziti with Mozzarella'],
+      matchedTitle: 'Cheesy Baked Ziti with Mozzarella',
+      suggestedSides: 'Warm Garlic Knots & Crisp Mixed Greens',
+      suggestedDessert: 'Italian Lemon Ice',
+      suggestedTheme: 'Cheesy Baked Pasta Night 🍝',
+      suggestedIcon: '🍝',
+      matchType: 'fuzzy',
+    };
+  }
+
+  // Alfredo & Carbonara
+  if (lower.includes('alfredo') || lower.includes('carbonara')) {
     return {
       recipe: RECIPE_PRESETS_DATABASE['Creamy Garlic Chicken Alfredo Pasta'],
       matchedTitle: 'Creamy Garlic Chicken Alfredo Pasta',

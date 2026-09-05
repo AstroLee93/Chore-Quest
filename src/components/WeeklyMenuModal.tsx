@@ -26,7 +26,7 @@ import {
   Search,
   AlertTriangle,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 import {
   FamilyDatabase,
   KidProfile,
@@ -135,11 +135,9 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
     if (!selectedKidForVote) return;
     sound.playStarEarned();
 
-    confetti({
-      particleCount: 45,
-      spread: 60,
+    fireConfetti({
       origin: { y: 0.7 },
-      colors: ['#f59e0b', '#ec4899', '#3b82f6', '#10b981'],
+      mode: 'snappy',
     });
 
     const updatedOptions = (currentPlan.votingOptions || []).map((opt) => {
@@ -221,10 +219,9 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
     if (!suggestionDish.trim() || !selectedKidForVote) return;
 
     sound.playChoreComplete();
-    confetti({
-      particleCount: 30,
-      spread: 50,
+    fireConfetti({
       origin: { y: 0.6 },
+      mode: 'mini',
     });
 
     const newSuggestion: MealSuggestion = {
@@ -260,11 +257,9 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
   // --- Parent: Declare Winner & Finalize Meal ---
   const handleDeclareWinningMeal = (option: MealVotingOption) => {
     sound.playStarEarned();
-    confetti({
-      particleCount: 80,
-      spread: 90,
+    fireConfetti({
       origin: { y: 0.5 },
-      colors: ['#fbbf24', '#f59e0b', '#ec4899', '#3b82f6', '#10b981'],
+      mode: 'celebration',
     });
 
     const updatedDays = {
@@ -444,11 +439,9 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
     if (!parentEditForm || !parentEditForm.mainDish.trim()) return;
 
     sound.playStarEarned();
-    confetti({
-      particleCount: 40,
-      spread: 60,
+    fireConfetti({
       origin: { y: 0.6 },
-      colors: ['#f59e0b', '#fbbf24', '#10b981', '#3b82f6'],
+      mode: 'mini',
     });
 
     const searchResult = searchRecipeForDish(parentEditForm.mainDish, parentEditForm.theme);
@@ -485,10 +478,9 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
   // --- Parent: Load Preset Menu ---
   const handleApplyPreset = (preset: ReturnType<typeof getMealPresets>[0]) => {
     sound.playChoreComplete();
-    confetti({
-      particleCount: 50,
-      spread: 70,
+    fireConfetti({
       origin: { y: 0.5 },
+      mode: 'snappy',
     });
 
     const newDays: Record<DayOfWeekKey, DailyDinnerPlan> = { ...menu.days };

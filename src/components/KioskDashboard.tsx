@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { fireConfetti } from '../utils/confetti';
 import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent, RewardItem, RewardRedemption } from '../types';
 import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getMvpKid } from '../utils/storage';
 import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar';
@@ -93,11 +93,9 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
     sound.playChoreComplete();
     sound.playStarEarned();
 
-    confetti({
-      particleCount: 50,
-      spread: 65,
+    fireConfetti({
       origin: { y: 0.6 },
-      colors: ['#f59e0b', '#ec4899', '#3b82f6', '#10b981'],
+      mode: 'snappy',
     });
 
     const existingLogIndex = (database.logs || []).findIndex(
@@ -237,11 +235,9 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
   const handleCheerMvp = useCallback(() => {
     sound.playStarEarned();
-    confetti({
-      particleCount: 80,
-      spread: 90,
+    fireConfetti({
       origin: { y: 0.5 },
-      colors: ['#fbbf24', '#f59e0b', '#ec4899', '#3b82f6', '#10b981'],
+      mode: 'celebration',
     });
   }, []);
 

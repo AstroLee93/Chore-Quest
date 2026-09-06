@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   X,
   ShoppingCart,
@@ -49,6 +49,7 @@ import {
   estimateGroceryItemsBatchApi,
   calculateGroceryBudgetSummary,
   normalizeItemKey,
+  findHistoricalPrice,
   ParsedReceiptItem,
 } from '../utils/groceryPricing';
 import { ReceiptImportModal } from './ReceiptImportModal';
@@ -317,11 +318,16 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     }, 3200);
   };
 
+  const databaseRef = useRef(database);
+  databaseRef.current = database;
+
   const handleUpdateGroceryList = (updated: WeeklyGroceryList) => {
-    onUpdateDatabase({
-      ...database,
+    const updatedDb: FamilyDatabase = {
+      ...databaseRef.current,
       weeklyGroceryList: updated,
-    });
+    };
+    databaseRef.current = updatedDb;
+    onUpdateDatabase(updatedDb);
   };
 
   // Auto-estimate any unpriced items on modal open
@@ -481,10 +487,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       lastUpdated: new Date().toISOString(),
     };
 
-    onUpdateDatabase({
-      ...database,
-      weeklyGroceryList: updatedWeeklyGroceryList,
-    });
+    handleUpdateGroceryList(updatedWeeklyGroceryList);
 
     fireConfetti({ mode: 'celebration' });
     showToast(
@@ -494,7 +497,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
 
   const applyPriceEstimates = (estimates: Record<string, number>) => {
     if (!estimates || Object.keys(estimates).length === 0) return;
-    const currentList = database.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
+    const currentList = databaseRef.current.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
     const currentItems = currentList.items || [];
     let changed = false;
 
@@ -523,12 +526,25 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
   };
 
   const applySinglePriceEstimate = (itemId: string, estimatedCost: number) => {
-    const currentList = database.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
+    const currentList = databaseRef.current.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
     const currentItems = currentList.items || [];
+
+    // CRITICAL GUARD: Only update if the item actually exists in current list!
+    const targetItem = currentItems.find((item) => item.id === itemId);
+    if (!targetItem) {
+      return;
+    }
+
+    // If actualCost has already been set manually or via receipt, do not overwrite with estimate
+    if (targetItem.actualCost !== undefined) {
+      return;
+    }
+
+    const norm = normalizeItemKey(targetItem.name);
+    const hasReceiptMemory = Boolean(currentList.priceHistory?.[norm]);
+
     const updatedItems = currentItems.map((item) => {
       if (item.id === itemId && item.actualCost === undefined) {
-        const norm = normalizeItemKey(item.name);
-        const hasReceiptMemory = Boolean(currentList.priceHistory?.[norm]);
         return {
           ...item,
           estimatedCost,
@@ -728,10 +744,19 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     const itemQty = newItemQuantity.trim() || undefined;
     const itemId = `g-item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
+    const currentList = databaseRef.current.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
+    const currentItems = currentList.items || [];
+
+    const detectedCategory = userManuallySelectedCategory
+      ? newItemCategory
+      : detectGroceryCategory(itemName);
+
+    const historical = findHistoricalPrice(itemName, currentList.priceHistory);
+
     const newItem: GroceryItem = {
       id: itemId,
       name: itemName,
-      category: newItemCategory,
+      category: detectedCategory,
       quantity: itemQty,
       importance: newItemImportance,
       acquired: false,
@@ -739,12 +764,13 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       addedBy: newItemAddedBy || 'Family',
       createdAt: getTodayDateString(),
       currency: 'USD',
-      priceSource: 'ai',
+      estimatedCost: historical?.price || 3.49,
+      priceSource: historical?.price ? 'receipt' : 'ai',
     };
 
     const updatedList: WeeklyGroceryList = {
-      ...groceryList,
-      items: [newItem, ...items],
+      ...currentList,
+      items: [newItem, ...currentItems],
       lastUpdated: new Date().toISOString(),
     };
 
@@ -752,25 +778,42 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     setNewItemName('');
     setNewItemQuantity('');
     setUserManuallySelectedCategory(false);
+
+    // Make sure newly added item is immediately visible by resetting any active filters that would hide it
+    if (selectedCategoryFilter !== 'all' && selectedCategoryFilter !== detectedCategory) {
+      setSelectedCategoryFilter('all');
+    }
+    if (statusFilter === 'acquired') {
+      setStatusFilter('all');
+    }
+    if (searchQuery.trim().length > 0) {
+      setSearchQuery('');
+    }
+
     showToast(`Added "${newItem.name}" to grocery list!`);
 
-    // Asynchronously estimate cost using Gemini AI
-    estimateGroceryItemPriceApi(itemName, itemQty, groceryList.priceHistory)
-      .then((res) => {
-        if (res && res.estimatedCost) {
-          applySinglePriceEstimate(itemId, res.estimatedCost);
-        }
-      })
-      .catch((err) => console.warn('Failed to estimate price on add:', err));
+    // Refine price estimate via AI in background if no receipt history exists
+    if (!historical?.price) {
+      estimateGroceryItemPriceApi(itemName, itemQty, currentList.priceHistory)
+        .then((res) => {
+          if (res && res.estimatedCost && res.estimatedCost !== 3.49) {
+            applySinglePriceEstimate(itemId, res.estimatedCost);
+          }
+        })
+        .catch((err) => console.warn('Failed to estimate price on add:', err));
+    }
   };
 
   // 3. Delete Grocery Item permanently
   const handleDeleteItem = (itemId: string) => {
     sound.playTap();
+    const currentList = databaseRef.current.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
+    const currentItems = currentList.items || [];
+    const currentStaples = currentList.pantryStaples || [];
     const updatedList: WeeklyGroceryList = {
-      ...groceryList,
-      items: items.filter((i) => i.id !== itemId),
-      pantryStaples: pantryStaples.filter((s) => s.id !== itemId),
+      ...currentList,
+      items: currentItems.filter((i) => i.id !== itemId),
+      pantryStaples: currentStaples.filter((s) => s.id !== itemId),
       lastUpdated: new Date().toISOString(),
     };
     handleUpdateGroceryList(updatedList);
@@ -1143,16 +1186,19 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       priceSource: 'ai',
     };
 
+    const currentList = databaseRef.current.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
+    const currentItems = currentList.items || [];
+
     handleUpdateGroceryList({
-      ...groceryList,
-      items: [newItem, ...items],
+      ...currentList,
+      items: [newItem, ...currentItems],
       lastUpdated: new Date().toISOString(),
     });
 
     showToast(`Added "${spice.name}" to active grocery list! 🛒`);
 
     // Estimate spice price
-    estimateGroceryItemPriceApi(`${spice.name} Seasoning`, '1 container', groceryList.priceHistory)
+    estimateGroceryItemPriceApi(`${spice.name} Seasoning`, '1 container', currentList.priceHistory)
       .then((res) => {
         if (res && res.estimatedCost) {
           applySinglePriceEstimate(newItem.id, res.estimatedCost);
@@ -1223,9 +1269,12 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       return r;
     });
 
+    const currentList = databaseRef.current.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
+    const currentItems = currentList.items || [];
+
     handleUpdateGroceryList({
-      ...groceryList,
-      items: [newItem, ...items],
+      ...currentList,
+      items: [newItem, ...currentItems],
       requests: updatedRequests,
       lastUpdated: new Date().toISOString(),
     });
@@ -1234,7 +1283,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     showToast(`✅ Approved "${req.name}" and added to grocery list!`);
 
     // Estimate price for approved item
-    estimateGroceryItemPriceApi(req.name, req.quantity, groceryList.priceHistory)
+    estimateGroceryItemPriceApi(req.name, req.quantity, currentList.priceHistory)
       .then((res) => {
         if (res && res.estimatedCost) {
           applySinglePriceEstimate(newItem.id, res.estimatedCost);
@@ -1262,19 +1311,24 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       return r;
     });
 
-    const updatedKids = refundStars > 0 && targetReq?.kidId
-      ? database.kids.map((k) => (k.id === targetReq.kidId ? { ...k, stars: k.stars + refundStars } : k))
-      : database.kids;
+    const currentDb = databaseRef.current;
+    const currentList = currentDb.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
 
-    onUpdateDatabase({
-      ...database,
+    const updatedKids = refundStars > 0 && targetReq?.kidId
+      ? currentDb.kids.map((k) => (k.id === targetReq.kidId ? { ...k, stars: k.stars + refundStars } : k))
+      : currentDb.kids;
+
+    const updatedDb: FamilyDatabase = {
+      ...currentDb,
       kids: updatedKids,
       weeklyGroceryList: {
-        ...groceryList,
+        ...currentList,
         requests: updatedRequests,
         lastUpdated: new Date().toISOString(),
       },
-    });
+    };
+    databaseRef.current = updatedDb;
+    onUpdateDatabase(updatedDb);
 
     setDenyingRequestId(null);
     setDenyReason('');

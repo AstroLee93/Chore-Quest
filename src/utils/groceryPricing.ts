@@ -184,12 +184,27 @@ export async function parseReceiptImageApi(
     body: JSON.stringify({ image, mimeType }),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || `Server receipt parse failed with HTTP ${res.status}`);
+  const rawText = await res.text();
+  let data: any = null;
+
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    // Upstream proxy, gateway, or dev-server returned HTML instead of JSON
+    if (res.status === 503 || res.status === 504 || res.status === 502) {
+      throw new Error('The AI receipt scanner is temporarily experiencing high demand. Please wait a few seconds and tap Retry Scan.');
+    }
+    if (!res.ok) {
+      throw new Error(`Server receipt parse failed with status ${res.status} (${res.statusText || 'Error'}). Please try again.`);
+    }
+    throw new Error('Received an unexpected response format from the server. Please try again.');
   }
 
-  return await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || `Server receipt parse failed with HTTP ${res.status}`);
+  }
+
+  return data;
 }
 
 export interface GroceryBudgetSummary {

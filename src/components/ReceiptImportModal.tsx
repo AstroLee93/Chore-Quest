@@ -130,8 +130,11 @@ export const ReceiptImportModal: React.FC<ReceiptImportModalProps> = ({
   onImportSuccess,
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [lastRawImage, setLastRawImage] = useState<string | null>(null);
+  const [lastRawMime, setLastRawMime] = useState<string>('image/jpeg');
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [isOptimizing, setIsOptimizing] = useState<boolean>(false);
   const [scanError, setScanError] = useState<string | null>(null);
 
   // Extracted data
@@ -169,9 +172,54 @@ export const ReceiptImportModal: React.FC<ReceiptImportModalProps> = ({
     };
   };
 
+  const optimizeImageForOcr = async (file: File): Promise<{ base64: string; mime: string }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const rawData = reader.result as string;
+        const img = new Image();
+        img.onload = () => {
+          // Constrain large camera resolutions to 1600px max dimension
+          const MAX_DIM = 1600;
+          let { width, height } = img;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const optimizedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+            resolve({ base64: optimizedBase64, mime: 'image/jpeg' });
+            return;
+          }
+          resolve({ base64: rawData, mime: file.type || 'image/jpeg' });
+        };
+        img.onerror = () => {
+          resolve({ base64: rawData, mime: file.type || 'image/jpeg' });
+        };
+        img.src = rawData;
+      };
+      reader.onerror = () => {
+        resolve({ base64: '', mime: file.type || 'image/jpeg' });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleProcessImage = async (base64Image: string, mime = 'image/jpeg') => {
     setIsScanning(true);
     setScanError(null);
+    setLastRawImage(base64Image);
+    setLastRawMime(mime);
     sound.playTap();
 
     try {
@@ -210,31 +258,33 @@ export const ReceiptImportModal: React.FC<ReceiptImportModalProps> = ({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
+    setIsOptimizing(true);
+    try {
+      const { base64, mime } = await optimizeImageForOcr(file);
       setImagePreview(base64);
-      handleProcessImage(base64, file.type || 'image/jpeg');
-    };
-    reader.readAsDataURL(file);
+      await handleProcessImage(base64, mime);
+    } finally {
+      setIsOptimizing(false);
+    }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result as string;
+      setIsOptimizing(true);
+      try {
+        const { base64, mime } = await optimizeImageForOcr(file);
         setImagePreview(base64);
-        handleProcessImage(base64, file.type || 'image/jpeg');
-      };
-      reader.readAsDataURL(file);
+        await handleProcessImage(base64, mime);
+      } finally {
+        setIsOptimizing(false);
+      }
     }
   };
 
@@ -454,16 +504,20 @@ export const ReceiptImportModal: React.FC<ReceiptImportModalProps> = ({
                     className="hidden"
                   />
 
-                  {isScanning ? (
+                  {isScanning || isOptimizing ? (
                     <div className="py-6 flex flex-col items-center justify-center space-y-3 animate-pulse">
                       <div className="w-14 h-14 rounded-full bg-amber-400/20 text-amber-500 flex items-center justify-center text-2xl animate-spin">
                         <Sparkles className="w-7 h-7" />
                       </div>
                       <p className="font-black text-sm text-amber-900 dark:text-amber-300">
-                        Analyzing receipt image with Gemini AI...
+                        {isOptimizing
+                          ? 'Optimizing receipt photo for fast AI scanning...'
+                          : 'Analyzing receipt with Gemini AI...'}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
-                        Extracting store name, purchase date, line items, individual prices, and item quantities...
+                      <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm text-center">
+                        {isOptimizing
+                          ? 'Resizing and preparing high-resolution image...'
+                          : 'Extracting store name, purchase date, line items, and unit prices with resilient model fallback...'}
                       </p>
                     </div>
                   ) : (
@@ -508,11 +562,27 @@ export const ReceiptImportModal: React.FC<ReceiptImportModalProps> = ({
                   )}
                 </div>
 
-                {/* Error Banner */}
+                {/* Error Banner with Retry */}
                 {scanError && (
-                  <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs font-semibold flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                    <span>{scanError}</span>
+                  <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs font-semibold flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
+                    <div className="flex items-start sm:items-center gap-2.5">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-rose-600 mt-0.5 sm:mt-0" />
+                      <span>{scanError}</span>
+                    </div>
+                    {lastRawImage && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleProcessImage(lastRawImage, lastRawMime);
+                        }}
+                        disabled={isScanning}
+                        className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shrink-0 cursor-pointer shadow-xs transition-all flex items-center justify-center gap-1.5 self-end sm:self-center"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
+                        <span>Retry Scan</span>
+                      </button>
+                    )}
                   </div>
                 )}
 

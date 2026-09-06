@@ -62,7 +62,46 @@ function getFallbackEstimate(name: string, quantity?: string): number {
   return Number(basePrice.toFixed(2));
 }
 
-app.use(express.json({ limit: '10mb' }));
+// Resilient Gemini model caller with exponential retry and model fallback cascade
+async function callGeminiWithFallback<T>(
+  ai: GoogleGenAI,
+  callFn: (modelName: string) => Promise<T>,
+  preferredModels = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-pro-preview']
+): Promise<T> {
+  let lastError: any = null;
+
+  for (const model of preferredModels) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await callFn(model);
+      } catch (err: any) {
+        lastError = err;
+        const errStr = String(err?.message || err || '');
+        const isTemporary =
+          errStr.includes('503') ||
+          errStr.includes('UNAVAILABLE') ||
+          errStr.includes('high demand') ||
+          errStr.includes('429') ||
+          errStr.includes('RESOURCE_EXHAUSTED') ||
+          errStr.includes('overloaded');
+
+        console.warn(`[Server] Model ${model} (attempt ${attempt}) encountered: ${errStr.slice(0, 150)}`);
+
+        if (isTemporary && attempt === 1) {
+          // Wait 1000ms before retrying same model
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+        // Move on to next candidate model in the cascade
+        break;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+app.use(express.json({ limit: '25mb' }));
 
 // File persistence path
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -339,9 +378,11 @@ app.post('/api/grocery/estimate-price', async (req, res) => {
   }
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
+    const response = await callGeminiWithFallback(ai, async (modelName) => {
+      return await ai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+      });
     });
 
     const text = response.text?.trim() || '';
@@ -419,13 +460,18 @@ ${itemsNeedingEstimate.map((it: any, idx: number) => `${idx + 1}. [ID: ${it.id}]
 Reply with a JSON array where each item has "id" (the exact string ID provided) and "price" (number in USD, e.g. 3.49). If unsure, give a reasonable average.
 Reply with ONLY the valid JSON array.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
+    const response = await callGeminiWithFallback(
+      ai,
+      async (modelName) => {
+        return await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+      }
+    );
 
     const text = response.text?.trim() || '[]';
     let parsed: Array<{ id: string; price: number }> = [];
@@ -541,21 +587,30 @@ Important Rules:
 5. If the receipt has multiple items, extract every single purchased item line.
 6. Reply ONLY with the valid JSON object.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: [
-        {
-          inlineData: {
-            data: base64Data,
-            mimeType: detectedMime,
+    const response = await callGeminiWithFallback(
+      ai,
+      async (modelName) => {
+        return await ai.models.generateContent({
+          model: modelName,
+          contents: {
+            parts: [
+              {
+                inlineData: {
+                  data: base64Data,
+                  mimeType: detectedMime,
+                },
+              },
+              {
+                text: prompt,
+              },
+            ],
           },
-        },
-        prompt,
-      ],
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+      }
+    );
 
     const text = response.text?.trim() || '{}';
     let parsed: any = {};
@@ -620,9 +675,19 @@ Important Rules:
     });
   } catch (err: any) {
     console.error('[Server] Gemini receipt parse error:', err?.message || err);
-    res.status(500).json({
-      error: 'Failed to extract receipt items. Please ensure the image is clear or try again.',
-      details: err?.message || String(err),
+    const errText = String(err?.message || err);
+    const isHighDemand =
+      errText.includes('503') ||
+      errText.includes('high demand') ||
+      errText.includes('UNAVAILABLE') ||
+      errText.includes('429');
+
+    res.status(isHighDemand ? 503 : 500).json({
+      error: isHighDemand
+        ? 'The AI receipt scanner is experiencing high demand right now. Please tap Retry Scan in a moment.'
+        : 'Failed to extract receipt items. Please ensure the image is clear or try again.',
+      details: errText,
+      canRetry: true,
     });
   }
 });

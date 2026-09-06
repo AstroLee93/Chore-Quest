@@ -40,13 +40,18 @@ import {
   DollarSign,
   PiggyBank,
   RotateCcw,
+  Receipt,
+  History,
 } from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
 import {
   estimateGroceryItemPriceApi,
   estimateGroceryItemsBatchApi,
   calculateGroceryBudgetSummary,
+  normalizeItemKey,
+  ParsedReceiptItem,
 } from '../utils/groceryPricing';
+import { ReceiptImportModal } from './ReceiptImportModal';
 import {
   FamilyDatabase,
   KidProfile,
@@ -58,6 +63,8 @@ import {
   GroceryRequest,
   WeeklyGroceryList,
   DayOfWeekKey,
+  PriceHistoryEntry,
+  ImportedReceiptSummary,
 } from '../types';
 import {
   GROCERY_CATEGORY_ORDER,
@@ -117,6 +124,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
   const [newPantryCategory, setNewPantryCategory] = useState<GroceryCategory>('pantry');
   const [newPantryQuantity, setNewPantryQuantity] = useState<string>('1');
   const [newPantryImportance, setNewPantryImportance] = useState<GroceryImportance>('staple');
+  const [newPantryStatus, setNewPantryStatus] = useState<'in_stock' | 'depleted'>('in_stock');
   const [isAddingPantryOpen, setIsAddingPantryOpen] = useState<boolean>(false);
 
   // New Spice Item State
@@ -144,6 +152,10 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
   // Print / Share Dialog State
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
+  // Receipt Import Modal State
+  const [isReceiptImportOpen, setIsReceiptImportOpen] = useState<boolean>(false);
+  const [isReceiptHistoryOpen, setIsReceiptHistoryOpen] = useState<boolean>(false);
 
   // Toast Feedback State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -182,6 +194,9 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       depletedBy?: string;
       notes?: string;
       isStapleOnly?: boolean;
+      lastCost?: number;
+      lastStore?: string;
+      lastRestockedAt?: string;
     }[] = [];
 
     const seenNames = new Set<string>();
@@ -191,17 +206,27 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       const key = item.name.toLowerCase().trim();
       if (!seenNames.has(key)) {
         seenNames.add(key);
+        // CRITICAL FIX: If item has already been acquired (purchased), it is In Stock (NOT depleted!)
+        const isDepleted = item.acquired ? false : Boolean(item.isDepleted);
+        const norm = normalizeItemKey(item.name);
+        const histEntry = groceryList.priceHistory?.[norm];
+        const cost = item.actualCost !== undefined ? item.actualCost : histEntry?.price;
+        const store = histEntry?.store;
+
         list.push({
           id: item.id,
           name: item.name,
           category: item.category,
           quantity: item.quantity,
           importance: item.importance || 'common',
-          isDepleted: item.isDepleted || false,
-          depletedAt: item.depletedAt,
-          depletedBy: item.depletedBy,
+          isDepleted,
+          depletedAt: isDepleted ? item.depletedAt : undefined,
+          depletedBy: isDepleted ? item.depletedBy : undefined,
           notes: item.notes,
           isStapleOnly: false,
+          lastCost: cost,
+          lastStore: store,
+          lastRestockedAt: item.acquired ? (item.acquiredAt || getTodayDateString()) : undefined,
         });
       }
     });
@@ -211,23 +236,34 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       const key = staple.name.toLowerCase().trim();
       if (!seenNames.has(key)) {
         seenNames.add(key);
+        // If there is an acquired item matching this staple, it has been purchased and is In Stock!
+        const matchingAcquired = items.some((i) => i.name.toLowerCase().trim() === key && i.acquired);
+        const isDepleted = matchingAcquired ? false : Boolean(staple.isDepleted);
+        const norm = normalizeItemKey(staple.name);
+        const histEntry = groceryList.priceHistory?.[norm];
+        const cost = staple.lastCost !== undefined ? staple.lastCost : histEntry?.price;
+        const store = staple.lastStore || histEntry?.store;
+
         list.push({
           id: staple.id,
           name: staple.name,
           category: staple.category,
           quantity: staple.defaultQuantity,
           importance: staple.importance || 'staple',
-          isDepleted: staple.isDepleted || false,
-          depletedAt: staple.depletedAt,
-          depletedBy: staple.depletedBy,
+          isDepleted,
+          depletedAt: isDepleted ? staple.depletedAt : undefined,
+          depletedBy: isDepleted ? staple.depletedBy : undefined,
           notes: staple.notes,
           isStapleOnly: true,
+          lastCost: cost,
+          lastStore: store,
+          lastRestockedAt: staple.lastRestockedAt,
         });
       }
     });
 
     return list;
-  }, [items, pantryStaples]);
+  }, [items, pantryStaples, groceryList.priceHistory]);
 
   const depletedItems = useMemo(() => {
     return getPantryDepletedItems(groceryList);
@@ -296,7 +332,8 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     );
     if (unpriced.length > 0) {
       estimateGroceryItemsBatchApi(
-        unpriced.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity }))
+        unpriced.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity })),
+        groceryList.priceHistory
       ).then((estimates) => {
         if (estimates && Object.keys(estimates).length > 0) {
           applyPriceEstimates(estimates);
@@ -304,6 +341,156 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       }).catch((err) => console.warn('Auto-estimate error:', err));
     }
   }, [isOpen]);
+
+  // Receipt Import Success Handler
+  const handleImportReceiptSuccess = (data: {
+    importedItems: ParsedReceiptItem[];
+    storeName?: string;
+    receiptDate?: string;
+    totalAmount?: number;
+    syncToPantry: boolean;
+    syncToGroceryList: boolean;
+    savePriceHistory: boolean;
+  }) => {
+    const {
+      importedItems,
+      storeName,
+      receiptDate,
+      totalAmount,
+      syncToPantry,
+      syncToGroceryList,
+      savePriceHistory,
+    } = data;
+
+    const currentList = database.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
+    let updatedGroceryItems = [...(currentList.items || [])];
+    let updatedPantryStaples = [...(currentList.pantryStaples || DEFAULT_PANTRY_STAPLES)];
+    const updatedPriceHistory = { ...(currentList.priceHistory || {}) };
+    const dateStr = receiptDate || getTodayDateString();
+
+    // 1. Update Price History Memory if enabled
+    if (savePriceHistory) {
+      importedItems.forEach((it) => {
+        const key = normalizeItemKey(it.name);
+        updatedPriceHistory[key] = {
+          price: it.price,
+          lastUpdated: dateStr,
+          store: storeName,
+          quantity: it.quantity,
+        };
+      });
+    }
+
+    // 2. Sync to Household Pantry Replenish Tracker
+    if (syncToPantry) {
+      importedItems.forEach((it) => {
+        const norm = normalizeItemKey(it.name);
+        const existingIdx = updatedPantryStaples.findIndex((s) => {
+          const sNorm = normalizeItemKey(s.name);
+          return sNorm === norm || norm.includes(sNorm) || sNorm.includes(norm);
+        });
+
+        if (existingIdx !== -1) {
+          // Restock existing pantry staple!
+          updatedPantryStaples[existingIdx] = {
+            ...updatedPantryStaples[existingIdx],
+            isDepleted: false,
+            lastRestockedAt: dateStr,
+            lastCost: it.price,
+            lastStore: storeName,
+            depletedAt: undefined,
+            depletedBy: undefined,
+          };
+        } else {
+          // Add as new pantry staple (In Stock & Full)
+          const newStaple: PantryStapleItem = {
+            id: `pantry-rcpt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            name: it.name,
+            category: it.category,
+            defaultQuantity: it.quantity || '1',
+            importance: 'common',
+            isDepleted: false,
+            lastRestockedAt: dateStr,
+            lastCost: it.price,
+            lastStore: storeName,
+          };
+          updatedPantryStaples.push(newStaple);
+        }
+      });
+    }
+
+    // 3. Sync to Weekly Grocery List & Price Tracking
+    if (syncToGroceryList) {
+      importedItems.forEach((it) => {
+        const norm = normalizeItemKey(it.name);
+        const existingIdx = updatedGroceryItems.findIndex((g) => {
+          const gNorm = normalizeItemKey(g.name);
+          return gNorm === norm || norm.includes(gNorm) || gNorm.includes(norm);
+        });
+
+        if (existingIdx !== -1) {
+          // Mark existing item as acquired and apply real receipt price!
+          updatedGroceryItems[existingIdx] = {
+            ...updatedGroceryItems[existingIdx],
+            acquired: true,
+            acquiredAt: updatedGroceryItems[existingIdx].acquiredAt || dateStr,
+            actualCost: it.price,
+            priceSource: 'receipt',
+            quantity: it.quantity || updatedGroceryItems[existingIdx].quantity,
+          };
+        } else {
+          // Add new acquired item to weekly trip with receipt price
+          const newGroceryItem: GroceryItem = {
+            id: `g-rcpt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            name: it.name,
+            category: it.category,
+            quantity: it.quantity || '1',
+            importance: 'common',
+            acquired: true,
+            acquiredAt: dateStr,
+            actualCost: it.price,
+            priceSource: 'receipt',
+            addedBy: storeName ? `Receipt (${storeName})` : 'Receipt Import',
+            notes: it.notes || (storeName ? `Imported from ${storeName} receipt` : 'Imported from receipt'),
+            createdAt: dateStr,
+          };
+          updatedGroceryItems.push(newGroceryItem);
+        }
+      });
+    }
+
+    // 4. Log imported receipt summary
+    const newReceiptLog: ImportedReceiptSummary = {
+      id: `rcpt-${Date.now()}`,
+      storeName: storeName || 'Grocery Store',
+      receiptDate: dateStr,
+      importedAt: new Date().toISOString(),
+      importedBy: isParentMode ? 'Parent' : activeKid ? activeKid.name : 'Family',
+      totalAmount: totalAmount || importedItems.reduce((acc, it) => acc + it.price, 0),
+      itemCount: importedItems.length,
+      itemsSummary: importedItems.slice(0, 5).map((i) => i.name),
+    };
+    const updatedReceipts = [newReceiptLog, ...(currentList.receipts || [])];
+
+    const updatedWeeklyGroceryList: WeeklyGroceryList = {
+      ...currentList,
+      items: updatedGroceryItems,
+      pantryStaples: updatedPantryStaples,
+      priceHistory: updatedPriceHistory,
+      receipts: updatedReceipts,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    onUpdateDatabase({
+      ...database,
+      weeklyGroceryList: updatedWeeklyGroceryList,
+    });
+
+    fireConfetti({ mode: 'celebration' });
+    showToast(
+      `Imported ${importedItems.length} items from ${storeName || 'receipt'}! Pantry restocked & prices synced! 🧾✨`
+    );
+  };
 
   const applyPriceEstimates = (estimates: Record<string, number>) => {
     if (!estimates || Object.keys(estimates).length === 0) return;
@@ -314,11 +501,13 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     const updatedItems = currentItems.map((item) => {
       if (estimates[item.id] !== undefined && item.actualCost === undefined) {
         changed = true;
+        const norm = normalizeItemKey(item.name);
+        const hasReceiptMemory = Boolean(currentList.priceHistory?.[norm]);
         return {
           ...item,
           estimatedCost: estimates[item.id],
           currency: 'USD',
-          priceSource: 'ai' as const,
+          priceSource: hasReceiptMemory ? ('receipt' as const) : ('ai' as const),
         };
       }
       return item;
@@ -338,11 +527,13 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     const currentItems = currentList.items || [];
     const updatedItems = currentItems.map((item) => {
       if (item.id === itemId && item.actualCost === undefined) {
+        const norm = normalizeItemKey(item.name);
+        const hasReceiptMemory = Boolean(currentList.priceHistory?.[norm]);
         return {
           ...item,
           estimatedCost,
           currency: 'USD',
-          priceSource: 'ai' as const,
+          priceSource: hasReceiptMemory ? ('receipt' as const) : ('ai' as const),
         };
       }
       return item;
@@ -357,8 +548,12 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
 
   const handleUpdateItemPrice = (itemId: string, actualCost: number | undefined) => {
     sound.playTap();
+    let updatedPriceHistory = { ...(groceryList.priceHistory || {}) };
+    let changedItemName = '';
+
     const updatedItems = items.map((item) => {
       if (item.id === itemId) {
+        changedItemName = item.name;
         if (actualCost === undefined) {
           // Revert to AI estimate
           return {
@@ -377,14 +572,23 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       return item;
     });
 
+    if (actualCost !== undefined && changedItemName) {
+      const norm = normalizeItemKey(changedItemName);
+      updatedPriceHistory[norm] = {
+        price: actualCost,
+        lastUpdated: getTodayDateString(),
+      };
+    }
+
     handleUpdateGroceryList({
       ...groceryList,
       items: updatedItems,
+      priceHistory: updatedPriceHistory,
       lastUpdated: new Date().toISOString(),
     });
 
     if (actualCost !== undefined) {
-      showToast(`Saved price: $${actualCost.toFixed(2)}`);
+      showToast(`Saved price: $${actualCost.toFixed(2)} (remembered for future estimates!)`);
     } else {
       showToast('Reverted to AI estimated price');
     }
@@ -404,7 +608,8 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     sound.playTap();
     try {
       const estimates = await estimateGroceryItemsBatchApi(
-        itemsToRefresh.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity }))
+        itemsToRefresh.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity })),
+        groceryList.priceHistory
       );
 
       const count = Object.keys(estimates).length;
@@ -412,7 +617,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
         applyPriceEstimates(estimates);
         sound.playRewardRedeemed();
         fireConfetti({ mode: 'snappy' });
-        showToast(`Refreshed AI store prices for ${count} item${count !== 1 ? 's' : ''}! ✨`);
+        showToast(`Refreshed prices for ${count} item${count !== 1 ? 's' : ''}! ✨`);
       } else {
         showToast('Could not fetch price estimates at this time.');
       }
@@ -449,6 +654,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     sound.playTap();
     const itemToToggle = items.find((i) => i.id === itemId);
     const willBeAcquired = !itemToToggle?.acquired;
+    const matchingName = itemToToggle?.name.toLowerCase().trim();
 
     const updatedItems = items.map((item) => {
       if (item.id === itemId) {
@@ -456,9 +662,43 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
           ...item,
           acquired: willBeAcquired,
           acquiredAt: willBeAcquired ? new Date().toISOString() : undefined,
+          isDepleted: willBeAcquired ? false : item.isDepleted,
+          isReplenishItem: willBeAcquired ? false : item.isReplenishItem,
+          depletedAt: willBeAcquired ? undefined : item.depletedAt,
+          depletedBy: willBeAcquired ? undefined : item.depletedBy,
         };
       }
       return item;
+    });
+
+    // Also sync matching pantry staples so purchased groceries reflect as In Stock!
+    const updatedStaples = pantryStaples.map((staple) => {
+      if (matchingName && staple.name.toLowerCase().trim() === matchingName) {
+        return {
+          ...staple,
+          isDepleted: willBeAcquired ? false : staple.isDepleted,
+          depletedAt: willBeAcquired ? undefined : staple.depletedAt,
+          depletedBy: willBeAcquired ? undefined : staple.depletedBy,
+          lastRestockedAt: willBeAcquired ? getTodayDateString() : staple.lastRestockedAt,
+        };
+      }
+      return staple;
+    });
+
+    // Also sync matching spices
+    const updatedSpices = spices.map((spice) => {
+      if (
+        matchingName &&
+        (spice.name.toLowerCase().trim() === matchingName ||
+          `${spice.name.toLowerCase().trim()} (seasoning)` === matchingName)
+      ) {
+        return {
+          ...spice,
+          isEmpty: willBeAcquired ? false : spice.isEmpty,
+          needsReplenish: willBeAcquired ? false : spice.needsReplenish,
+        };
+      }
+      return spice;
     });
 
     const totalCount = updatedItems.length;
@@ -472,6 +712,8 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     handleUpdateGroceryList({
       ...groceryList,
       items: updatedItems,
+      pantryStaples: updatedStaples,
+      spices: updatedSpices,
       lastUpdated: new Date().toISOString(),
     });
   };
@@ -513,7 +755,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     showToast(`Added "${newItem.name}" to grocery list!`);
 
     // Asynchronously estimate cost using Gemini AI
-    estimateGroceryItemPriceApi(itemName, itemQty)
+    estimateGroceryItemPriceApi(itemName, itemQty, groceryList.priceHistory)
       .then((res) => {
         if (res && res.estimatedCost) {
           applySinglePriceEstimate(itemId, res.estimatedCost);
@@ -542,13 +784,51 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     const removedCount = items.length - needed.length;
     if (removedCount === 0) return;
 
+    // Preserve acquired items into persistent pantry staples as In Stock
+    const acquiredItems = items.filter((i) => i.acquired);
+    const existingStapleNames = new Set(pantryStaples.map((s) => s.name.toLowerCase().trim()));
+    const newStaplesFromAcquired: PantryStapleItem[] = [];
+
+    acquiredItems.forEach((acq) => {
+      const nameKey = acq.name.toLowerCase().trim();
+      if (!existingStapleNames.has(nameKey)) {
+        newStaplesFromAcquired.push({
+          id: `staple-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          name: acq.name,
+          category: acq.category,
+          defaultQuantity: acq.quantity || '1',
+          importance: acq.importance || 'common',
+          isDepleted: false,
+          lastRestockedAt: getTodayDateString(),
+        });
+        existingStapleNames.add(nameKey);
+      }
+    });
+
+    const updatedStaples = pantryStaples.map((s) => {
+      const isAcquiredMatch = acquiredItems.some(
+        (acq) => acq.name.toLowerCase().trim() === s.name.toLowerCase().trim()
+      );
+      if (isAcquiredMatch) {
+        return {
+          ...s,
+          isDepleted: false,
+          depletedAt: undefined,
+          depletedBy: undefined,
+          lastRestockedAt: getTodayDateString(),
+        };
+      }
+      return s;
+    });
+
     const updatedList: WeeklyGroceryList = {
       ...groceryList,
       items: needed,
+      pantryStaples: [...updatedStaples, ...newStaplesFromAcquired],
       lastUpdated: new Date().toISOString(),
     };
     handleUpdateGroceryList(updatedList);
-    showToast(`Cleared ${removedCount} acquired items!`);
+    showToast(`Cleared ${removedCount} acquired items and stocked them in Pantry!`);
   };
 
   // 5. Toggle Household Grocery Depletion State ("Depleted / Needs Replenish")
@@ -559,10 +839,15 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     let isNowDepleted = false;
     let itemName = '';
 
+    // First find item name if available
+    const existingInItems = items.find((i) => i.id === itemId);
+    const existingInStaples = pantryStaples.find((s) => s.id === itemId);
+    const targetName = (existingInItems?.name || existingInStaples?.name || '').toLowerCase().trim();
+
     // Check if in items
     let itemFound = false;
     const updatedItems = items.map((item) => {
-      if (item.id === itemId) {
+      if (item.id === itemId || (targetName && item.name.toLowerCase().trim() === targetName)) {
         itemFound = true;
         const nextState = !item.isDepleted;
         isNowDepleted = nextState;
@@ -570,6 +855,8 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
         return {
           ...item,
           isDepleted: nextState,
+          isReplenishItem: nextState,
+          acquired: nextState ? false : true,
           depletedAt: nextState ? getTodayDateString() : undefined,
           depletedBy: nextState ? reporterName : undefined,
         };
@@ -579,7 +866,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
 
     // Also update staples if present
     const updatedStaples = pantryStaples.map((staple) => {
-      if (staple.id === itemId) {
+      if (staple.id === itemId || (targetName && staple.name.toLowerCase().trim() === targetName)) {
         const nextState = !staple.isDepleted;
         isNowDepleted = nextState;
         itemName = staple.name;
@@ -588,14 +875,30 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
           isDepleted: nextState,
           depletedAt: nextState ? getTodayDateString() : undefined,
           depletedBy: nextState ? reporterName : undefined,
+          lastRestockedAt: !nextState ? getTodayDateString() : staple.lastRestockedAt,
         };
       }
       return staple;
     });
 
+    // Sync items array if the target existed in staples
+    const finalItems = updatedItems.map((item) => {
+      if (targetName && item.name.toLowerCase().trim() === targetName) {
+        return {
+          ...item,
+          isDepleted: isNowDepleted,
+          isReplenishItem: isNowDepleted,
+          acquired: isNowDepleted ? false : true,
+          depletedAt: isNowDepleted ? getTodayDateString() : undefined,
+          depletedBy: isNowDepleted ? reporterName : undefined,
+        };
+      }
+      return item;
+    });
+
     handleUpdateGroceryList({
       ...groceryList,
-      items: itemFound ? updatedItems : items,
+      items: itemFound ? finalItems : items,
       pantryStaples: updatedStaples,
       lastUpdated: new Date().toISOString(),
     });
@@ -605,6 +908,40 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     } else {
       showToast(`Marked "${itemName}" as In Stock & Full! ✅`);
     }
+  };
+
+  // Restock All Pantry Items (Quick Action for Parents)
+  const handleRestockAllPantry = () => {
+    sound.playRewardRedeemed();
+    fireConfetti({ mode: 'snappy' });
+    const updatedItems = items.map((item) => ({
+      ...item,
+      isDepleted: false,
+      isReplenishItem: false,
+      acquired: true,
+      depletedAt: undefined,
+      depletedBy: undefined,
+    }));
+    const updatedStaples = pantryStaples.map((staple) => ({
+      ...staple,
+      isDepleted: false,
+      depletedAt: undefined,
+      depletedBy: undefined,
+      lastRestockedAt: getTodayDateString(),
+    }));
+    const updatedSpices = spices.map((spice) => ({
+      ...spice,
+      isEmpty: false,
+      needsReplenish: false,
+    }));
+    handleUpdateGroceryList({
+      ...groceryList,
+      items: updatedItems,
+      pantryStaples: updatedStaples,
+      spices: updatedSpices,
+      lastUpdated: new Date().toISOString(),
+    });
+    showToast('🎉 All household groceries & spices marked In Stock & Restocked!');
   };
 
   // 6. Import Replenished Items into Active List
@@ -623,7 +960,8 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       );
       if (newUnpriced.length > 0) {
         estimateGroceryItemsBatchApi(
-          newUnpriced.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity }))
+          newUnpriced.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity })),
+          updatedList.priceHistory
         ).then((estimates) => {
           applyPriceEstimates(estimates);
         }).catch((err) => console.warn('Replenishment estimate error:', err));
@@ -639,31 +977,75 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     if (!newPantryName.trim()) return;
 
     sound.playTap();
-    const newGrocery: GroceryItem = {
-      id: `g-pantry-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      name: newPantryName.trim(),
+    const itemName = newPantryName.trim();
+    const isDepleted = newPantryStatus === 'depleted';
+    const reporterName = activeKid ? `${activeKid.name} ${activeKid.avatar}` : isParentMode ? 'Mom/Dad' : 'Family';
+
+    // Create persistent pantry staple item (In Stock by default!)
+    const newStaple: PantryStapleItem = {
+      id: `staple-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name: itemName,
       category: newPantryCategory,
-      quantity: newPantryQuantity.trim() || '1',
+      defaultQuantity: newPantryQuantity.trim() || '1',
       importance: newPantryImportance,
-      acquired: false,
-      isDepleted: true, // starts depleted so user can easily replenish
-      depletedAt: getTodayDateString(),
-      depletedBy: activeKid ? activeKid.name : isParentMode ? 'Mom/Dad' : 'Family',
-      addedBy: 'Household Pantry Catalog',
-      createdAt: getTodayDateString(),
+      isDepleted: isDepleted,
+      depletedAt: isDepleted ? getTodayDateString() : undefined,
+      depletedBy: isDepleted ? reporterName : undefined,
+      lastRestockedAt: !isDepleted ? getTodayDateString() : undefined,
     };
+
+    // If there is any existing item with this name in items, sync its state
+    let matchingItemFound = false;
+    const updatedItems = items.map((item) => {
+      if (item.name.toLowerCase().trim() === itemName.toLowerCase().trim()) {
+        matchingItemFound = true;
+        return {
+          ...item,
+          isDepleted: isDepleted,
+          isReplenishItem: isDepleted,
+          acquired: !isDepleted,
+          depletedAt: isDepleted ? getTodayDateString() : undefined,
+          depletedBy: isDepleted ? reporterName : undefined,
+        };
+      }
+      return item;
+    });
+
+    const finalItems = [...updatedItems];
+    // If the user explicitly chose depleted, also queue it in the active grocery list to buy
+    if (isDepleted && !matchingItemFound) {
+      finalItems.unshift({
+        id: `g-pantry-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: itemName,
+        category: newPantryCategory,
+        quantity: newPantryQuantity.trim() || '1',
+        importance: newPantryImportance,
+        acquired: false,
+        isDepleted: true,
+        depletedAt: getTodayDateString(),
+        depletedBy: reporterName,
+        addedBy: 'Household Pantry Catalog',
+        createdAt: getTodayDateString(),
+      });
+    }
 
     const updatedList: WeeklyGroceryList = {
       ...groceryList,
-      items: [newGrocery, ...items],
+      items: finalItems,
+      pantryStaples: [newStaple, ...pantryStaples.filter((s) => s.name.toLowerCase().trim() !== itemName.toLowerCase().trim())],
       lastUpdated: new Date().toISOString(),
     };
 
     handleUpdateGroceryList(updatedList);
     setNewPantryName('');
     setNewPantryQuantity('1');
+    setNewPantryStatus('in_stock');
     setIsAddingPantryOpen(false);
-    showToast(`Added "${newGrocery.name}" to household groceries!`);
+    showToast(
+      isDepleted
+        ? `Added "${itemName}" to pantry (marked Depleted & Needs Replenish) ⚠️`
+        : `Added "${itemName}" to household pantry (In Stock & Full) ✅`
+    );
   };
 
   // 8. Seasonings & Spices Handlers
@@ -770,7 +1152,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     showToast(`Added "${spice.name}" to active grocery list! 🛒`);
 
     // Estimate spice price
-    estimateGroceryItemPriceApi(`${spice.name} Seasoning`, '1 container')
+    estimateGroceryItemPriceApi(`${spice.name} Seasoning`, '1 container', groceryList.priceHistory)
       .then((res) => {
         if (res && res.estimatedCost) {
           applySinglePriceEstimate(newItem.id, res.estimatedCost);
@@ -852,7 +1234,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     showToast(`✅ Approved "${req.name}" and added to grocery list!`);
 
     // Estimate price for approved item
-    estimateGroceryItemPriceApi(req.name, req.quantity)
+    estimateGroceryItemPriceApi(req.name, req.quantity, groceryList.priceHistory)
       .then((res) => {
         if (res && res.estimatedCost) {
           applySinglePriceEstimate(newItem.id, res.estimatedCost);
@@ -924,7 +1306,8 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     // Automatically estimate prices for items in the new week's list
     if (newList.items.length > 0) {
       estimateGroceryItemsBatchApi(
-        newList.items.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity }))
+        newList.items.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity })),
+        newList.priceHistory
       ).then((estimates) => {
         applyPriceEstimates(estimates);
       }).catch((err) => console.warn('Start week price estimate error:', err));
@@ -971,7 +1354,8 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
 
     // Automatically batch estimate prices for newly added menu ingredients
     estimateGroceryItemsBatchApi(
-      toAdd.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity }))
+      toAdd.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity })),
+      updatedList.priceHistory
     ).then((estimates) => {
       applyPriceEstimates(estimates);
     }).catch((err) => console.warn('Dinner menu price estimate error:', err));
@@ -1309,8 +1693,24 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Actions: Refresh Prices & Budget Target */}
-                  <div className="flex items-center gap-2">
+                  {/* Actions: Refresh Prices, Import Receipt & Budget Target */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {isParentMode && (
+                      <button
+                        id="btn-import-receipt-budget-header"
+                        type="button"
+                        onClick={() => {
+                          sound.playTap();
+                          setIsReceiptImportOpen(true);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer transition-all border border-emerald-500"
+                        title="Scan or upload a store receipt to update price history and log real costs"
+                      >
+                        <Receipt className="w-3.5 h-3.5" />
+                        <span>Import Receipt 🧾</span>
+                      </button>
+                    )}
+
                     <button
                       id="btn-refresh-grocery-prices"
                       type="button"
@@ -1826,14 +2226,54 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end flex-wrap">
-                  {isParentMode && depletedItems.length > 0 && (
+                  {isParentMode && (
                     <button
-                      onClick={handleImportReplenishments}
-                      className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                      id="btn-import-receipt-pantry"
+                      onClick={() => {
+                        sound.playTap();
+                        setIsReceiptImportOpen(true);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                      title="Upload or scan a store receipt to restock pantry items & record unit prices"
                     >
-                      <Package className="w-4 h-4" />
-                      <span>Import Depleted ({depletedItems.length})</span>
+                      <Receipt className="w-4 h-4" />
+                      <span>Import Receipt 🧾</span>
                     </button>
+                  )}
+
+                  {(groceryList.receipts || []).length > 0 && (
+                    <button
+                      id="btn-view-receipts-history"
+                      onClick={() => {
+                        sound.playTap();
+                        setIsReceiptHistoryOpen(true);
+                      }}
+                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                      title="View receipt scan history and price records"
+                    >
+                      <Receipt className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Receipts ({(groceryList.receipts || []).length})</span>
+                    </button>
+                  )}
+
+                  {isParentMode && depletedItems.length > 0 && (
+                    <>
+                      <button
+                        onClick={handleRestockAllPantry}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                        title="Mark all depleted household groceries and spices as In Stock (Restocked)"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Restock All ({depletedItems.length})</span>
+                      </button>
+                      <button
+                        onClick={handleImportReplenishments}
+                        className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                      >
+                        <Package className="w-4 h-4" />
+                        <span>Import Depleted ({depletedItems.length})</span>
+                      </button>
+                    </>
                   )}
                   {isParentMode && (
                     <button
@@ -1891,11 +2331,11 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                         autoFocus
                       />
                     </div>
-                    <div className="sm:col-span-3">
+                    <div className="sm:col-span-2">
                       <select
                         value={newPantryCategory}
                         onChange={(e) => setNewPantryCategory(e.target.value as GroceryCategory)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-bold text-xs text-slate-900"
+                        className="w-full px-2.5 py-2 rounded-xl border border-slate-300 bg-white font-bold text-xs text-slate-900"
                       >
                         {GROCERY_CATEGORY_ORDER.map((cat) => (
                           <option key={cat} value={cat}>
@@ -1904,16 +2344,30 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                         ))}
                       </select>
                     </div>
-                    <div className="sm:col-span-3">
+                    <div className="sm:col-span-2">
                       <select
                         value={newPantryImportance}
                         onChange={(e) => setNewPantryImportance(e.target.value as GroceryImportance)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-bold text-xs text-slate-900"
+                        className="w-full px-2.5 py-2 rounded-xl border border-slate-300 bg-white font-bold text-xs text-slate-900"
                       >
                         <option value="staple">⭐ Staple</option>
                         <option value="common">🍎 Common</option>
                         <option value="treat">🍪 Treat</option>
                         <option value="luxury">✨ Luxury</option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <select
+                        value={newPantryStatus}
+                        onChange={(e) => setNewPantryStatus(e.target.value as 'in_stock' | 'depleted')}
+                        className={`w-full px-2 py-2 rounded-xl border font-bold text-xs ${
+                          newPantryStatus === 'in_stock'
+                            ? 'bg-emerald-50 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-700'
+                            : 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700'
+                        }`}
+                      >
+                        <option value="in_stock">✅ In Stock</option>
+                        <option value="depleted">⚠️ Depleted</option>
                       </select>
                     </div>
                     <div className="sm:col-span-2 flex gap-2">
@@ -2002,6 +2456,21 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                             </button>
                           )}
                         </div>
+
+                        {/* Last Purchase Price / Receipt Record */}
+                        {item.lastCost !== undefined && (
+                          <div className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-200/80 dark:border-emerald-800/60 flex items-center justify-between gap-1">
+                            <span className="flex items-center gap-1">
+                              <span>🧾</span>
+                              <span>Last: <strong>${item.lastCost.toFixed(2)}</strong></span>
+                            </span>
+                            {item.lastStore && (
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate max-w-[110px]">
+                                {item.lastStore}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         {/* Depleted Reporter Note if empty */}
                         {item.isDepleted && item.depletedBy && (
@@ -2792,6 +3261,115 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
         </div>
       )}
 
+      {/* Receipt Import Modal */}
+      <ReceiptImportModal
+        isOpen={isReceiptImportOpen}
+        onClose={() => setIsReceiptImportOpen(false)}
+        onImportSuccess={handleImportReceiptSuccess}
+        existingGroceryItems={items.map((i) => ({ id: i.id, name: i.name, category: i.category }))}
+        existingPantryStaples={allHouseholdGroceries.map((p) => ({ id: p.id, name: p.name, category: p.category }))}
+      />
+
+      {/* Past Receipts History Dialog */}
+      {isReceiptHistoryOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-teal-400 dark:border-teal-600 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-teal-500 text-white flex items-center justify-center text-xl shadow-xs">
+                  🧾
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
+                    Imported Receipt Logs
+                  </h3>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    Past receipts scanned for pantry restocking and price tracking
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsReceiptHistoryOpen(false)}
+                className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {(groceryList.receipts || []).length === 0 ? (
+                <div className="p-8 text-center text-slate-400 font-medium text-xs">
+                  No receipts logged yet. Upload or scan a receipt to get started!
+                </div>
+              ) : (
+                (groceryList.receipts || []).map((rcpt) => (
+                  <div
+                    key={rcpt.id}
+                    className="p-3.5 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                          <span>🏪 {rcpt.storeName || 'Store Receipt'}</span>
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mt-0.5">
+                          Date: {rcpt.receiptDate || 'Recent'} • Scanned by: {rcpt.importedBy || 'Family'}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-black text-emerald-700 dark:text-emerald-400">
+                          ${rcpt.totalAmount.toFixed(2)}
+                        </div>
+                        <div className="text-[10px] font-extrabold text-slate-400">
+                          {rcpt.itemCount} items
+                        </div>
+                      </div>
+                    </div>
+
+                    {rcpt.itemsSummary && rcpt.itemsSummary.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-200 dark:border-slate-700/60">
+                        {rcpt.itemsSummary.map((name, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-bold"
+                          >
+                            {name}
+                          </span>
+                        ))}
+                        {rcpt.itemCount > rcpt.itemsSummary.length && (
+                          <span className="text-[10px] text-slate-400 font-bold self-center px-1">
+                            +{rcpt.itemCount - rcpt.itemsSummary.length} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+              <button
+                onClick={() => {
+                  setIsReceiptHistoryOpen(false);
+                  setIsReceiptImportOpen(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs flex items-center gap-1.5 shadow-md cursor-pointer active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Import Another Receipt</span>
+              </button>
+              <button
+                onClick={() => setIsReceiptHistoryOpen(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Toast Message */}
       {toastMessage && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-70 px-5 py-3 rounded-2xl bg-slate-900/95 text-white font-black text-xs sm:text-sm shadow-2xl border border-white/20 animate-in fade-in slide-in-from-bottom-4 duration-150 flex items-center gap-2">
@@ -2831,7 +3409,8 @@ const GroceryItemRow: React.FC<GroceryItemRowProps> = ({
   );
 
   const displayPrice = item.actualCost !== undefined ? item.actualCost : item.estimatedCost;
-  const isManual = item.actualCost !== undefined;
+  const isReceipt = item.priceSource === 'receipt';
+  const isManual = item.actualCost !== undefined && !isReceipt;
 
   const handleSavePrice = () => {
     const val = parseFloat(priceInput.trim());
@@ -2888,7 +3467,7 @@ const GroceryItemRow: React.FC<GroceryItemRowProps> = ({
               {impMeta.icon} {impMeta.label}
             </span>
 
-            {item.isReplenishItem && (
+            {item.isReplenishItem && !item.acquired && (
               <span className="px-2 py-0.2 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
                 ⚠️ Replenish
               </span>
@@ -2961,27 +3540,33 @@ const GroceryItemRow: React.FC<GroceryItemRowProps> = ({
                   }
                 }}
                 className={`group px-2 py-1 rounded-xl border text-xs font-black flex items-center gap-1.5 transition-all ${
-                  isManual
+                  isReceipt
+                    ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-950 dark:text-teal-200 border-teal-300 dark:border-teal-700'
+                    : isManual
                     ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
                     : 'bg-slate-100 dark:bg-slate-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-650'
                 } ${isParentMode ? 'cursor-pointer hover:border-emerald-400 hover:shadow-2xs' : 'cursor-default'}`}
                 title={
                   isParentMode
-                    ? isManual
-                      ? 'Receipt price (click to edit)'
+                    ? isReceipt
+                      ? 'Imported from store receipt (click to edit)'
+                      : isManual
+                      ? 'Manual price (click to edit)'
                       : 'AI estimated price (click to edit receipt price)'
                     : 'Price'
                 }
               >
-                <span>{isManual ? `$${displayPrice.toFixed(2)}` : `~$${displayPrice.toFixed(2)}`}</span>
+                <span>{isReceipt || isManual ? `$${displayPrice.toFixed(2)}` : `~$${displayPrice.toFixed(2)}`}</span>
                 <span
-                  className={`text-[9px] font-extrabold uppercase px-1 py-0.2 rounded-sm ${
-                    isManual
+                  className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-sm ${
+                    isReceipt
+                      ? 'bg-teal-200/80 dark:bg-teal-900 text-teal-950 dark:text-teal-200'
+                      : isManual
                       ? 'bg-emerald-200/80 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200'
                       : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
                   }`}
                 >
-                  {isManual ? 'Actual' : 'AI Est.'}
+                  {isReceipt ? '🧾 Receipt' : isManual ? 'Actual' : 'AI Est.'}
                 </span>
                 {isParentMode && (
                   <Pencil className="w-3 h-3 opacity-40 group-hover:opacity-100 transition-opacity" />

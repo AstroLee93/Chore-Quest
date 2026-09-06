@@ -306,11 +306,23 @@ export const getPantryDepletedItems = (groceryList: WeeklyGroceryList): { id: st
   const result: { id: string; name: string; category: GroceryCategory; quantity?: string; icon?: string; depletedBy?: string; notes?: string; importance?: GroceryImportance }[] = [];
   const seen = new Set<string>();
 
-  // Check all grocery items marked as depleted or replenish items
+  // Names of items that have already been acquired (purchased) this week
+  const acquiredNames = new Set(
+    (groceryList.items || [])
+      .filter((i) => i.acquired)
+      .map((i) => i.name.toLowerCase().trim())
+  );
+
+  // Check all grocery items that are unacquired and actually marked as depleted
   (groceryList.items || []).forEach((item) => {
-    if (item.isDepleted || item.isReplenishItem) {
+    // If the item has already been acquired (purchased), it is in stock - NOT depleted!
+    if (item.acquired) {
+      return;
+    }
+
+    if (item.isDepleted) {
       const key = item.name.toLowerCase().trim();
-      if (!seen.has(key)) {
+      if (!seen.has(key) && !acquiredNames.has(key)) {
         seen.add(key);
         result.push({
           id: item.id,
@@ -326,11 +338,11 @@ export const getPantryDepletedItems = (groceryList: WeeklyGroceryList): { id: st
     }
   });
 
-  // Also include any legacy pantryStaples that are depleted
+  // Also include any legacy pantryStaples that are depleted and not already acquired
   (groceryList.pantryStaples || []).forEach((staple) => {
     if (staple.isDepleted) {
       const key = staple.name.toLowerCase().trim();
-      if (!seen.has(key)) {
+      if (!seen.has(key) && !acquiredNames.has(key)) {
         seen.add(key);
         result.push({
           id: staple.id,
@@ -346,11 +358,12 @@ export const getPantryDepletedItems = (groceryList: WeeklyGroceryList): { id: st
     }
   });
 
-  // Also check empty spices that need replenishment
+  // Also check empty spices that need replenishment and have not been acquired
   (groceryList.spices || []).forEach((spice) => {
     if (spice.isEmpty && spice.needsReplenish) {
       const key = spice.name.toLowerCase().trim();
-      if (!seen.has(key)) {
+      const seasoningKey = `${key} (seasoning)`;
+      if (!seen.has(key) && !acquiredNames.has(key) && !acquiredNames.has(seasoningKey)) {
         seen.add(key);
         result.push({
           id: spice.id,

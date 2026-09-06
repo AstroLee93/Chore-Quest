@@ -300,15 +300,30 @@ app.get('/api/events', (req, res) => {
 
 // 8. Single Grocery Item Price Estimation via Gemini AI
 app.post('/api/grocery/estimate-price', async (req, res) => {
-  const { name, quantity } = req.body;
+  const { name, quantity, knownPrices } = req.body;
   if (!name || typeof name !== 'string' || !name.trim()) {
     res.status(400).json({ error: 'Item name is required' });
     return;
   }
 
-  const ai = getGenAI();
   const trimmedName = name.trim();
+  const lowerName = trimmedName.toLowerCase();
   const trimmedQty = quantity && typeof quantity === 'string' ? quantity.trim() : '';
+
+  // Check known receipt price history first if provided
+  if (knownPrices && typeof knownPrices === 'object' && knownPrices[lowerName] !== undefined) {
+    const historical = Number(knownPrices[lowerName]);
+    if (!isNaN(historical) && historical > 0) {
+      res.json({
+        estimatedCost: Number(historical.toFixed(2)),
+        currency: 'USD',
+        priceSource: 'receipt',
+      });
+      return;
+    }
+  }
+
+  const ai = getGenAI();
   const qtyText = trimmedQty ? `${trimmedQty} of ` : '';
   const prompt = `Estimate the typical current US grocery store price in USD for ${qtyText}${trimmedName}. Reply with ONLY a number (e.g. 3.49). If unsure, give a reasonable average.`;
 
@@ -356,17 +371,38 @@ app.post('/api/grocery/estimate-price', async (req, res) => {
 
 // 9. Batch Grocery Items Price Estimation via Gemini AI
 app.post('/api/grocery/estimate-prices', async (req, res) => {
-  const { items } = req.body;
+  const { items, knownPrices } = req.body;
   if (!Array.isArray(items) || items.length === 0) {
     res.json({ estimates: {}, currency: 'USD', priceSource: 'ai' });
     return;
   }
 
-  const ai = getGenAI();
   const estimates: Record<string, number> = {};
+  const itemsNeedingEstimate: any[] = [];
+
+  // Check historical/receipt prices first
+  items.forEach((it: any) => {
+    if (!it || !it.id || !it.name) return;
+    const lower = it.name.toLowerCase().trim();
+    if (knownPrices && typeof knownPrices === 'object' && knownPrices[lower] !== undefined) {
+      const hist = Number(knownPrices[lower]);
+      if (!isNaN(hist) && hist > 0) {
+        estimates[it.id] = Number(hist.toFixed(2));
+        return;
+      }
+    }
+    itemsNeedingEstimate.push(it);
+  });
+
+  if (itemsNeedingEstimate.length === 0) {
+    res.json({ estimates, currency: 'USD', priceSource: 'receipt' });
+    return;
+  }
+
+  const ai = getGenAI();
 
   if (!ai) {
-    items.forEach((it: { id: string; name: string; quantity?: string }) => {
+    itemsNeedingEstimate.forEach((it: { id: string; name: string; quantity?: string }) => {
       if (it.id && it.name) {
         estimates[it.id] = getFallbackEstimate(it.name, it.quantity);
       }
@@ -378,7 +414,7 @@ app.post('/api/grocery/estimate-prices', async (req, res) => {
   try {
     const prompt = `Estimate the typical current US grocery store price in USD for each of the following grocery items.
 Items:
-${items.map((it: any, idx: number) => `${idx + 1}. [ID: ${it.id}] ${it.quantity ? `${it.quantity} of ` : ''}${it.name}`).join('\n')}
+${itemsNeedingEstimate.map((it: any, idx: number) => `${idx + 1}. [ID: ${it.id}] ${it.quantity ? `${it.quantity} of ` : ''}${it.name}`).join('\n')}
 
 Reply with a JSON array where each item has "id" (the exact string ID provided) and "price" (number in USD, e.g. 3.49). If unsure, give a reasonable average.
 Reply with ONLY the valid JSON array.`;
@@ -411,7 +447,7 @@ Reply with ONLY the valid JSON array.`;
     }
 
     // Fill any missing with fallback
-    items.forEach((it: any) => {
+    itemsNeedingEstimate.forEach((it: any) => {
       if (it.id && estimates[it.id] === undefined) {
         estimates[it.id] = getFallbackEstimate(it.name, it.quantity);
       }
@@ -420,12 +456,174 @@ Reply with ONLY the valid JSON array.`;
     res.json({ estimates, currency: 'USD', priceSource: 'ai' });
   } catch (err: any) {
     console.error('[Server] Gemini batch price estimation error:', err?.message || err);
-    items.forEach((it: any) => {
-      if (it.id) {
+    itemsNeedingEstimate.forEach((it: any) => {
+      if (it.id && estimates[it.id] === undefined) {
         estimates[it.id] = getFallbackEstimate(it.name, it.quantity);
       }
     });
     res.json({ estimates, currency: 'USD', priceSource: 'ai', fallback: true });
+  }
+});
+
+// 10. AI Receipt Image Parser via Multimodal Gemini Vision
+app.post('/api/grocery/parse-receipt', async (req, res) => {
+  const { image, mimeType } = req.body;
+  if (!image || typeof image !== 'string') {
+    res.status(400).json({ error: 'Receipt image data is required.' });
+    return;
+  }
+
+  let base64Data = image;
+  let detectedMime = mimeType || 'image/jpeg';
+
+  const dataUriMatch = image.match(/^data:([^;]+);base64,(.+)$/);
+  if (dataUriMatch) {
+    detectedMime = dataUriMatch[1];
+    base64Data = dataUriMatch[2];
+  }
+
+  const ai = getGenAI();
+
+  if (!ai) {
+    // Provide a realistic fallback sample parse if API key is not configured
+    const sampleItems = [
+      { name: 'Organic Whole Milk', price: 4.29, quantity: '1 gal', category: 'dairy_eggs', notes: 'Store brand' },
+      { name: 'Grade A Large Eggs', price: 3.49, quantity: '1 dozen', category: 'dairy_eggs', notes: 'Cage free' },
+      { name: 'Gala Apples', price: 2.99, quantity: '2 lbs', category: 'produce', notes: 'Fresh' },
+      { name: 'Whole Wheat Bread', price: 3.19, quantity: '1 loaf', category: 'bakery', notes: 'Sliced' },
+      { name: 'Boneless Chicken Breasts', price: 7.89, quantity: '1.5 lbs', category: 'meat_seafood', notes: 'Fresh pack' },
+      { name: 'Ground Cinnamon', price: 2.49, quantity: '1 jar', category: 'pantry', notes: 'Spice' },
+    ];
+    const total = sampleItems.reduce((acc, it) => acc + it.price, 0);
+
+    res.json({
+      success: true,
+      storeName: 'Sample Grocery Store',
+      receiptDate: new Date().toISOString().split('T')[0],
+      currency: 'USD',
+      subtotal: total,
+      tax: Number((total * 0.05).toFixed(2)),
+      total: Number((total * 1.05).toFixed(2)),
+      items: sampleItems,
+      fallback: true,
+    });
+    return;
+  }
+
+  try {
+    const prompt = `You are an expert receipt OCR scanner and grocery analyst for a family kitchen pantry and grocery budgeting app.
+Analyze this store receipt photo and extract all purchased products, item costs, quantities, and receipt details.
+
+Return a valid JSON object with the following fields:
+{
+  "storeName": "Name of the store (e.g. 'Trader Joe's', 'Walmart', 'Kroger', 'Costco', 'Aldi', 'Target', 'Safeway', or null if unreadable)",
+  "receiptDate": "Date of purchase in YYYY-MM-DD format (or null)",
+  "currency": "USD",
+  "subtotal": float or null,
+  "tax": float or 0,
+  "total": float or null,
+  "items": [
+    {
+      "name": "Clean product name without cryptic abbreviations or POS codes (e.g. expand 'ORG WHL MLK 1GL' to 'Organic Whole Milk', 'BNLS SKNLS CHKN BRST' to 'Boneless Skinless Chicken Breast', 'BANANAS' to 'Bananas')",
+      "price": float (actual unit price or net line total charged in USD, e.g. 3.49),
+      "quantity": "package size, weight, or count like '1 gal', '2 lbs', '1 dozen', '1 loaf', '1' (default '1' if unspecified)",
+      "category": "produce | dairy_eggs | meat_seafood | bakery | pantry | frozen | snacks | beverages | household | other",
+      "notes": "Any discount notes or brand details if detected, else empty string"
+    }
+  ]
+}
+
+Important Rules:
+1. Clean up shortened abbreviations into friendly names kids and parents understand.
+2. Ensure 'price' is a positive floating-point number. If an item has an immediate store discount or loyalty markdown, use the net final charged price.
+3. Every item must be classified into one of the exact category strings: produce, dairy_eggs, meat_seafood, bakery, pantry, frozen, snacks, beverages, household, other.
+4. Filter out administrative non-grocery lines like tax, total, payment method (VISA, Debit, Cash), change due, or bottle deposit fee lines from the items list.
+5. If the receipt has multiple items, extract every single purchased item line.
+6. Reply ONLY with the valid JSON object.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: [
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType: detectedMime,
+          },
+        },
+        prompt,
+      ],
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const text = response.text?.trim() || '{}';
+    let parsed: any = {};
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      }
+    }
+
+    const rawItems = Array.isArray(parsed.items) ? parsed.items : [];
+    const validCategories = new Set([
+      'produce',
+      'dairy_eggs',
+      'meat_seafood',
+      'bakery',
+      'pantry',
+      'frozen',
+      'snacks',
+      'beverages',
+      'household',
+      'other',
+    ]);
+
+    const sanitizedItems = rawItems
+      .filter((it: any) => it && typeof it.name === 'string' && it.name.trim().length > 0)
+      .map((it: any) => {
+        let price = typeof it.price === 'number' ? it.price : parseFloat(String(it.price || '0').replace(/[^0-9.]/g, ''));
+        if (isNaN(price) || price <= 0) price = 2.99;
+        price = Number(price.toFixed(2));
+
+        let cat = typeof it.category === 'string' ? it.category.toLowerCase().trim() : 'pantry';
+        if (!validCategories.has(cat)) {
+          cat = 'pantry';
+        }
+
+        return {
+          name: it.name.trim(),
+          price,
+          quantity: it.quantity && typeof it.quantity === 'string' ? it.quantity.trim() : '1',
+          category: cat,
+          notes: it.notes && typeof it.notes === 'string' ? it.notes.trim() : '',
+        };
+      });
+
+    const calculatedSubtotal = sanitizedItems.reduce((acc: number, it: any) => acc + it.price, 0);
+    const subtotal = typeof parsed.subtotal === 'number' ? parsed.subtotal : Number(calculatedSubtotal.toFixed(2));
+    const tax = typeof parsed.tax === 'number' ? parsed.tax : 0;
+    const total = typeof parsed.total === 'number' && parsed.total > 0 ? parsed.total : Number((subtotal + tax).toFixed(2));
+
+    res.json({
+      success: true,
+      storeName: parsed.storeName || null,
+      receiptDate: parsed.receiptDate || new Date().toISOString().split('T')[0],
+      currency: parsed.currency || 'USD',
+      subtotal,
+      tax,
+      total,
+      items: sanitizedItems,
+    });
+  } catch (err: any) {
+    console.error('[Server] Gemini receipt parse error:', err?.message || err);
+    res.status(500).json({
+      error: 'Failed to extract receipt items. Please ensure the image is clear or try again.',
+      details: err?.message || String(err),
+    });
   }
 });
 

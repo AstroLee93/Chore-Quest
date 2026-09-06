@@ -273,7 +273,7 @@ export interface GroceryItem {
   estimatedCost?: number;
   actualCost?: number;
   currency?: string; // default "USD"
-  priceSource?: 'manual' | 'ai' | 'api';
+  priceSource?: 'manual' | 'ai' | 'api' | 'receipt';
 }
 
 export interface SpiceItem {
@@ -323,7 +323,28 @@ export interface PantryStapleItem {
   depletedAt?: string;
   depletedBy?: string; // Who marked it as used up (e.g. kid or parent)
   lastRestockedAt?: string;
+  lastCost?: number; // Last purchased unit / receipt cost in USD
+  lastStore?: string; // Store where last purchased (e.g. "Trader Joe's", "Walmart")
   notes?: string;
+}
+
+export interface PriceHistoryEntry {
+  price: number;
+  lastUpdated: string;
+  store?: string;
+  quantity?: string;
+  sourceReceiptId?: string;
+}
+
+export interface ImportedReceiptSummary {
+  id: string;
+  storeName?: string;
+  receiptDate?: string;
+  importedAt: string;
+  importedBy?: string;
+  totalAmount?: number;
+  itemCount: number;
+  itemsSummary?: string[]; // e.g. ["Milk", "Eggs", "Bread"]
 }
 
 export interface WeeklyGroceryList {
@@ -334,6 +355,8 @@ export interface WeeklyGroceryList {
   spices?: SpiceItem[];
   requests?: GroceryRequest[];
   budgetTarget?: number; // Optional budget target for the weekly grocery trip
+  priceHistory?: Record<string, PriceHistoryEntry>; // Historical known prices from receipts / verified store purchases
+  receipts?: ImportedReceiptSummary[]; // Log of imported receipts
   lastUpdated?: string;
 }
 

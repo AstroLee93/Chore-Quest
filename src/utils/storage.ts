@@ -533,7 +533,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     {
       id: 'rew-6',
       title: 'Special Outing to the Park / Playground',
-      description: 'Trip to your favorite adventure park with mom/dad.',
+      description: 'Trip to your favorite adventure park with Mom or Lex.',
       icon: '🎡',
       starCost: 60,
       category: 'activity',

@@ -220,7 +220,7 @@ export interface DailyDinnerPlan {
   mainDish: string;
   sideDishes?: string;
   dessert?: string;
-  preparedBy?: string; // e.g. "Mom & Maya", "Dad", "Leo (Chef in Training)"
+  preparedBy?: string; // e.g. "Mom & Maya", "Mom and Lex", "Lex", "Leo (Chef in Training)"
   icon?: string; // Emoji
   notes?: string; // e.g. "5:30 PM before soccer game"
   votingEnabled?: boolean;

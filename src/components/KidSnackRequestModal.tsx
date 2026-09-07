@@ -190,7 +190,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
       fireConfetti({ mode: 'snappy' });
       if (onPostActionComplete) {
         showToast(
-          `🎉 Custom request for "${itemName}" submitted! Mom & Dad will review and set the star rating. Returning...`,
+          `🎉 Custom request for "${itemName}" submitted! Mom and Lex will review and set the star rating. Returning...`,
           'success'
         );
         setTimeout(() => {
@@ -198,7 +198,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
         }, 1200);
       } else {
         showToast(
-          `🎉 Custom request for "${itemName}" sent! Mom & Dad will assign the expense rating and review it.`,
+          `🎉 Custom request for "${itemName}" sent! Mom and Lex will assign the expense rating and review it.`,
           'success'
         );
       }
@@ -272,7 +272,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
       }, 1200);
     } else {
       showToast(
-        `🎉 Paid ${starCost} ⭐! Request for "${itemName}" sent to Mom & Dad for this week's grocery trip!`,
+        `🎉 Paid ${starCost} ⭐! Request for "${itemName}" sent to Mom and Lex for this week's grocery trip!`,
         'success'
       );
     }
@@ -355,7 +355,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
           status: 'approved' as const,
           starsDeducted: true,
           needsAdminRating: false,
-          reviewedBy: isParentMode ? 'Mom & Dad' : 'Admin',
+          reviewedBy: isParentMode ? 'Mom and Lex' : 'Admin',
           reviewedAt: new Date().toISOString(),
         };
       }
@@ -401,7 +401,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
           ...r,
           status: 'denied' as const,
           deniedReason: denyReasonText.trim() || 'Not on this shopping trip',
-          reviewedBy: isParentMode ? 'Mom & Dad' : 'Admin',
+          reviewedBy: isParentMode ? 'Mom and Lex' : 'Admin',
           reviewedAt: new Date().toISOString(),
         };
       }
@@ -840,7 +840,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                             </span>
                           </div>
                           <p className="text-[9px] text-purple-700 dark:text-purple-400 font-bold mt-1">
-                            Mom & Dad determine the expense rating upon review.
+                            Mom and Lex determine the expense rating upon review.
                           </p>
                         </div>
                       )}
@@ -849,7 +849,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
 
                   <div>
                     <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
-                      Why do you want it? (Optional note for Mom & Dad):
+                      Why do you want it? (Optional note for Mom and Lex):
                     </label>
                     <input
                       type="text"
@@ -1245,7 +1245,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                       onChange={(e) => setPricingTiers({ ...pricingTiers, staple: Number(e.target.value) })}
                       className="w-24 px-3 py-1.5 rounded-lg border border-blue-300 bg-white dark:bg-slate-900 font-black text-sm text-slate-900 dark:text-white"
                     />
-                    <span className="text-xs font-bold text-slate-500">Stars (e.g. Berries, Carrots, Bananas)</span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Stars (e.g. Berries, Carrots, Bananas)</span>
                   </div>
                 </div>
 
@@ -1262,7 +1262,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                       onChange={(e) => setPricingTiers({ ...pricingTiers, common: Number(e.target.value) })}
                       className="w-24 px-3 py-1.5 rounded-lg border border-slate-300 bg-white dark:bg-slate-900 font-black text-sm text-slate-900 dark:text-white"
                     />
-                    <span className="text-xs font-bold text-slate-500">Stars (e.g. Goldfish, Chips, Popcorn)</span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Stars (e.g. Goldfish, Chips, Popcorn)</span>
                   </div>
                 </div>
 
@@ -1279,7 +1279,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                       onChange={(e) => setPricingTiers({ ...pricingTiers, treat: Number(e.target.value) })}
                       className="w-24 px-3 py-1.5 rounded-lg border border-amber-300 bg-white dark:bg-slate-900 font-black text-sm text-slate-900 dark:text-white"
                     />
-                    <span className="text-xs font-bold text-slate-500">Stars (e.g. Ice Cream Tub, Cookies, Soda)</span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Stars (e.g. Ice Cream Tub, Cookies, Soda)</span>
                   </div>
                 </div>
 
@@ -1296,7 +1296,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
                       onChange={(e) => setPricingTiers({ ...pricingTiers, luxury: Number(e.target.value) })}
                       className="w-24 px-3 py-1.5 rounded-lg border border-purple-300 bg-white dark:bg-slate-900 font-black text-sm text-slate-900 dark:text-white"
                     />
-                    <span className="text-xs font-bold text-slate-500">Stars (e.g. Beef Jerky, Gelato, Frappuccino)</span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Stars (e.g. Beef Jerky, Gelato, Frappuccino)</span>
                   </div>
                 </div>
               </div>

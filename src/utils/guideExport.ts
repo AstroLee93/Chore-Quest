@@ -96,7 +96,7 @@ export function generateGuidePDF(): void {
     {
       num: '6',
       title: 'Can\'t Finish? Give a Reason',
-      desc: 'If you are sick, missing cleaning supplies, or have a valid reason, tap "Can\'t Complete" to notify Mom or Dad with a polite explanation.',
+      desc: 'If you are sick, missing cleaning supplies, or have a valid reason, tap "Can\'t Complete" to notify Mom or Lex with a polite explanation.',
     },
     {
       num: '7',
@@ -329,7 +329,7 @@ ChoreQuest turns daily household responsibilities into an engaging, gamified adv
 
 ### 8. The Reward Store & Snack Requests 🍪
 - Trade your hard-earned stars for rewards: screen time, extra allowance, fun outings, or special toys.
-- Use the **Snack Request** feature to ask Mom & Dad for your favorite treat!
+- Use the **Snack Request** feature to ask Mom and Lex for your favorite treat!
 
 ---
 
@@ -473,7 +473,7 @@ export function generateGuideHTML(): string {
     <p>Can't decide what task to do first? Let the wheel choose a mission for you!</p>
 
     <h3>8. Reward Store & Snack Requests</h3>
-    <p>Trade stars for screen time, allowance, outings, or send a Snack Request to Mom & Dad!</p>
+    <p>Trade stars for screen time, allowance, outings, or send a Snack Request to Mom and Lex!</p>
 
     <h2>🛡️ PART 2: Parent Command & Admin Controls</h2>
     <h3>1. Parent PIN Access</h3>

@@ -116,7 +116,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
   const [newItemCategory, setNewItemCategory] = useState<GroceryCategory>('produce');
   const [newItemImportance, setNewItemImportance] = useState<GroceryImportance>('common');
   const [newItemAddedBy, setNewItemAddedBy] = useState<string>(
-    activeKid ? `${activeKid.name} ${activeKid.avatar}` : isParentMode ? 'Mom & Dad' : 'Family'
+    activeKid ? `${activeKid.name} ${activeKid.avatar}` : isParentMode ? 'Mom and Lex' : 'Family'
   );
   const [userManuallySelectedCategory, setUserManuallySelectedCategory] = useState<boolean>(false);
 
@@ -127,6 +127,18 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
   const [newPantryImportance, setNewPantryImportance] = useState<GroceryImportance>('staple');
   const [newPantryStatus, setNewPantryStatus] = useState<'in_stock' | 'depleted'>('in_stock');
   const [isAddingPantryOpen, setIsAddingPantryOpen] = useState<boolean>(false);
+
+  // Admin Edit Pantry Item State
+  const [editingPantryItem, setEditingPantryItem] = useState<{
+    id: string;
+    originalName: string;
+    name: string;
+    category: GroceryCategory;
+    quantity: string;
+    importance: GroceryImportance;
+    isDepleted: boolean;
+    notes: string;
+  } | null>(null);
 
   // New Spice Item State
   const [newSpiceName, setNewSpiceName] = useState<string>('');
@@ -182,7 +194,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     return requests.filter((r) => r.status === 'pending');
   }, [requests]);
 
-  // Unified Pantry Items: All household groceries (items + staples)
+  // Unified Pantry Items: Cataloged pantry staples + verified purchased grocery items
   const allHouseholdGroceries = useMemo(() => {
     const list: {
       id: string;
@@ -202,13 +214,51 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
 
     const seenNames = new Set<string>();
 
-    // 1. Process active grocery items
+    // 1. Process cataloged household pantry staples first
+    pantryStaples.forEach((staple) => {
+      const key = staple.name.toLowerCase().trim();
+      if (!seenNames.has(key)) {
+        seenNames.add(key);
+        // If there is an acquired item on the shopping list matching this staple, it has been purchased and is In Stock!
+        const matchingAcquired = items.find((i) => i.name.toLowerCase().trim() === key && i.acquired);
+        const isDepleted = matchingAcquired ? false : Boolean(staple.isDepleted);
+        const norm = normalizeItemKey(staple.name);
+        const histEntry = groceryList.priceHistory?.[norm];
+        const cost = matchingAcquired?.actualCost !== undefined
+          ? matchingAcquired.actualCost
+          : (staple.lastCost !== undefined ? staple.lastCost : histEntry?.price);
+        const store = staple.lastStore || histEntry?.store;
+        const restockedAt = matchingAcquired ? (matchingAcquired.acquiredAt || getTodayDateString()) : staple.lastRestockedAt;
+
+        list.push({
+          id: staple.id,
+          name: staple.name,
+          category: staple.category,
+          quantity: matchingAcquired?.quantity || staple.defaultQuantity,
+          importance: staple.importance || 'staple',
+          isDepleted,
+          depletedAt: isDepleted ? staple.depletedAt : undefined,
+          depletedBy: isDepleted ? staple.depletedBy : undefined,
+          notes: staple.notes,
+          isStapleOnly: true,
+          lastCost: cost,
+          lastStore: store,
+          lastRestockedAt: restockedAt,
+        });
+      }
+    });
+
+    // 2. Process active grocery items that have been VERIFIED AS PURCHASED (item.acquired === true)
+    // CRITICAL: Items sitting unpurchased on the shopping list MUST NOT appear in the pantry tracker
+    // until verified as purchased by checking the checkbox on the weekly shopping list!
     items.forEach((item) => {
+      if (!item.acquired) {
+        return; // Only add to pantry once verified as purchased!
+      }
+
       const key = item.name.toLowerCase().trim();
       if (!seenNames.has(key)) {
         seenNames.add(key);
-        // CRITICAL FIX: If item has already been acquired (purchased), it is In Stock (NOT depleted!)
-        const isDepleted = item.acquired ? false : Boolean(item.isDepleted);
         const norm = normalizeItemKey(item.name);
         const histEntry = groceryList.priceHistory?.[norm];
         const cost = item.actualCost !== undefined ? item.actualCost : histEntry?.price;
@@ -220,45 +270,14 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
           category: item.category,
           quantity: item.quantity,
           importance: item.importance || 'common',
-          isDepleted,
-          depletedAt: isDepleted ? item.depletedAt : undefined,
-          depletedBy: isDepleted ? item.depletedBy : undefined,
+          isDepleted: false,
+          depletedAt: undefined,
+          depletedBy: undefined,
           notes: item.notes,
           isStapleOnly: false,
           lastCost: cost,
           lastStore: store,
-          lastRestockedAt: item.acquired ? (item.acquiredAt || getTodayDateString()) : undefined,
-        });
-      }
-    });
-
-    // 2. Process pantry staples
-    pantryStaples.forEach((staple) => {
-      const key = staple.name.toLowerCase().trim();
-      if (!seenNames.has(key)) {
-        seenNames.add(key);
-        // If there is an acquired item matching this staple, it has been purchased and is In Stock!
-        const matchingAcquired = items.some((i) => i.name.toLowerCase().trim() === key && i.acquired);
-        const isDepleted = matchingAcquired ? false : Boolean(staple.isDepleted);
-        const norm = normalizeItemKey(staple.name);
-        const histEntry = groceryList.priceHistory?.[norm];
-        const cost = staple.lastCost !== undefined ? staple.lastCost : histEntry?.price;
-        const store = staple.lastStore || histEntry?.store;
-
-        list.push({
-          id: staple.id,
-          name: staple.name,
-          category: staple.category,
-          quantity: staple.defaultQuantity,
-          importance: staple.importance || 'staple',
-          isDepleted,
-          depletedAt: isDepleted ? staple.depletedAt : undefined,
-          depletedBy: isDepleted ? staple.depletedBy : undefined,
-          notes: staple.notes,
-          isStapleOnly: true,
-          lastCost: cost,
-          lastStore: store,
-          lastRestockedAt: staple.lastRestockedAt,
+          lastRestockedAt: item.acquiredAt || getTodayDateString(),
         });
       }
     });
@@ -877,7 +896,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
   // 5. Toggle Household Grocery Depletion State ("Depleted / Needs Replenish")
   const handleTogglePantryDepletion = (itemId: string) => {
     sound.playTap();
-    const reporterName = activeKid ? `${activeKid.name} ${activeKid.avatar}` : isParentMode ? 'Mom/Dad' : 'Family';
+    const reporterName = activeKid ? `${activeKid.name} ${activeKid.avatar}` : isParentMode ? 'Mom and Lex' : 'Family';
 
     let isNowDepleted = false;
     let itemName = '';
@@ -907,9 +926,11 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       return item;
     });
 
-    // Also update staples if present
+    // Also update staples if present, or add if it was an acquired item being tracked in pantry
+    let stapleFound = false;
     const updatedStaples = pantryStaples.map((staple) => {
       if (staple.id === itemId || (targetName && staple.name.toLowerCase().trim() === targetName)) {
+        stapleFound = true;
         const nextState = !staple.isDepleted;
         isNowDepleted = nextState;
         itemName = staple.name;
@@ -923,6 +944,26 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       }
       return staple;
     });
+
+    let finalStaples = updatedStaples;
+    if (!stapleFound && existingInItems) {
+      const nextState = !existingInItems.isDepleted;
+      isNowDepleted = nextState;
+      itemName = existingInItems.name;
+      const newStaple: PantryStapleItem = {
+        id: `staple-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: existingInItems.name,
+        category: existingInItems.category,
+        defaultQuantity: existingInItems.quantity || '1',
+        importance: existingInItems.importance || 'common',
+        isDepleted: nextState,
+        depletedAt: nextState ? getTodayDateString() : undefined,
+        depletedBy: nextState ? reporterName : undefined,
+        lastRestockedAt: !nextState ? getTodayDateString() : undefined,
+        lastCost: existingInItems.actualCost ?? existingInItems.estimatedCost,
+      };
+      finalStaples = [newStaple, ...updatedStaples];
+    }
 
     // Sync items array if the target existed in staples
     const finalItems = updatedItems.map((item) => {
@@ -942,7 +983,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     handleUpdateGroceryList({
       ...groceryList,
       items: itemFound ? finalItems : items,
-      pantryStaples: updatedStaples,
+      pantryStaples: finalStaples,
       lastUpdated: new Date().toISOString(),
     });
 
@@ -951,6 +992,133 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     } else {
       showToast(`Marked "${itemName}" as In Stock & Full! ✅`);
     }
+  };
+
+  // Start Editing Pantry Item (Admin/Parent)
+  const handleStartEditPantryItem = (item: {
+    id: string;
+    name: string;
+    category: GroceryCategory;
+    quantity?: string;
+    importance: GroceryImportance;
+    isDepleted: boolean;
+    notes?: string;
+  }) => {
+    sound.playTap();
+    setEditingPantryItem({
+      id: item.id,
+      originalName: item.name,
+      name: item.name,
+      category: item.category,
+      quantity: item.quantity || '1',
+      importance: item.importance || 'common',
+      isDepleted: item.isDepleted,
+      notes: item.notes || '',
+    });
+  };
+
+  // Save Edited Pantry Item (Admin/Parent)
+  const handleSavePantryItem = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!editingPantryItem || !editingPantryItem.name.trim()) {
+      showToast('Please provide an item name.');
+      return;
+    }
+
+    sound.playRewardRedeemed();
+    const trimmedName = editingPantryItem.name.trim();
+    const origNameKey = (editingPantryItem.originalName || '').toLowerCase().trim();
+    const newQuantity = editingPantryItem.quantity.trim() || '1';
+    const newCategory = editingPantryItem.category;
+    const newImportance = editingPantryItem.importance;
+    const newIsDepleted = editingPantryItem.isDepleted;
+    const newNotes = editingPantryItem.notes.trim() || undefined;
+
+    const currentList = databaseRef.current.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST;
+    const currentItems = currentList.items || [];
+    const currentStaples = currentList.pantryStaples || [];
+
+    let foundInStaples = false;
+    const updatedStaples = currentStaples.map((staple) => {
+      if (staple.id === editingPantryItem.id || (origNameKey && staple.name.toLowerCase().trim() === origNameKey)) {
+        foundInStaples = true;
+        const wasDepleted = Boolean(staple.isDepleted);
+        return {
+          ...staple,
+          name: trimmedName,
+          category: newCategory,
+          defaultQuantity: newQuantity,
+          importance: newImportance,
+          isDepleted: newIsDepleted,
+          notes: newNotes,
+          lastRestockedAt: !newIsDepleted
+            ? (wasDepleted ? getTodayDateString() : (staple.lastRestockedAt || getTodayDateString()))
+            : staple.lastRestockedAt,
+          depletedAt: newIsDepleted
+            ? (!wasDepleted ? getTodayDateString() : staple.depletedAt)
+            : undefined,
+          depletedBy: newIsDepleted
+            ? (!wasDepleted ? (isParentMode ? 'Mom and Lex' : 'Family') : staple.depletedBy)
+            : undefined,
+        };
+      }
+      return staple;
+    });
+
+    let finalStaples = updatedStaples;
+    if (!foundInStaples) {
+      const newStaple: PantryStapleItem = {
+        id: editingPantryItem.id.startsWith('staple-')
+          ? editingPantryItem.id
+          : `staple-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: trimmedName,
+        category: newCategory,
+        defaultQuantity: newQuantity,
+        importance: newImportance,
+        isDepleted: newIsDepleted,
+        notes: newNotes,
+        lastRestockedAt: !newIsDepleted ? getTodayDateString() : undefined,
+        depletedAt: newIsDepleted ? getTodayDateString() : undefined,
+        depletedBy: newIsDepleted ? (isParentMode ? 'Mom and Lex' : 'Family') : undefined,
+      };
+      finalStaples = [newStaple, ...updatedStaples];
+    }
+
+    // Also update any matching items in the active weekly list
+    const updatedItems = currentItems.map((item) => {
+      if (item.id === editingPantryItem.id || (origNameKey && item.name.toLowerCase().trim() === origNameKey)) {
+        return {
+          ...item,
+          name: trimmedName,
+          category: newCategory,
+          quantity: newQuantity,
+          importance: newImportance,
+          notes: newNotes,
+          isDepleted: newIsDepleted,
+          acquired: newIsDepleted ? false : item.acquired,
+        };
+      }
+      return item;
+    });
+
+    // Migrate price history key if item name was edited
+    const updatedPriceHistory = { ...(currentList.priceHistory || {}) };
+    const oldNorm = normalizeItemKey(editingPantryItem.originalName);
+    const newNorm = normalizeItemKey(trimmedName);
+    if (oldNorm !== newNorm && updatedPriceHistory[oldNorm]) {
+      updatedPriceHistory[newNorm] = updatedPriceHistory[oldNorm];
+    }
+
+    handleUpdateGroceryList({
+      ...currentList,
+      items: updatedItems,
+      pantryStaples: finalStaples,
+      priceHistory: updatedPriceHistory,
+      lastUpdated: new Date().toISOString(),
+    });
+
+    setEditingPantryItem(null);
+    showToast(`Updated pantry entry for "${trimmedName}"!`);
   };
 
   // Restock All Pantry Items (Quick Action for Parents)
@@ -1022,7 +1190,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     sound.playTap();
     const itemName = newPantryName.trim();
     const isDepleted = newPantryStatus === 'depleted';
-    const reporterName = activeKid ? `${activeKid.name} ${activeKid.avatar}` : isParentMode ? 'Mom/Dad' : 'Family';
+    const reporterName = activeKid ? `${activeKid.name} ${activeKid.avatar}` : isParentMode ? 'Mom and Lex' : 'Family';
 
     // Create persistent pantry staple item (In Stock by default!)
     const newStaple: PantryStapleItem = {
@@ -1238,7 +1406,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
     setKidReqNotes('');
     setIsAddingKidReqOpen(false);
     fireConfetti({ mode: 'mini' });
-    showToast(`🚀 Sent grocery request for "${newReq.name}" to Mom & Dad!`);
+    showToast(`🚀 Sent grocery request for "${newReq.name}" to Mom and Lex!`);
   };
 
   const handleApproveRequest = (req: GroceryRequest) => {
@@ -1262,7 +1430,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
         return {
           ...r,
           status: 'approved' as const,
-          reviewedBy: isParentMode ? 'Mom & Dad' : 'Admin',
+          reviewedBy: isParentMode ? 'Mom and Lex' : 'Admin',
           reviewedAt: new Date().toISOString(),
         };
       }
@@ -1302,7 +1470,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
         return {
           ...r,
           status: 'denied' as const,
-          reviewedBy: isParentMode ? 'Mom & Dad' : 'Admin',
+          reviewedBy: isParentMode ? 'Mom and Lex' : 'Admin',
           reviewedAt: new Date().toISOString(),
           denialReason: denyReason.trim() || 'Not this shopping trip',
           starsDeducted: false,
@@ -2491,23 +2659,37 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                                   {impMeta.icon} {impMeta.label}
                                 </span>
                                 {item.quantity && (
-                                  <span className="text-[10px] font-bold text-slate-500">
+                                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
                                     {item.quantity}
+                                  </span>
+                                )}
+                                {item.notes && (
+                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 italic">
+                                    • {item.notes}
                                   </span>
                                 )}
                               </div>
                             </div>
                           </div>
 
-                          {/* Delete Item Button (Parent Only) */}
+                          {/* Admin Actions: Edit & Delete (Parent Only) */}
                           {isParentMode && (
-                            <button
-                              onClick={() => handleDeleteItem(item.id)}
-                              className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer shrink-0"
-                              title="Permanently remove from list"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => handleStartEditPantryItem(item)}
+                                className="text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors cursor-pointer"
+                                title="Edit item quantity, category, and details"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteItem(item.id)}
+                                className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                                title="Permanently remove from list"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           )}
                         </div>
 
@@ -2983,7 +3165,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                               </>
                             ) : (
                               <div className="w-full text-center text-[11px] font-extrabold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 py-1.5 rounded-xl">
-                                ⏳ Waiting for Mom & Dad to review!
+                                ⏳ Waiting for Mom and Lex to review!
                               </div>
                             )}
                           </div>
@@ -3420,6 +3602,196 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Edit Pantry Item Modal */}
+      {editingPantryItem && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-amber-400 dark:border-amber-600 space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center text-xl shadow-xs shrink-0 font-black">
+                  ✏️
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
+                    Edit Pantry Item
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
+                    Admin Edit • Adjust quantity, category, & priority
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPantryItem(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePantryItem} className="flex-1 overflow-y-auto space-y-4 pr-1">
+              {/* Item Name */}
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
+                  Item Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingPantryItem.name}
+                  onChange={(e) =>
+                    setEditingPantryItem({ ...editingPantryItem, name: e.target.value })
+                  }
+                  required
+                  placeholder="e.g. Whole Milk, Eggs, Brown Rice"
+                  className="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-black text-sm text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden"
+                />
+              </div>
+
+              {/* Category & Quantity */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={editingPantryItem.category}
+                    onChange={(e) =>
+                      setEditingPantryItem({
+                        ...editingPantryItem,
+                        category: e.target.value as GroceryCategory,
+                      })
+                    }
+                    className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-xs text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden cursor-pointer"
+                  >
+                    {GROCERY_CATEGORY_ORDER.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {GROCERY_CATEGORY_METADATA[cat].icon} {GROCERY_CATEGORY_METADATA[cat].label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
+                    Item Quantity / Pack
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPantryItem.quantity}
+                    onChange={(e) =>
+                      setEditingPantryItem({ ...editingPantryItem, quantity: e.target.value })
+                    }
+                    placeholder="e.g. 1 gal, 2 boxes, 12-pack"
+                    className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-xs text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Household Priority */}
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1.5">
+                  Household Priority
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['staple', 'common', 'treat'] as GroceryImportance[]).map((imp) => {
+                    const meta = GROCERY_IMPORTANCE_METADATA[imp];
+                    const isSelected = editingPantryItem.importance === imp;
+                    return (
+                      <button
+                        type="button"
+                        key={imp}
+                        onClick={() =>
+                          setEditingPantryItem({ ...editingPantryItem, importance: imp })
+                        }
+                        className={`py-2 px-2 rounded-xl text-xs font-black flex flex-col items-center justify-center gap-0.5 border-2 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-500 border-amber-600 text-slate-950 shadow-xs'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="text-base">{meta.icon}</span>
+                        <span className="text-[10px] font-extrabold">{meta.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Stock Status */}
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1.5">
+                  Pantry Stock Status
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingPantryItem({ ...editingPantryItem, isDepleted: false })
+                    }
+                    className={`py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border-2 transition-all cursor-pointer ${
+                      !editingPantryItem.isDepleted
+                        ? 'bg-emerald-500 border-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-850 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <Check className="w-4 h-4 stroke-[3]" />
+                    <span>In Stock & Full</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingPantryItem({ ...editingPantryItem, isDepleted: true })
+                    }
+                    className={`py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border-2 transition-all cursor-pointer ${
+                      editingPantryItem.isDepleted
+                        ? 'bg-amber-500 border-amber-600 text-slate-950 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-850 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Depleted (Empty)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Optional Notes */}
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
+                  Notes / Details (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={editingPantryItem.notes}
+                  onChange={(e) =>
+                    setEditingPantryItem({ ...editingPantryItem, notes: e.target.value })
+                  }
+                  placeholder="e.g. Brand preference, package specifics, or store note"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-medium text-xs text-slate-900 dark:text-slate-100 focus:border-amber-500 outline-hidden"
+                />
+              </div>
+
+              {/* Footer Actions */}
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingPantryItem(null)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer transition-all"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

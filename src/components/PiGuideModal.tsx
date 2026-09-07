@@ -405,7 +405,7 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
                       <h4 className="font-black text-slate-800 text-sm">Can't Finish? Give a Reason</h4>
                     </div>
                     <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                      If you're sick, out of cleaning supplies, or need adult help, tap the three dots or "Can't Complete" button. Select a polite explanation so Mom and Dad stay in the loop!
+                      If you're sick, out of cleaning supplies, or need adult help, tap the three dots or "Can't Complete" button. Select a polite explanation so Mom and Lex stay in the loop!
                     </p>
                   </div>
                   <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] font-black text-rose-800">

@@ -1031,7 +1031,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
                           setParentEditForm({ ...parentEditForm, preparedBy: e.target.value })
                         }
                         className="w-full px-3.5 py-2.5 rounded-2xl border-2 border-slate-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
-                        placeholder="e.g. Dad & Maya 🦄"
+                        placeholder="e.g. Mom & Lex 🧑‍🍳 or Lex & Maya 🦄"
                       />
                     </div>
 

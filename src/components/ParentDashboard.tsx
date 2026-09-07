@@ -1084,25 +1084,26 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
 
               {/* Individual Snack/Treat Custom Pricing Section */}
-              <div className="pt-3 border-t border-amber-200">
+              <div className="pt-3 border-t border-purple-500/40">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
-                    <h5 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                    <h5 className="text-xs sm:text-sm font-black text-amber-300 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                       <span>Specific Snack Item Star Overrides</span>
                       {Object.keys(customSnackOverrides).length > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 font-black text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] shadow-xs">
                           {Object.keys(customSnackOverrides).length} customized
                         </span>
                       )}
                     </h5>
-                    <p className="text-[11px] text-slate-600 font-medium">
+                    <p className="text-[11px] text-purple-200 font-medium mt-0.5">
                       Need a specific snack or treat to cost more or fewer stars than its category tier? Set custom star amounts below.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsSnackCatalogExpanded(!isSnackCatalogExpanded)}
-                    className="min-h-[44px] px-3.5 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-100 text-amber-950 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                    className="min-h-[44px] px-3.5 py-1.5 rounded-xl border border-amber-400/80 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95"
                   >
                     <span>{isSnackCatalogExpanded ? 'Hide Catalog' : 'Browse & Edit Items'}</span>
                     <ChevronDown className={`w-4 h-4 transition-transform ${isSnackCatalogExpanded ? 'rotate-180' : ''}`} />
@@ -1147,7 +1148,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                                         Custom
                                       </span>
                                     ) : (
-                                      <span className="text-[10px] font-bold text-slate-400">
+                                      <span className="text-[10px] font-bold text-slate-500">
                                         (Tier: {tierDefault}⭐)
                                       </span>
                                     )}
@@ -1188,7 +1189,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleResetItemStarCost(item.id)}
-                                    className="min-h-[44px] px-2 text-[11px] font-bold text-slate-400 hover:text-red-500 cursor-pointer ml-1"
+                                    className="min-h-[44px] px-2 text-[11px] font-bold text-slate-500 hover:text-rose-600 cursor-pointer ml-1"
                                     title="Reset to category tier default"
                                   >
                                     Reset

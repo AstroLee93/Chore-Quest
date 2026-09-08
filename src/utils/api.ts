@@ -46,9 +46,9 @@ export function computeDatabaseSignature(db: FamilyDatabase): string {
     .map((c) => `${c.id}:${c.isActive ? 1 : 0}:${c.stars}:${c.isBounty ? 1 : 0}:${c.bountyBonusStars || 0}:${(c.assignedKidIds || []).join(',')}:${c.order}`)
     .join('|');
 
-  // Logs: total count, and detailed state of the latest 20 logs (including status and parent verification)
+  // Logs: total count, and detailed state of the latest 100 logs (including status and parent verification)
   const logsList = db.logs || [];
-  const recentLogs = logsList.slice(Math.max(0, logsList.length - 20));
+  const recentLogs = logsList.slice(Math.max(0, logsList.length - 100));
   const logsPart = `${logsList.length}#` + recentLogs
     .map((l) => `${l.id}:${l.choreId}:${l.kidId}:${l.date}:${l.status}:${l.verifiedByParent ? 1 : 0}:${l.starsAwarded}:${l.skippedReasonCategory || ''}`)
     .join('|');
@@ -239,22 +239,17 @@ export function subscribeToDatabaseSync(
     const dbRev = incomingRev ?? (db as any)._rev;
     const dbUpdatedAt = incomingUpdatedAt ?? (db as any)._updatedAt;
 
-    let isNewer = false;
-    if (dbRev !== undefined && dbRev > lastKnownRev) {
-      isNewer = true;
-    } else if (dbUpdatedAt !== undefined && dbUpdatedAt > lastKnownUpdatedAt) {
-      isNewer = true;
-    } else {
-      const sig = computeDatabaseSignature(db);
-      if (sig !== lastKnownSignature || force) {
-        isNewer = true;
-      }
-    }
+    const sig = computeDatabaseSignature(db);
+    const hasSigChanged = sig !== lastKnownSignature;
+    const hasRevIncreased = dbRev !== undefined && dbRev > lastKnownRev;
+    const hasUpdatedAtIncreased = dbUpdatedAt !== undefined && dbUpdatedAt > lastKnownUpdatedAt;
+
+    const isNewer = force || hasSigChanged || hasRevIncreased || hasUpdatedAtIncreased;
 
     if (isNewer) {
       if (dbRev !== undefined) lastKnownRev = Math.max(lastKnownRev, dbRev);
       if (dbUpdatedAt !== undefined) lastKnownUpdatedAt = Math.max(lastKnownUpdatedAt, dbUpdatedAt);
-      lastKnownSignature = computeDatabaseSignature(db);
+      lastKnownSignature = sig;
       saveDatabase(db);
       onDatabaseUpdate(db);
     }

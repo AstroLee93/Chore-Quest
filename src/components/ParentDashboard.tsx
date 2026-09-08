@@ -56,6 +56,7 @@ import { formatTime12Hour, checkCategoryTimeWindow } from '../utils/timeWindow';
 import { GROCERY_IMPORTANCE_METADATA } from '../utils/grocery';
 import { EmojiPicker } from './EmojiPicker';
 import { ActionMenu } from './ActionMenu';
+import { fireConfetti } from '../utils/confetti';
 import {
   CURATED_SNACK_CATALOG,
   SnackCatalogItem,
@@ -122,6 +123,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const [activityDateFilter, setActivityDateFilter] = useState<string>(todayStr);
   const [activityKidFilter, setActivityKidFilter] = useState<string>('all');
   const [activityStatusFilter, setActivityStatusFilter] = useState<'all' | 'completed' | 'skipped' | 'pending'>('all');
+  const [activityVerificationFilter, setActivityVerificationFilter] = useState<'all' | 'unverified' | 'verified'>('all');
+  const [isSnackPricingExpanded, setIsSnackPricingExpanded] = useState<boolean>(false);
 
   // Modals for Editing/Creating
   const [editingChore, setEditingChore] = useState<Partial<ChoreItem> | null>(null);
@@ -374,6 +377,31 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   };
 
   // --- Handlers for Activity Log ---
+  const handleConfirmChore = (logId: string) => {
+    sound.playStarEarned();
+    fireConfetti({ origin: { y: 0.5 }, mode: 'snappy' });
+    const updatedLogs = database.logs.map((l) => {
+      if (l.id === logId) {
+        return { ...l, verifiedByParent: true };
+      }
+      return l;
+    });
+    onUpdateDatabase({ ...database, logs: updatedLogs });
+  };
+
+  const handleApproveAllPendingChores = () => {
+    sound.playStarEarned();
+    sound.playRewardRedeemed();
+    fireConfetti({ origin: { y: 0.5 }, mode: 'celebration' });
+    const updatedLogs = database.logs.map((l) => {
+      if (l.status === 'completed' && !l.verifiedByParent) {
+        return { ...l, verifiedByParent: true };
+      }
+      return l;
+    });
+    onUpdateDatabase({ ...database, logs: updatedLogs });
+  };
+
   const handleToggleParentVerification = (logId: string) => {
     sound.playTap();
     const updatedLogs = database.logs.map((l) => {
@@ -721,17 +749,26 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
     reader.readAsText(file);
   };
 
+  // Computed: Unverified Completed Chores (Chore Confirmation Queue)
+  const pendingVerificationChores = useMemo(() => {
+    return (database.logs || [])
+      .filter((l) => l.status === 'completed' && !l.verifiedByParent)
+      .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+  }, [database.logs]);
+
   // Computed: Filtered Activity Logs
   const filteredLogs = useMemo(() => {
-    return database.logs
+    return (database.logs || [])
       .filter((l) => {
-        if (activityDateFilter && l.date !== activityDateFilter) return false;
+        if (activityDateFilter && activityDateFilter !== 'all' && l.date !== activityDateFilter) return false;
         if (activityKidFilter !== 'all' && l.kidId !== activityKidFilter) return false;
         if (activityStatusFilter !== 'all' && l.status !== activityStatusFilter) return false;
+        if (activityVerificationFilter === 'unverified' && (l.status !== 'completed' || l.verifiedByParent)) return false;
+        if (activityVerificationFilter === 'verified' && (l.status !== 'completed' || !l.verifiedByParent)) return false;
         return true;
       })
       .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
-  }, [database.logs, activityDateFilter, activityKidFilter, activityStatusFilter]);
+  }, [database.logs, activityDateFilter, activityKidFilter, activityStatusFilter, activityVerificationFilter]);
 
   return (
     <div className="w-full max-w-6xl mx-auto p-0 sm:px-4 sm:py-4 space-y-1 sm:space-y-4">
@@ -786,7 +823,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             id: 'activity',
             label: 'Daily Review & Audit',
             icon: CheckCircle,
-            badge: database.logs.filter((l) => l.date === todayStr).length + pendingSnackRequests.length,
+            badge: (pendingVerificationChores.length + pendingSnackRequests.length) || undefined,
           },
           { id: 'menu', label: 'Dinner Menu', icon: UtensilsCrossed },
           { id: 'calendar', label: 'Yearly Calendar', icon: Calendar, badge: (database.events || []).length },
@@ -830,6 +867,149 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* TAB 1: DAILY REVIEW & AUDIT LOG */}
       {activeTab === 'activity' && (
         <div className="space-y-1 sm:space-y-4 animate-fade-in">
+          {/* 1. Dedicated Pending Chore Confirmations Queue */}
+          <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 rounded-none sm:rounded-2xl p-3 sm:p-4 text-white border-x-0 border-y sm:border-2 border-emerald-500 shadow-none sm:shadow-md space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-2xl shrink-0">
+                  🛡️
+                </div>
+                <div>
+                  <h3 className="font-black text-sm sm:text-base text-emerald-300 flex items-center gap-2 flex-wrap">
+                    <span>Kids Chore Confirmation & Verification Queue</span>
+                    {pendingVerificationChores.length > 0 ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[11px] font-black animate-pulse shadow-xs">
+                        {pendingVerificationChores.length} Awaiting Confirmation
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-emerald-400 text-[10px] font-bold border border-emerald-500/40">
+                        All Caught Up ✓
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-[11px] sm:text-xs text-slate-300 font-medium">
+                    When kids check off chores from the Kiosk or Kid Dashboard, verify their work here to confirm completion and keep records accurate.
+                  </p>
+                </div>
+              </div>
+
+              {pendingVerificationChores.length > 1 && (
+                <button
+                  onClick={handleApproveAllPendingChores}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
+                  title="Confirm all pending completed chores in one tap"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Confirm All ({pendingVerificationChores.length})</span>
+                </button>
+              )}
+            </div>
+
+            {pendingVerificationChores.length === 0 ? (
+              <div className="bg-emerald-950/40 rounded-xl p-3 sm:p-4 text-center border border-emerald-800/60 text-emerald-200 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1">
+                <span className="text-xl">✨</span>
+                <span>All completed chores have been confirmed by Mom and Lex!</span>
+                <span className="text-[11px] text-slate-400 font-normal">
+                  When kids tap check off from the Kiosk, completed missions will appear here immediately for review.
+                </span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+                {pendingVerificationChores.map((log) => {
+                  const chore = database.chores.find((c) => c.id === log.choreId);
+                  const kid = database.kids.find((k) => k.id === log.kidId);
+                  const category = database.categories.find((c) => c.id === chore?.categoryId);
+
+                  return (
+                    <div
+                      key={log.id}
+                      className="bg-white text-slate-900 rounded-xl p-3 sm:p-3.5 border-2 border-emerald-400 shadow-sm flex flex-col justify-between space-y-2.5 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 border-2"
+                            style={{
+                              backgroundColor: `${kid?.color || '#10b981'}25`,
+                              borderColor: kid?.color || '#10b981',
+                            }}
+                          >
+                            {kid?.avatar || '⭐'}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-black text-xs sm:text-sm text-slate-900 truncate">
+                              {chore?.title || 'Completed Chore'}
+                            </h4>
+                            <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5 flex-wrap">
+                              <span>By <strong>{kid?.name || 'Child'}</strong></span>
+                              {category && (
+                                <span className="text-[10px] bg-slate-100 px-1.5 py-0.2 rounded font-semibold text-slate-600">
+                                  {category.name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-black bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+                          <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                          +{log.starsAwarded} ⭐
+                        </span>
+                      </div>
+
+                      {/* Details & Timestamp */}
+                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 text-[11px] flex items-center justify-between text-slate-600">
+                        <span className="font-medium">Completed on: <strong>{log.date}</strong></span>
+                        {log.completedAt && (
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(log.completedAt).toLocaleTimeString(undefined, {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <button
+                          onClick={() => handleConfirmChore(log.id)}
+                          className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          title="Verify and confirm this completed chore"
+                        >
+                          <Check className="w-4 h-4 stroke-[3]" />
+                          <span>Confirm Chore ✓</span>
+                        </button>
+
+                        {kid && (
+                          <button
+                            onClick={() => {
+                              setBonusStarModalKid(kid);
+                              setBonusStarsAmount(5);
+                              setBonusStarReason(`Awesome job completing ${chore?.title || 'chore'}!`);
+                            }}
+                            className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-xs transition-all cursor-pointer shrink-0 active:scale-95"
+                            title="Award bonus points for great work"
+                          >
+                            <Sparkles className="w-4 h-4 text-amber-600" />
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => handleReopenTask(log.id)}
+                          className="p-2 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-300 font-bold text-xs transition-all cursor-pointer shrink-0 active:scale-95"
+                          title="Chore wasn't done properly: reset task and refund points"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Kids Grocery & Snack Requests Card */}
           <div className="bg-gradient-to-r from-purple-900 to-indigo-950 rounded-none sm:rounded-2xl p-3 sm:p-4 text-white border-x-0 border-y sm:border-2 border-purple-500 shadow-none sm:shadow-xs space-y-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -990,20 +1170,35 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             <div className="bg-purple-950/60 rounded-xl p-3.5 sm:p-4 border border-purple-500/50 space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h4 className="text-xs sm:text-sm font-black text-amber-300 flex items-center gap-1.5">
+                  <h4 className="text-xs sm:text-sm font-black text-amber-300 flex items-center gap-1.5 flex-wrap">
                     <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
                     <span>Snack & Treat Star Pricing Tiers</span>
+                    <span className="text-[10px] text-purple-200 font-semibold bg-purple-900/80 px-2 py-0.5 rounded-full border border-purple-700">
+                      Staple {snackTiersForm.staple}⭐ • Munchies {snackTiersForm.common}⭐ • Treat {snackTiersForm.treat}⭐ • Luxury {snackTiersForm.luxury}⭐
+                    </span>
                   </h4>
                   <p className="text-[11px] text-purple-200 font-medium mt-0.5">
                     Adjust the necessary stars required for each snack category if the default amount does not reflect your family's desired rates!
                   </p>
                 </div>
-                {snackTiersSaved && (
-                  <span className="text-xs font-black text-emerald-400 flex items-center gap-1 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-500">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" /> Saved Star Pricing!
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {snackTiersSaved && (
+                    <span className="text-xs font-black text-emerald-400 flex items-center gap-1 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-500">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" /> Saved Star Pricing!
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsSnackPricingExpanded(!isSnackPricingExpanded)}
+                    className="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-yellow-300 text-xs font-black transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>{isSnackPricingExpanded ? 'Collapse Rates ▲' : 'Configure Rates ⚙️'}</span>
+                  </button>
+                </div>
               </div>
+
+              {isSnackPricingExpanded && (
+                <div className="space-y-3 pt-2 border-t border-purple-800/60">
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-slate-900">
                 <div className="bg-white rounded-xl p-2.5 border border-purple-300 flex flex-col justify-between">
@@ -1215,7 +1410,9 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 </button>
               </div>
             </div>
-          </div>
+          )}
+        </div>
+      </div>
           {/* Filter Bar */}
           <div className="bg-white p-2 sm:p-4 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-indigo-300 sm:border-indigo-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3">
@@ -1230,12 +1427,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
 
               {/* Date selector quick buttons */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <input
                   type="date"
-                  value={activityDateFilter}
-                  onChange={(e) => setActivityDateFilter(e.target.value)}
+                  value={activityDateFilter === 'all' ? '' : activityDateFilter}
+                  onChange={(e) => setActivityDateFilter(e.target.value || 'all')}
                   className="px-2 py-1 rounded-lg border border-yellow-300 text-xs font-black text-slate-700 focus:outline-indigo-500 bg-yellow-50"
+                  title="Filter by specific date"
                 />
                 <button
                   onClick={() => setActivityDateFilter(todayStr)}
@@ -1246,6 +1444,16 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   }`}
                 >
                   Today
+                </button>
+                <button
+                  onClick={() => setActivityDateFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black border transition-colors cursor-pointer ${
+                    activityDateFilter === 'all'
+                      ? 'bg-indigo-900 text-white border-indigo-900'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  All Dates
                 </button>
               </div>
             </div>
@@ -1274,18 +1482,65 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 </button>
               ))}
 
-              <span className="text-slate-400 font-black uppercase tracking-wider text-[10px] sm:text-xs ml-auto">Status:</span>
-              {(['all', 'completed', 'skipped'] as const).map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setActivityStatusFilter(st)}
-                  className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black capitalize transition-colors cursor-pointer ${
-                    activityStatusFilter === st ? 'bg-indigo-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  {st}
-                </button>
-              ))}
+              <span className="text-slate-400 font-black uppercase tracking-wider text-[10px] sm:text-xs ml-auto">Verification & Status:</span>
+              <button
+                onClick={() => {
+                  setActivityStatusFilter('all');
+                  setActivityVerificationFilter('all');
+                }}
+                className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black transition-colors cursor-pointer ${
+                  activityStatusFilter === 'all' && activityVerificationFilter === 'all'
+                    ? 'bg-indigo-900 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => {
+                  setActivityStatusFilter('completed');
+                  setActivityVerificationFilter('unverified');
+                  setActivityDateFilter('all');
+                }}
+                className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black transition-colors cursor-pointer flex items-center gap-1 ${
+                  activityVerificationFilter === 'unverified'
+                    ? 'bg-amber-500 text-slate-950 font-black'
+                    : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+                }`}
+              >
+                <span>⏳ Needs Confirmation</span>
+                {pendingVerificationChores.length > 0 && (
+                  <span className="px-1.5 py-0.1 text-[9px] rounded-full bg-amber-600 text-white font-black">
+                    {pendingVerificationChores.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setActivityStatusFilter('completed');
+                  setActivityVerificationFilter('verified');
+                }}
+                className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black transition-colors cursor-pointer ${
+                  activityVerificationFilter === 'verified'
+                    ? 'bg-emerald-700 text-white'
+                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                }`}
+              >
+                ✅ Verified
+              </button>
+              <button
+                onClick={() => {
+                  setActivityStatusFilter('skipped');
+                  setActivityVerificationFilter('all');
+                }}
+                className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black transition-colors cursor-pointer ${
+                  activityStatusFilter === 'skipped'
+                    ? 'bg-orange-700 text-white'
+                    : 'bg-orange-50 text-orange-800 hover:bg-orange-100'
+                }`}
+              >
+                ⚠️ Skipped
+              </button>
             </div>
           </div>
 
@@ -1384,16 +1639,25 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     {/* Right: Parent Verification & Action buttons */}
                     <div className="flex items-center gap-1.5 shrink-0 justify-end pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                       {isCompleted && (
-                        <span
-                          className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-black border flex items-center gap-0.5 ${
-                            log.verifiedByParent
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}
-                        >
-                          <Check className="w-3 h-3 stroke-[3]" />
-                          <span>{log.verifiedByParent ? 'Verified' : 'Unverified'}</span>
-                        </span>
+                        log.verifiedByParent ? (
+                          <button
+                            onClick={() => handleToggleParentVerification(log.id)}
+                            className="px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-black border flex items-center gap-1 bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 transition-colors cursor-pointer"
+                            title="Click to toggle verification status"
+                          >
+                            <Check className="w-3 h-3 stroke-[3] text-emerald-600" />
+                            <span>Verified ✓</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleConfirmChore(log.id)}
+                            className="px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-black shadow-xs flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white transition-all cursor-pointer active:scale-95"
+                            title="Confirm and verify this completed chore"
+                          >
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                            <span>Confirm Chore ✓</span>
+                          </button>
+                        )
                       )}
 
                       <ActionMenu

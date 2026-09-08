@@ -112,6 +112,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         status: 'completed',
         completedAt: new Date().toISOString(),
         starsAwarded: starsEarned,
+        verifiedByParent: false,
       };
     } else {
       const newLog: ChoreLog = {
@@ -122,20 +123,25 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         status: 'completed',
         completedAt: new Date().toISOString(),
         starsAwarded: starsEarned,
+        verifiedByParent: false,
       };
       updatedLogs = [...(database.logs || []), newLog];
     }
 
-    const updatedKids = database.kids.map((k) =>
-      k.id === kid.id
-        ? {
-            ...k,
-            stars: k.stars + starsEarned,
-            lifetimeStars: k.lifetimeStars + starsEarned,
-            lastActiveDate: todayStr,
-          }
-        : k
-    );
+    const updatedKids = database.kids.map((k) => {
+      if (k.id === kid.id) {
+        const isNewActiveDay = k.lastActiveDate !== todayStr;
+        const newStreak = isNewActiveDay ? k.streakDays + 1 : Math.max(1, k.streakDays);
+        return {
+          ...k,
+          stars: k.stars + starsEarned,
+          lifetimeStars: k.lifetimeStars + starsEarned,
+          streakDays: newStreak,
+          lastActiveDate: todayStr,
+        };
+      }
+      return k;
+    });
 
     onUpdateDatabase({ ...database, kids: updatedKids, logs: updatedLogs });
   }, [database, todayStr, onUpdateDatabase]);

@@ -107,7 +107,9 @@ app.use(express.json({ limit: '25mb' }));
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'chorequest_database.json');
 
-// In-memory active database
+// In-memory active database and revision tracking
+let currentDatabaseRev = Date.now();
+let currentDatabaseUpdatedAt = Date.now();
 let currentDatabase: FamilyDatabase = JSON.parse(JSON.stringify(DEFAULT_SEED_DATA));
 
 // Ensure data folder and load persisted data if available
@@ -126,10 +128,16 @@ function initDatabase() {
         if (!parsed.weatherForecasts) {
           parsed.weatherForecasts = {};
         }
+        currentDatabaseRev = (parsed as any)._rev || Date.now();
+        currentDatabaseUpdatedAt = (parsed as any)._updatedAt || Date.now();
+        (parsed as any)._rev = currentDatabaseRev;
+        (parsed as any)._updatedAt = currentDatabaseUpdatedAt;
         currentDatabase = parsed;
-        console.log('[Server] Loaded persisted database from disk.');
+        console.log('[Server] Loaded persisted database from disk with rev:', currentDatabaseRev);
       }
     } else {
+      (currentDatabase as any)._rev = currentDatabaseRev;
+      (currentDatabase as any)._updatedAt = currentDatabaseUpdatedAt;
       fs.writeFileSync(DB_FILE, JSON.stringify(currentDatabase, null, 2), 'utf-8');
       console.log('[Server] Initialized new database file with seed data.');
     }
@@ -160,20 +168,29 @@ type SSEClient = {
 const sseClients: SSEClient[] = [];
 
 function broadcastDatabaseUpdate(updatedDb: FamilyDatabase, senderId?: string) {
+  currentDatabaseRev++;
+  currentDatabaseUpdatedAt = Date.now();
+  (updatedDb as any)._rev = currentDatabaseRev;
+  (updatedDb as any)._updatedAt = currentDatabaseUpdatedAt;
   currentDatabase = updatedDb;
   persistDatabaseToDisk();
 
   const payload = JSON.stringify({
     type: 'DATABASE_UPDATED',
     database: currentDatabase,
+    rev: currentDatabaseRev,
+    updatedAt: currentDatabaseUpdatedAt,
     senderId: senderId || null,
-    timestamp: Date.now(),
+    timestamp: currentDatabaseUpdatedAt,
   });
 
   const deadClientIds: string[] = [];
   sseClients.forEach((client) => {
     try {
       client.res.write(`data: ${payload}\n\n`);
+      if (typeof (client.res as any).flush === 'function') {
+        (client.res as any).flush();
+      }
     } catch (err) {
       deadClientIds.push(client.id);
     }
@@ -192,12 +209,35 @@ function broadcastDatabaseUpdate(updatedDb: FamilyDatabase, senderId?: string) {
 
 // 1. Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString(), connectedClients: sseClients.length });
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    connectedClients: sseClients.length,
+    rev: currentDatabaseRev,
+    updatedAt: currentDatabaseUpdatedAt,
+  });
 });
 
 // 2. Fetch current shared database
 app.get('/api/database', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.json(currentDatabase);
+});
+
+// 2b. Ultra-lightweight database version check endpoint for sub-second lag detection
+app.get('/api/database/version', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.json({
+    rev: currentDatabaseRev,
+    updatedAt: currentDatabaseUpdatedAt,
+    kidsCount: currentDatabase.kids?.length || 0,
+    choresCount: currentDatabase.chores?.length || 0,
+    logsCount: currentDatabase.logs?.length || 0,
+  });
 });
 
 // 3. Save / Update shared database (broadcasts to all other sessions)
@@ -300,10 +340,14 @@ app.get('/api/calendar/fetch-ics', async (req, res) => {
 app.get('/api/events', (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
+    'Cache-Control': 'no-cache, no-transform',
     'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
     'Access-Control-Allow-Origin': '*',
   });
+  if (typeof (res as any).flushHeaders === 'function') {
+    (res as any).flushHeaders();
+  }
 
   const clientId = `client-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
   const client: SSEClient = { id: clientId, res };
@@ -315,18 +359,26 @@ app.get('/api/events', (req, res) => {
       type: 'CONNECTED',
       clientId,
       database: currentDatabase,
+      rev: currentDatabaseRev,
+      updatedAt: currentDatabaseUpdatedAt,
       timestamp: Date.now(),
     })}\n\n`
   );
+  if (typeof (res as any).flush === 'function') {
+    (res as any).flush();
+  }
 
-  // Keep-alive heartbeat every 20 seconds
+  // Keep-alive heartbeat every 10 seconds to keep connection open and detect dead sockets
   const heartbeat = setInterval(() => {
     try {
-      res.write(': heartbeat\n\n');
+      res.write(': keepalive\n\n');
+      if (typeof (res as any).flush === 'function') {
+        (res as any).flush();
+      }
     } catch {
       clearInterval(heartbeat);
     }
-  }, 20000);
+  }, 10000);
 
   req.on('close', () => {
     clearInterval(heartbeat);

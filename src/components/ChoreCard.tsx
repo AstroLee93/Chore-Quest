@@ -14,6 +14,7 @@ interface ChoreCardProps {
   onOpenSkipModal: (chore: ChoreItem) => void;
   onUndo: (choreId: string) => void;
   onStartTimer?: (chore: ChoreItem) => void;
+  claimedByOtherKidName?: string;
 }
 
 export const ChoreCard: React.FC<ChoreCardProps> = ({
@@ -24,6 +25,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   onOpenSkipModal,
   onUndo,
   onStartTimer,
+  claimedByOtherKidName,
 }) => {
   const isCompleted = log?.status === 'completed';
   const isSkipped = log?.status === 'skipped';
@@ -56,6 +58,11 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   const handleCompleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isCompleted) return;
+
+    if (claimedByOtherKidName) {
+      sound.playWarning();
+      return;
+    }
 
     if (isTimeLocked) {
       sound.playWarning();
@@ -154,9 +161,16 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               {chore.isBounty && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-400 text-amber-950 border border-amber-500 animate-pulse">
-                  <Target className="w-3 h-3" />
-                  <span>BONUS BOUNTY</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-400 text-amber-950 border border-amber-500 shadow-xs font-serif">
+                  <span>🤠</span>
+                  <span>BOUNTY BOARD</span>
+                </span>
+              )}
+
+              {claimedByOtherKidName && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
+                  <Lock className="w-3 h-3 text-amber-700" />
+                  <span>Claimed by {claimedByOtherKidName}</span>
                 </span>
               )}
 
@@ -414,7 +428,18 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
               />
 
               {/* Complete Big Vibrant Button (Or Locked Indicator) */}
-              {isTimeLocked ? (
+              {claimedByOtherKidName ? (
+                <div
+                  className="min-h-[44px] px-3.5 py-2 bg-amber-100/90 dark:bg-amber-950/80 rounded-2xl flex items-center gap-2 text-amber-950 dark:text-amber-200 border-2 border-amber-400 shadow-xs shrink-0"
+                  title={`This bounty was claimed by Deputy ${claimedByOtherKidName} on the Bounty Board!`}
+                >
+                  <Lock className="w-4 h-4 text-amber-800 dark:text-amber-400 shrink-0" />
+                  <div className="text-left leading-tight">
+                    <div className="text-xs font-black">Claimed by {claimedByOtherKidName}</div>
+                    <div className="text-[9px] font-bold text-amber-800 dark:text-amber-300 font-serif">Bounty Board Reserved</div>
+                  </div>
+                </div>
+              ) : isTimeLocked ? (
                 <button
                   id={`btn-complete-${chore.id}`}
                   onClick={handleCompleteClick}

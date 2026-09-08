@@ -7,6 +7,7 @@ import { ChoreTimerModal } from './ChoreTimerModal';
 import { ChoreWheelModal } from './ChoreWheelModal';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { BadgeModal } from './BadgeModal';
+import { BountyBoardModal } from './BountyBoardModal';
 import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getBountyChores } from '../utils/storage';
 import { calculateKidBadges } from '../utils/badges';
 import { getSeasonalWeatherForDate, EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../utils/calendar';
@@ -22,6 +23,7 @@ interface KidDashboardProps {
   settings: AppSettings;
   events?: CalendarEvent[];
   database?: FamilyDatabase;
+  onUpdateDatabase?: (updated: FamilyDatabase) => void;
   currentTheme?: AppThemeId;
   isKioskKidSession?: boolean;
   onReturnToKiosk?: () => void;
@@ -43,6 +45,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   settings,
   events = [],
   database,
+  onUpdateDatabase,
   currentTheme = 'coastal-horizon',
   isKioskKidSession = false,
   onReturnToKiosk,
@@ -62,6 +65,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const [skipModalChore, setSkipModalChore] = useState<ChoreItem | null>(null);
   const [activeTimerChore, setActiveTimerChore] = useState<ChoreItem | null>(null);
   const [isWheelOpen, setIsWheelOpen] = useState<boolean>(false);
+  const [isBountyBoardOpen, setIsBountyBoardOpen] = useState<boolean>(false);
   const [selectedBadgeModalId, setSelectedBadgeModalId] = useState<string | null>(null);
   const [isBadgeModalOpen, setIsBadgeModalOpen] = useState<boolean>(false);
 
@@ -386,6 +390,14 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             visibleChores.map((chore) => {
               const category = categories.find((c) => c.id === chore.categoryId);
               const log = logMap.get(chore.id);
+              const otherKidClaimLog = chore.isBounty
+                ? (logs || []).find(
+                    (l) => l.choreId === chore.id && l.date === todayStr && l.status === 'completed' && l.kidId !== kid.id
+                  )
+                : null;
+              const otherKidClaimer = otherKidClaimLog
+                ? (database?.kids || []).find((k) => k.id === otherKidClaimLog.kidId)
+                : null;
 
               return (
                 <ChoreCard
@@ -397,30 +409,48 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                   onOpenSkipModal={(c) => setSkipModalChore(c)}
                   onUndo={onUndoChoreStatus}
                   onStartTimer={(c) => setActiveTimerChore(c)}
+                  claimedByOtherKidName={otherKidClaimer?.name}
                 />
               );
             })
           )}
         </div>
 
-        {/* Bonus Bounty Board (Extra Credit Missions) */}
+        {/* Western Bounty Board (Extra Credit Missions) */}
         {bountyChores.length > 0 && (
           <div className="mt-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 shadow-sm">
-            <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <span className="text-2xl">🎯</span>
+                <span className="text-3xl">🤠</span>
                 <div>
-                  <h3 className="text-base sm:text-lg font-black text-amber-950">
-                    Bonus Bounty Board
+                  <h3 className="text-base sm:text-lg font-black text-amber-950 font-serif">
+                    The Bounty Board
                   </h3>
                   <p className="text-xs font-medium text-amber-800">
-                    Extra credit missions! Complete these for bonus star points anytime.
+                    High-reward contracts! Complete these for bonus star points anytime.
                   </p>
                 </div>
               </div>
-              <span className="px-3 py-1 rounded-full bg-amber-200 text-amber-900 font-black text-xs">
-                {bountyChores.length} Available
-              </span>
+              <div className="flex items-center gap-2">
+                {database && onUpdateDatabase && (
+                  <button
+                    id="btn-kid-open-bounty-board"
+                    onClick={() => {
+                      sound.playTap();
+                      setIsBountyBoardOpen(true);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs font-serif flex items-center gap-1.5 shadow-sm border border-amber-600 transition-all cursor-pointer"
+                  >
+                    <span>📜 Wanted Board</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-slate-950 text-amber-300 text-[10px] font-black">
+                      {bountyChores.length}
+                    </span>
+                  </button>
+                )}
+                <span className="px-3 py-1 rounded-full bg-amber-200 text-amber-900 font-black text-xs">
+                  {bountyChores.length} Available
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
@@ -662,6 +692,21 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
         badges={kidBadges}
         initialBadgeId={selectedBadgeModalId}
       />
+
+      {/* Western Bounty Board Pop-up Modal */}
+      {isBountyBoardOpen && database && onUpdateDatabase && (
+        <BountyBoardModal
+          isOpen={isBountyBoardOpen}
+          onClose={() => setIsBountyBoardOpen(false)}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          currentKid={kid}
+          onStartTimer={(chore) => {
+            setIsBountyBoardOpen(false);
+            setActiveTimerChore(chore);
+          }}
+        />
+      )}
     </div>
   );
 };

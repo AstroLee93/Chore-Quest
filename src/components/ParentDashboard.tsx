@@ -3061,14 +3061,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       }
                       className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400"
                     />
-                    <span className="text-xs font-black text-amber-950">
-                      🎯 Extra Credit Bounty
+                    <span className="text-xs font-black text-amber-950 flex items-center gap-1 font-serif">
+                      <span>🤠</span>
+                      <span>Bounty Board (Wanted Notice)</span>
                     </span>
                   </label>
                   {editingChore.isBounty && (
                     <div className="mt-1">
                       <label className="text-[9px] font-black uppercase text-amber-800 block mb-0.5">
-                        Bonus Stars (+⭐):
+                        Bounty Bonus Stars (+⭐):
                       </label>
                       <input
                         type="number"
@@ -3085,8 +3086,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       />
                     </div>
                   )}
-                  <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold block mt-0.5">
-                    Appears on the Bounty Board
+                  <span className="text-[9px] sm:text-[10px] text-amber-700/80 font-bold block mt-0.5">
+                    Appears as a Wanted Poster on the Kiosk Bounty Board!
                   </span>
                 </div>
               </div>

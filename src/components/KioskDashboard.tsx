@@ -18,6 +18,7 @@ import { ActionMenu } from './ActionMenu';
 import { KidSnackRequestModal } from './KidSnackRequestModal';
 import { RewardStoreModal } from './RewardStoreModal';
 import { KidAvatarModal } from './KidAvatarModal';
+import { BountyBoardModal } from './BountyBoardModal';
 
 interface KioskDashboardProps {
   database: FamilyDatabase;
@@ -43,6 +44,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [activeTimerChore, setActiveTimerChore] = useState<ChoreItem | null>(null);
+  const [isBountyBoardOpen, setIsBountyBoardOpen] = useState<boolean>(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [isMenuModalOpen, setIsMenuModalOpen] = useState<boolean>(false);
   const [isExitPinOpen, setIsExitPinOpen] = useState<boolean>(false);
@@ -82,6 +84,17 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   }, []);
 
   const handleQuickCompleteChore = useCallback((chore: ChoreItem, kid: KidProfile) => {
+    // Exclusivity: Once a kid claims a bounty, it is unable to be claimed by another kid
+    if (chore.isBounty) {
+      const alreadyClaimedByOther = (database.logs || []).some(
+        (l) => l.choreId === chore.id && l.date === todayStr && l.status === 'completed' && l.kidId !== kid.id
+      );
+      if (alreadyClaimedByOther) {
+        sound.playWarning();
+        return;
+      }
+    }
+
     // Check category time window restriction
     const category = (database.categories || []).find((c) => c.id === chore.categoryId);
     const timeStatus = checkCategoryTimeWindow(category);
@@ -619,9 +632,19 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
                       );
                       const isDone = log?.status === 'completed';
+                      const otherKidClaimLog = chore.isBounty
+                        ? (database.logs || []).find(
+                            (l) => l.choreId === chore.id && l.date === todayStr && l.status === 'completed' && l.kidId !== kid.id
+                          )
+                        : null;
+                      const otherKidClaimer = otherKidClaimLog
+                        ? database.kids.find((k) => k.id === otherKidClaimLog.kidId)
+                        : null;
+                      const isClaimedByOther = !!otherKidClaimer;
+
                       const category = (database.categories || []).find((c) => c.id === chore.categoryId);
                       const timeStatus = checkCategoryTimeWindow(category);
-                      const isTimeLocked = !isDone && !timeStatus.isAllowed;
+                      const isTimeLocked = !isDone && !isClaimedByOther && !timeStatus.isAllowed;
 
                       return (
                         <div
@@ -648,6 +671,12 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                   <span className="text-sky-300 flex items-center gap-0.5">
                                     <Timer className="w-3 h-3" />
                                     <span>{chore.timerMinutes}m timer</span>
+                                  </span>
+                                )}
+                                {isClaimedByOther && (
+                                  <span className="text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded-md border border-amber-400/30 flex items-center gap-1 font-black">
+                                    <Lock className="w-2.5 h-2.5 text-amber-300" />
+                                    <span>Claimed by {otherKidClaimer?.name}</span>
                                   </span>
                                 )}
                                 {isTimeLocked && (
@@ -678,6 +707,15 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                               <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
                                 <Check className="w-4 h-4 stroke-[3]" />
                               </div>
+                            ) : isClaimedByOther ? (
+                              <button
+                                onClick={() => sound.playWarning()}
+                                className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center gap-1 text-[11px] font-black cursor-pointer hover:bg-amber-500/30 active:scale-95 transition-all"
+                                title={`This bounty was claimed by Deputy ${otherKidClaimer?.name} on the Bounty Board!`}
+                              >
+                                <Lock className="w-3.5 h-3.5 text-amber-300" />
+                                <span>{otherKidClaimer?.name}</span>
+                              </button>
                             ) : isTimeLocked ? (
                               <button
                                 onClick={() => sound.playWarning()}
@@ -833,30 +871,61 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           </div>
         </div>
 
-        {/* Bonus Bounties Slate */}
-        <div className={`p-3 rounded-2xl ${theme.kioskFooterSlateBg} ${theme.kioskFooterSlateBorder} flex items-center gap-3 shadow-md`}>
-          <div className={`p-2 rounded-xl ${theme.kioskFooterPillSecondaryBg} ${theme.kioskFooterPillSecondaryText} font-bold shrink-0 flex items-center gap-1`}>
-            <Target className="w-3.5 h-3.5" />
-            <span>Bonus Bounties</span>
+        {/* Western Bounty Board Slate */}
+        <div
+          id="kiosk-footer-bounty-board"
+          onClick={() => {
+            sound.playTap();
+            setIsBountyBoardOpen(true);
+          }}
+          className={`p-3 rounded-2xl ${theme.kioskFooterSlateBg} ${theme.kioskFooterSlateBorder} flex items-center gap-3 shadow-md cursor-pointer hover:border-amber-400/80 transition-all active:scale-[0.99] group`}
+          title="Click to open the Western Bounty Board Wanted Posters!"
+        >
+          <div className="p-2 sm:px-3 sm:py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs shrink-0 flex items-center gap-1.5 shadow-xs border border-amber-300">
+            <span className="text-sm">🤠</span>
+            <span className="font-serif tracking-wide">The Bounty Board</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-slate-950 text-amber-300 text-[10px] font-black">
+              {bountyChores.length} Wanted
+            </span>
           </div>
           <div className="flex-1 overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-2">
             {bountyChores.length === 0 ? (
-              <span className="text-white/60 italic">No extra bounties active.</span>
+              <span className="text-white/60 italic text-xs">No extra bounties active right now.</span>
             ) : (
               bountyChores.map((bounty) => (
                 <span
                   key={bounty.id}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl ${theme.kioskCardItemBg} text-white font-bold`}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl ${theme.kioskCardItemBg} text-white font-bold group-hover:border-amber-400/50 border border-transparent transition-all`}
                 >
                   <span>{bounty.icon || '⭐'}</span>
-                  <span className="truncate max-w-[120px]">{bounty.title}</span>
-                  <span className="text-amber-300 font-black">+{bounty.stars + (bounty.bountyBonusStars || 0)} Pts</span>
+                  <span className="truncate max-w-[140px] text-xs">{bounty.title}</span>
+                  <span className="text-amber-300 font-black text-xs">+{bounty.stars + (bounty.bountyBonusStars || 0)} ⭐</span>
                 </span>
               ))
             )}
           </div>
+          <button
+            type="button"
+            className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-colors shrink-0 shadow-xs cursor-pointer font-serif"
+          >
+            <span>Open Board 📜</span>
+          </button>
         </div>
       </footer>
+
+      {/* Western Bounty Board Pop-up Modal */}
+      {isBountyBoardOpen && (
+        <BountyBoardModal
+          isOpen={isBountyBoardOpen}
+          onClose={() => setIsBountyBoardOpen(false)}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          onStartTimer={(chore) => {
+            setIsBountyBoardOpen(false);
+            setActiveTimerChore(chore);
+          }}
+        />
+      )}
 
       {/* Focus Timer Modal in Kiosk */}
       {activeTimerChore && (

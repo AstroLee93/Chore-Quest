@@ -173,6 +173,17 @@ export default function App() {
   const handleToggleCompleteChore = useCallback((chore: ChoreItem) => {
     if (!activeKid) return;
 
+    // Exclusivity: Once a kid claims a bounty, it is unable to be claimed by another kid
+    if (chore.isBounty) {
+      const alreadyClaimedByOther = database.logs.some(
+        (l) => l.choreId === chore.id && l.date === todayStr && l.status === 'completed' && l.kidId !== activeKid.id
+      );
+      if (alreadyClaimedByOther) {
+        sound.playWarning();
+        return;
+      }
+    }
+
     // Check category time window restriction
     const category = database.categories.find((c) => c.id === chore.categoryId);
     const timeStatus = checkCategoryTimeWindow(category);
@@ -580,6 +591,7 @@ export default function App() {
             settings={database.settings}
             events={database.events || []}
             database={database}
+            onUpdateDatabase={handleUpdateDatabase}
             currentTheme={currentTheme}
             onToggleCompleteChore={handleToggleCompleteChore}
             onSkipChoreWithReason={handleSkipChoreWithReason}

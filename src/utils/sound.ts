@@ -240,6 +240,83 @@ class SoundEngine {
     osc.stop(now + 0.04);
   }
 
+  // Heavy rubber stamp slam with satisfying wooden impact thud
+  public playStampSlam() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // 1. Heavy low impact thud
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    subOsc.type = 'triangle';
+    subOsc.frequency.setValueAtTime(160, now);
+    subOsc.frequency.exponentialRampToValueAtTime(35, now + 0.12);
+
+    subGain.gain.setValueAtTime(0.35, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+    subOsc.connect(subGain);
+    subGain.connect(ctx.destination);
+    subOsc.start(now);
+    subOsc.stop(now + 0.2);
+
+    // 2. High snap / slap transient
+    const slapOsc = ctx.createOscillator();
+    const slapGain = ctx.createGain();
+    slapOsc.type = 'sawtooth';
+    slapOsc.frequency.setValueAtTime(480, now);
+    slapOsc.frequency.exponentialRampToValueAtTime(90, now + 0.05);
+
+    slapGain.gain.setValueAtTime(0.18, now);
+    slapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+    slapOsc.connect(slapGain);
+    slapGain.connect(ctx.destination);
+    slapOsc.start(now);
+    slapOsc.stop(now + 0.07);
+
+    // 3. Follow-up gold coin sparkle chime
+    setTimeout(() => {
+      this.playCoin();
+    }, 120);
+  }
+
+  // Classic wild west saloon twang arpeggio
+  public playWesternTwang() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // Pentatonic twang: E4, G4, A4, B4, D5, E5 with slight bends
+    const notes = [
+      { f: 329.63, t: 0.00, d: 0.12 },
+      { f: 392.00, t: 0.07, d: 0.12 },
+      { f: 493.88, t: 0.14, d: 0.15 },
+      { f: 659.25, t: 0.22, d: 0.35 },
+    ];
+
+    notes.forEach(({ f, t, d }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(f * 0.96, now + t);
+      osc.frequency.exponentialRampToValueAtTime(f, now + t + 0.04);
+
+      gain.gain.setValueAtTime(0.01, now + t);
+      gain.gain.exponentialRampToValueAtTime(0.14, now + t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + t + d);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + t);
+      osc.stop(now + t + d + 0.05);
+    });
+  }
+
   // Play fanfare triumph sound
   public playFanfare() {
     this.playRewardRedeemed();

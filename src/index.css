@@ -40,6 +40,40 @@
   animation: shake 0.25s ease-in-out;
 }
 
+@keyframes stampSlam {
+  0% {
+    opacity: 0;
+    transform: scale(2.8) rotate(-22deg);
+  }
+  60% {
+    opacity: 0.95;
+    transform: scale(0.92) rotate(-13deg);
+  }
+  80% {
+    transform: scale(1.05) rotate(-15deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-14deg);
+  }
+}
+
+.animate-stamp-slam {
+  animation: stampSlam 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes boardShake {
+  0%, 100% { transform: translateY(0) scale(1); }
+  20% { transform: translateY(4px) scale(0.995); }
+  40% { transform: translateY(-3px) scale(1.002); }
+  60% { transform: translateY(2px); }
+  80% { transform: translateY(-1px); }
+}
+
+.animate-board-shake {
+  animation: boardShake 0.4s ease-out;
+}
+
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }

@@ -206,6 +206,12 @@ export const POPULAR_CUSTOM_CATEGORY_SUGGESTIONS: PopularCustomCategorySuggestio
     color: '#8b5cf6',
   },
   {
+    name: 'Misc Tasks, Errands & To-Dos',
+    icon: '📋',
+    description: 'General tasks, home repairs, seasonal errands, and to-do items',
+    color: '#8b5cf6',
+  },
+  {
     name: 'Pet Training & Vet Care',
     icon: '🐕',
     description: 'Puppy obedience training, agility courses, and checkups',
@@ -526,7 +532,7 @@ export const POI_COLOR_PALETTE: PoiColorChoice[] = [
   { id: 'amber', label: 'Amber / Leo', hex: '#f59e0b', color: '#f59e0b', badgeBg: 'bg-amber-100 text-amber-900 border-amber-300', description: 'Sunny amber tint for sports and practices' },
   { id: 'pink', label: 'Berry / Maya', hex: '#ec4899', color: '#ec4899', badgeBg: 'bg-pink-100 text-pink-900 border-pink-300', description: 'Berry rose for arts, music & recitals' },
   { id: 'blue', label: 'Sky / Sam', hex: '#3b82f6', color: '#3b82f6', badgeBg: 'bg-blue-100 text-blue-900 border-blue-300', description: 'Sky blue for academic milestones & STEM' },
-  { id: 'purple', label: 'Royal Violet', hex: '#8b5cf6', color: '#8b5cf6', badgeBg: 'bg-purple-100 text-purple-900 border-purple-300', description: 'Royal violet for special celebrations' },
+  { id: 'purple', label: 'Purple / Violet (Tasks & Misc)', hex: '#8b5cf6', color: '#8b5cf6', badgeBg: 'bg-purple-100 text-purple-900 border-purple-300', description: 'Royal purple / violet for misc tasks, errands, home projects & special events' },
   { id: 'cyan', label: 'Aqua Cyan', hex: '#06b6d4', color: '#06b6d4', badgeBg: 'bg-cyan-100 text-cyan-900 border-cyan-300', description: 'Aqua cyan for outdoor trips & beach outings' },
   { id: 'rose', label: 'Ruby Red', hex: '#f43f5e', color: '#f43f5e', badgeBg: 'bg-rose-100 text-rose-900 border-rose-300', description: 'Ruby red for doctor & high-urgency appointments' },
   { id: 'orange', label: 'Sunset Orange', hex: '#f97316', color: '#f97316', badgeBg: 'bg-orange-100 text-orange-900 border-orange-300', description: 'Sunset orange for social playdates & birthdays' },

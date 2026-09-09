@@ -132,11 +132,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                     sound.playTap();
                     if (onOpenRewardStore) onOpenRewardStore();
                   }}
-                  className="bg-pink-100 hover:bg-pink-200 dark:bg-pink-950/60 dark:hover:bg-pink-950/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border-2 border-pink-300 dark:border-pink-800 flex items-center gap-1.5 sm:gap-2.5 transition-all cursor-pointer active:scale-95 shadow-xs shrink-0"
-                  title="Open Rewards Store"
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border-2 flex items-center gap-1.5 sm:gap-2.5 transition-all cursor-pointer active:scale-95 shadow-xs shrink-0 ${
+                    settings.pauseRewardStore
+                      ? 'bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-950/80 border-amber-300 dark:border-amber-700'
+                      : 'bg-pink-100 hover:bg-pink-200 dark:bg-pink-950/60 dark:hover:bg-pink-950/80 border-pink-300 dark:border-pink-800'
+                  }`}
+                  title={settings.pauseRewardStore ? 'Rewards Store (Paused by Parents)' : 'Open Rewards Store'}
                 >
-                  <span className="text-base sm:text-xl leading-none">⭐</span>
-                  <span className="font-black text-pink-600 dark:text-pink-300 text-sm sm:text-lg leading-none">
+                  <span className="text-base sm:text-xl leading-none">{settings.pauseRewardStore ? '⏸️' : '⭐'}</span>
+                  <span className={`font-black text-sm sm:text-lg leading-none ${settings.pauseRewardStore ? 'text-amber-800 dark:text-amber-300' : 'text-pink-600 dark:text-pink-300'}`}>
                     {activeKid.stars.toLocaleString()}{' '}
                     <span className="text-[10px] uppercase sm:text-xs font-extrabold">Pts</span>
                   </span>

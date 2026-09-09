@@ -511,6 +511,7 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
                               ...prev,
                               customCategoryColor: col.color,
                               color: col.color,
+                              highlightSquareColor: prev.highlightSquareColor || col.color,
                             }));
                           }}
                           className={`w-6 h-6 rounded-full border-2 transition-all cursor-pointer ${
@@ -817,7 +818,11 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
                       type="button"
                       onClick={() => {
                         sound.playTap();
-                        setFormData((prev) => ({ ...prev, highlightSquareColor: pal.color }));
+                        setFormData((prev) => ({
+                          ...prev,
+                          highlightSquareColor: pal.color,
+                          color: pal.color,
+                        }));
                       }}
                       className={`px-2 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
                         isSel
@@ -834,6 +839,35 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
                     </button>
                   );
                 })}
+
+                {/* Custom Color Swatch / Color Picker for any color (e.g. any purple or specific shade) */}
+                <label
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
+                    formData.highlightSquareColor && !POI_COLOR_PALETTE.some((p) => p.color === formData.highlightSquareColor)
+                      ? 'bg-slate-900 text-white border-slate-950 shadow-xs scale-105'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                  }`}
+                  title="Choose any custom color or specific shade using the color wheel"
+                >
+                  <input
+                    type="color"
+                    value={formData.highlightSquareColor || '#8b5cf6'}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        highlightSquareColor: val,
+                        color: val,
+                      }));
+                    }}
+                    className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
+                  />
+                  <span className="text-[11px]">
+                    {formData.highlightSquareColor && !POI_COLOR_PALETTE.some((p) => p.color === formData.highlightSquareColor)
+                      ? `Custom (${formData.highlightSquareColor})`
+                      : '🎨 Pick Custom Color...'}
+                  </span>
+                </label>
               </div>
             </div>
           </div>

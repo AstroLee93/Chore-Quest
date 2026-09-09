@@ -189,10 +189,16 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                     sound.playTap();
                     onOpenSnackRequest(kid);
                   }}
-                  className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
-                  title="Spend your stars to request delicious snacks & treats!"
+                  className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                    settings?.pauseSnackRequests
+                      ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'
+                  }`}
+                  title={settings?.pauseSnackRequests ? 'Snack requests currently paused by parents' : 'Spend your stars to request delicious snacks & treats!'}
                 >
-                  <span>🍪 Snacks ({kid.stars}⭐)</span>
+                  <span>
+                    🍪 Snacks {settings?.pauseSnackRequests ? '(Paused ⏸️)' : `(${kid.stars}⭐)`}
+                  </span>
                 </button>
               )}
 
@@ -291,7 +297,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
               }}
               className="px-4 py-2 rounded-xl bg-white text-emerald-800 font-black text-xs sm:text-sm hover:bg-emerald-50 active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer hidden sm:block"
             >
-              Store 🎁
+              {settings?.pauseRewardStore ? 'Store (Paused ⏸️)' : 'Store 🎁'}
             </button>
           </div>
         )}
@@ -620,10 +626,14 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 sound.playTap();
                 onOpenRewardStore();
               }}
-              className="mt-6 w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 active:scale-95 text-slate-900 font-black text-sm sm:text-base shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className={`mt-6 w-full py-3.5 px-4 rounded-2xl active:scale-95 text-slate-900 font-black text-sm sm:text-base shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                settings?.pauseRewardStore
+                  ? 'bg-gradient-to-r from-amber-300 to-amber-400 hover:from-amber-200 hover:to-amber-300 shadow-amber-500/25'
+                  : 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 shadow-orange-500/25'
+              }`}
             >
               <Gift className="w-5 h-5 text-slate-900" />
-              <span>Open Reward Store 🎁</span>
+              <span>{settings?.pauseRewardStore ? 'Reward Store (Paused ⏸️)' : 'Open Reward Store 🎁'}</span>
             </button>
           </div>
 

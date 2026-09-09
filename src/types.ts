@@ -188,6 +188,10 @@ export interface AppSettings {
   customSnackStarOverrides?: Record<string, number>; // Individual snack item star cost overrides
   calendarColorMode?: CalendarColorCodeMode;
   allKidsColor?: string;
+  pauseRewardStore?: boolean; // When true, kids cannot browse or claim rewards from the Reward Store
+  pauseRewardStoreReason?: string; // Custom message displayed to kids when Reward Store is paused
+  pauseSnackRequests?: boolean; // When true, kids cannot submit grocery or snack requests
+  pauseSnackRequestsReason?: string; // Custom message displayed to kids when snack requests are paused
 }
 
 export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';

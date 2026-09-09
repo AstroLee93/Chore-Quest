@@ -337,6 +337,10 @@ class SoundEngine {
     this.playSkipNotice();
   }
 
+  public playError() {
+    this.playSkipNotice();
+  }
+
   // Warning / locked tone
   public playWarning() {
     this.playSkipNotice();

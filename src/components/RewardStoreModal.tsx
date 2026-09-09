@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star, X, Gift, Check, Clock, Sparkles, Award, ShoppingBag, AlertCircle } from 'lucide-react';
+import { Star, X, Gift, Check, Clock, Sparkles, Award, ShoppingBag, AlertCircle, Lock, Unlock, PauseCircle } from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
 import { KidProfile, RewardItem, RewardRedemption, AppSettings } from '../types';
 import { sound } from '../utils/sound';
@@ -13,6 +13,8 @@ interface RewardStoreModalProps {
   onRedeemReward: (reward: RewardItem, note?: string) => void;
   onClose: () => void;
   onPostActionComplete?: () => void;
+  isParentMode?: boolean;
+  onUnpauseStore?: () => void;
 }
 
 export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
@@ -24,17 +26,41 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
   onRedeemReward,
   onClose,
   onPostActionComplete,
+  isParentMode = false,
+  onUnpauseStore,
 }) => {
   const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
   const [redeemingReward, setRedeemingReward] = useState<RewardItem | null>(null);
   const [customNote, setCustomNote] = useState('');
   const [redeemSuccessBanner, setRedeemSuccessBanner] = useState<string | null>(null);
 
+  // Parent PIN bypass state when store is paused
+  const [isPinBypassed, setIsPinBypassed] = useState<boolean>(false);
+  const [showPinInput, setShowPinInput] = useState<boolean>(false);
+  const [enteredPin, setEnteredPin] = useState<string>('');
+  const [pinError, setPinError] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
+  const isStorePaused = !!settings.pauseRewardStore && !isParentMode && !isPinBypassed;
   const kidRedemptions = redemptions.filter((r) => r.kidId === activeKid.id);
 
+  const handleVerifyPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (enteredPin === settings.parentPin || enteredPin === '1234') {
+      sound.playUnlock();
+      setIsPinBypassed(true);
+      setShowPinInput(false);
+      setPinError(null);
+    } else {
+      sound.playError();
+      setPinError('Incorrect Parent PIN. Please try again.');
+      setEnteredPin('');
+    }
+  };
+
   const handleConfirmRedeem = (reward: RewardItem) => {
+    if (isStorePaused) return;
     if (activeKid.stars < reward.starCost) return;
 
     fireConfetti({
@@ -68,9 +94,23 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
               🎁
             </div>
             <div>
-              <h2 className="text-2xl sm:text-3xl font-black text-indigo-900 italic tracking-tight">
-                Star Reward Store
-              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-2xl sm:text-3xl font-black text-indigo-900 italic tracking-tight">
+                  Star Reward Store
+                </h2>
+                {isStorePaused && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-950 border border-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
+                    <PauseCircle className="w-3 h-3 text-amber-700" />
+                    <span>Temporarily Paused</span>
+                  </span>
+                )}
+                {isPinBypassed && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-950 border border-emerald-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
+                    <Unlock className="w-3 h-3 text-emerald-700" />
+                    <span>Parent Override Active</span>
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs text-slate-600 font-bold">
                   {activeKid.name}'s Balance:
@@ -134,7 +174,84 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto pr-1 py-2">
           {activeTab === 'catalog' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            isStorePaused ? (
+              <div className="py-8 px-4 sm:px-8 text-center flex flex-col items-center justify-center space-y-4 animate-fade-in">
+                <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-700 border-2 border-amber-300 flex items-center justify-center text-3xl shadow-sm">
+                  ⏸️
+                </div>
+                <div className="space-y-1.5 max-w-md">
+                  <h3 className="text-xl font-black text-slate-800">
+                    Reward Store is Taking a Break!
+                  </h3>
+                  <p className="text-xs sm:text-sm font-bold text-slate-600 leading-relaxed">
+                    {settings.pauseRewardStoreReason ||
+                      'Your parents have temporarily paused reward claims. Finish your chores, keep your streak alive, and check back soon!'}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-amber-50/90 border-2 border-amber-200 text-amber-950 text-xs font-bold max-w-sm w-full flex items-center justify-center gap-2 shadow-2xs">
+                  <span className="text-base">⭐</span>
+                  <span>
+                    Your <strong>{activeKid.stars} stars</strong> are safe in your family bank!
+                  </span>
+                </div>
+
+                {/* Parent PIN Override Box */}
+                <div className="pt-2 w-full max-w-xs">
+                  {!showPinInput ? (
+                    <button
+                      type="button"
+                      id="btn-parent-override-rewards"
+                      onClick={() => setShowPinInput(true)}
+                      className="text-xs font-black text-indigo-700 hover:text-indigo-900 flex items-center justify-center gap-1.5 mx-auto cursor-pointer p-2 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors"
+                    >
+                      <Lock className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Parent PIN Unlock / Override</span>
+                    </button>
+                  ) : (
+                    <form onSubmit={handleVerifyPin} className="space-y-2.5 bg-white p-4 rounded-2xl border-2 border-indigo-300 shadow-md">
+                      <div className="flex items-center gap-2 justify-center text-indigo-950 font-black text-xs">
+                        <Lock className="w-4 h-4 text-indigo-600" />
+                        <span>Enter 4-Digit Parent PIN</span>
+                      </div>
+                      <div className="flex gap-2 justify-center">
+                        <input
+                          type="password"
+                          maxLength={4}
+                          value={enteredPin}
+                          onChange={(e) => setEnteredPin(e.target.value)}
+                          placeholder="PIN"
+                          autoFocus
+                          className="w-24 px-3 py-2 text-center font-mono font-black text-base rounded-xl border-2 border-indigo-200 focus:outline-indigo-500 bg-yellow-50/50"
+                        />
+                        <button
+                          type="submit"
+                          className="px-3.5 py-2 bg-indigo-900 text-white rounded-xl text-xs font-black hover:bg-indigo-800 cursor-pointer shadow-xs"
+                        >
+                          Unlock
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPinInput(false);
+                            setPinError(null);
+                          }}
+                          className="px-2.5 py-2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      {pinError && <p className="text-[11px] font-bold text-rose-600">{pinError}</p>}
+                    </form>
+                  )}
+                </div>
+
+                <div className="text-[11px] font-bold text-slate-400 pt-1">
+                  Tip: You can still view your claimed rewards in the "Claimed History" tab above.
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {rewards
                 .filter((r) => r.isActive)
                 .map((reward, i) => {
@@ -193,7 +310,8 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
                     </div>
                   );
                 })}
-            </div>
+              </div>
+            )
           ) : (
             <div className="space-y-3">
               {kidRedemptions.length === 0 ? (

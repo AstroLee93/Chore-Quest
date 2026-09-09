@@ -32,6 +32,8 @@ import {
   Cookie,
   ThumbsUp,
   ThumbsDown,
+  PauseCircle,
+  PlayCircle,
 } from 'lucide-react';
 import {
   FamilyDatabase,
@@ -1043,7 +1045,72 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               )}
             </div>
 
-              {pendingSnackRequests.length === 0 ? (
+            {/* Quick 1-Click Kid Access Control for Snack Requests */}
+            <div
+              className={`p-2.5 sm:p-3 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 transition-all ${
+                database.settings.pauseSnackRequests
+                  ? 'bg-amber-500/20 border-amber-400/80 text-amber-100'
+                  : 'bg-emerald-500/15 border-emerald-400/60 text-emerald-100'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-lg shrink-0">
+                  {database.settings.pauseSnackRequests ? '⏸️' : '🍪'}
+                </span>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black text-white">
+                      Snack Requests Kid Access:
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        database.settings.pauseSnackRequests
+                          ? 'bg-amber-300 text-amber-950 border border-amber-400'
+                          : 'bg-emerald-300 text-emerald-950 border border-emerald-400'
+                      }`}
+                    >
+                      {database.settings.pauseSnackRequests ? 'Paused for Kids' : 'Active (Open for Kids)'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-medium text-slate-200 mt-0.5">
+                    {database.settings.pauseSnackRequests
+                      ? database.settings.pauseSnackRequestsReason
+                        ? `Reason shown to kids: "${database.settings.pauseSnackRequestsReason}"`
+                        : 'Kids cannot submit new snack requests using stars. Existing requests are safe.'
+                      : 'Kids can browse the catalog and submit custom snack requests with stars.'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                id="btn-quick-toggle-snack-pause"
+                onClick={() => {
+                  sound.playTap();
+                  const newPaused = !database.settings.pauseSnackRequests;
+                  const updatedSettings = {
+                    ...database.settings,
+                    pauseSnackRequests: newPaused,
+                  };
+                  setSettingsForm((prev) => ({ ...prev, pauseSnackRequests: newPaused }));
+                  onUpdateDatabase({
+                    ...database,
+                    settings: updatedSettings,
+                  });
+                }}
+                className={`min-h-[34px] px-3 py-1.5 rounded-lg font-black text-xs transition-all active:scale-95 cursor-pointer shadow-xs whitespace-nowrap ${
+                  database.settings.pauseSnackRequests
+                    ? 'bg-emerald-400 hover:bg-emerald-300 text-slate-950'
+                    : 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                }`}
+              >
+                {database.settings.pauseSnackRequests
+                  ? '▶️ Resume / Unpause Requests'
+                  : '⏸️ Pause Requests for Kids'}
+              </button>
+            </div>
+
+            {pendingSnackRequests.length === 0 ? (
               <div className="bg-purple-950/40 rounded-xl p-3 text-center border border-purple-800/60 text-purple-300 text-xs font-bold">
                 ✨ No pending kid snack requests right now. All caught up!
               </div>
@@ -2137,7 +2204,76 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* TAB 3: REWARDS & CLAIMS */}
       {activeTab === 'rewards' && (
-        <div className="space-y-1 sm:space-y-4 animate-fade-in">
+        <div className="space-y-2 sm:space-y-4 animate-fade-in">
+          {/* Quick 1-Click Kid Access Control for Reward Store */}
+          <div
+            className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs ${
+              database.settings.pauseRewardStore
+                ? 'bg-amber-50 border-amber-400 text-amber-950'
+                : 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl font-black shrink-0 ${
+                  database.settings.pauseRewardStore
+                    ? 'bg-amber-200 text-amber-800'
+                    : 'bg-emerald-200 text-emerald-800'
+                }`}
+              >
+                {database.settings.pauseRewardStore ? '⏸️' : '🎁'}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-black text-xs sm:text-sm">
+                    Reward Store Kid Access:
+                  </span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      database.settings.pauseRewardStore
+                        ? 'bg-amber-200 text-amber-950 border border-amber-300'
+                        : 'bg-emerald-200 text-emerald-950 border border-emerald-300'
+                    }`}
+                  >
+                    {database.settings.pauseRewardStore ? 'Paused for Kids' : 'Active (Open for Kids)'}
+                  </span>
+                </div>
+                <p className="text-[11px] font-bold opacity-80 mt-0.5">
+                  {database.settings.pauseRewardStore
+                    ? database.settings.pauseRewardStoreReason
+                      ? `Reason shown to kids: "${database.settings.pauseRewardStoreReason}"`
+                      : 'Kids are temporarily restricted from claiming prizes. Stars are safely preserved.'
+                    : 'Kids can browse the store catalog and redeem their earned stars for rewards.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              id="btn-quick-toggle-reward-store-pause"
+              onClick={() => {
+                sound.playTap();
+                const newPaused = !database.settings.pauseRewardStore;
+                const updatedSettings = {
+                  ...database.settings,
+                  pauseRewardStore: newPaused,
+                };
+                setSettingsForm((prev) => ({ ...prev, pauseRewardStore: newPaused }));
+                onUpdateDatabase({
+                  ...database,
+                  settings: updatedSettings,
+                });
+              }}
+              className={`min-h-[40px] px-3.5 py-2 rounded-xl font-black text-xs sm:text-sm transition-all active:scale-95 cursor-pointer shadow-xs whitespace-nowrap ${
+                database.settings.pauseRewardStore
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+              }`}
+            >
+              {database.settings.pauseRewardStore ? '▶️ Resume / Unpause Store' : '⏸️ Pause Store for Kids'}
+            </button>
+          </div>
+
           {/* Pending Kid Claims Queue */}
           <div className="bg-white p-2 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-pink-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
             <div>
@@ -2580,6 +2716,203 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 <p className="text-[10px] text-slate-400 font-bold mt-0.5">
                   Set to "Off" to prevent losing progress while adding groceries, planning meals, or viewing missions.
                 </p>
+              </div>
+            </div>
+
+            {/* Kid Access & Restriction Controls */}
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-50/70 border-2 border-amber-300 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-amber-950 flex items-center gap-1.5">
+                    <PauseCircle className="w-4 h-4 text-amber-700" />
+                    <span>Kid Access Controls (Pause / Restrict Features)</span>
+                  </h4>
+                  <p className="text-[10px] sm:text-xs text-amber-900/80 font-bold mt-0.5">
+                    Temporarily restrict kids from spending stars or requesting grocery snacks (e.g. during family chores, meal prep, or after grocery orders are placed).
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playTap();
+                      setSettingsForm({
+                        ...settingsForm,
+                        pauseRewardStore: true,
+                        pauseSnackRequests: true,
+                      });
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-amber-200 hover:bg-amber-300 text-amber-950 border border-amber-400 cursor-pointer"
+                  >
+                    ⏸️ Pause Both
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playTap();
+                      setSettingsForm({
+                        ...settingsForm,
+                        pauseRewardStore: false,
+                        pauseSnackRequests: false,
+                      });
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 cursor-pointer"
+                  >
+                    ▶️ Enable Both
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {/* Reward Store Pause Control */}
+                <div className={`p-3 rounded-xl border-2 transition-all ${
+                  settingsForm.pauseRewardStore
+                    ? 'bg-amber-100/70 border-amber-400 shadow-2xs'
+                    : 'bg-white border-slate-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 font-black text-xs text-slate-900 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={!!settingsForm.pauseRewardStore}
+                        onChange={(e) =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            pauseRewardStore: e.target.checked,
+                          })
+                        }
+                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span>🎁 Pause Star Reward Store</span>
+                    </label>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                      settingsForm.pauseRewardStore
+                        ? 'bg-amber-300 text-amber-950'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {settingsForm.pauseRewardStore ? 'Paused' : 'Active'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-bold mt-1">
+                    Prevents kids from claiming prizes from the store. Their earned stars remain safe.
+                  </p>
+
+                  {settingsForm.pauseRewardStore && (
+                    <div className="mt-2.5 space-y-1.5 animate-fade-in">
+                      <label className="block text-[10px] font-black text-amber-950 uppercase tracking-wider">
+                        Explanation message for kids (Optional):
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.pauseRewardStoreReason || ''}
+                        onChange={(e) =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            pauseRewardStoreReason: e.target.value,
+                          })
+                        }
+                        placeholder="e.g. Finish daily chores first, then store will reopen!"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 text-xs font-bold bg-white text-slate-800 focus:outline-indigo-500"
+                      />
+                      <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+                        {[
+                          'Chores first! Reopening soon',
+                          'Store taking a short break',
+                          'Weekend claim time only',
+                        ].map((chip) => (
+                          <button
+                            key={chip}
+                            type="button"
+                            onClick={() =>
+                              setSettingsForm({
+                                ...settingsForm,
+                                pauseRewardStoreReason: chip,
+                              })
+                            }
+                            className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-white text-amber-900 border border-amber-200 hover:bg-amber-100 whitespace-nowrap cursor-pointer"
+                          >
+                            + {chip}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Kids Snack Request Pause Control */}
+                <div className={`p-3 rounded-xl border-2 transition-all ${
+                  settingsForm.pauseSnackRequests
+                    ? 'bg-amber-100/70 border-amber-400 shadow-2xs'
+                    : 'bg-white border-slate-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 font-black text-xs text-slate-900 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={!!settingsForm.pauseSnackRequests}
+                        onChange={(e) =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            pauseSnackRequests: e.target.checked,
+                          })
+                        }
+                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span>🍪 Pause Kids Snack Requests</span>
+                    </label>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                      settingsForm.pauseSnackRequests
+                        ? 'bg-amber-300 text-amber-950'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {settingsForm.pauseSnackRequests ? 'Paused' : 'Active'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-bold mt-1">
+                    Prevents kids from submitting new grocery or snack requests using stars.
+                  </p>
+
+                  {settingsForm.pauseSnackRequests && (
+                    <div className="mt-2.5 space-y-1.5 animate-fade-in">
+                      <label className="block text-[10px] font-black text-amber-950 uppercase tracking-wider">
+                        Explanation message for kids (Optional):
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.pauseSnackRequestsReason || ''}
+                        onChange={(e) =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            pauseSnackRequestsReason: e.target.value,
+                          })
+                        }
+                        placeholder="e.g. This week's grocery order has already been submitted!"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 text-xs font-bold bg-white text-slate-800 focus:outline-indigo-500"
+                      />
+                      <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+                        {[
+                          "This week's grocery order is placed!",
+                          'Pantry is currently full!',
+                          'Snack requests open again on Friday',
+                        ].map((chip) => (
+                          <button
+                            key={chip}
+                            type="button"
+                            onClick={() =>
+                              setSettingsForm({
+                                ...settingsForm,
+                                pauseSnackRequestsReason: chip,
+                              })
+                            }
+                            className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-white text-amber-900 border border-amber-200 hover:bg-amber-100 whitespace-nowrap cursor-pointer"
+                          >
+                            + {chip}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

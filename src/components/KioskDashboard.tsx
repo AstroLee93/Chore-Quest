@@ -549,7 +549,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         },
                         {
                           id: 'rewards',
-                          label: '🎁 Rewards Store',
+                          label: database.settings.pauseRewardStore ? '🎁 Rewards Store (Paused ⏸️)' : '🎁 Rewards Store',
                           onClick: () => {
                             setRewardStoreKid(kid);
                             setIsRewardStoreOpen(true);
@@ -557,7 +557,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         },
                         {
                           id: 'snack_request',
-                          label: '🍪 Kids Grocery & Snack Request',
+                          label: database.settings.pauseSnackRequests ? '🍪 Snack Request (Paused ⏸️)' : '🍪 Kids Grocery & Snack Request',
                           variant: 'primary',
                           onClick: () => {
                             setSnackKid(kid);
@@ -1017,6 +1017,15 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           onClose={() => {
             setIsRewardStoreOpen(false);
             setRewardStoreKid(null);
+          }}
+          onUnpauseStore={() => {
+            onUpdateDatabase({
+              ...database,
+              settings: {
+                ...database.settings,
+                pauseRewardStore: false,
+              },
+            });
           }}
         />
       )}

@@ -465,6 +465,16 @@ export default function App() {
               settings={database.settings}
               onRedeemReward={handleRedeemReward}
               onPostActionComplete={handleReturnToKiosk}
+              isParentMode={false}
+              onUnpauseStore={() => {
+                handleUpdateDatabase({
+                  ...database,
+                  settings: {
+                    ...database.settings,
+                    pauseRewardStore: false,
+                  },
+                });
+              }}
               onClose={() => {
                 setIsRewardStoreOpen(false);
                 handleReturnToKiosk();
@@ -731,6 +741,16 @@ export default function App() {
           redemptions={database.redemptions}
           settings={database.settings}
           onRedeemReward={handleRedeemReward}
+          isParentMode={isParentMode}
+          onUnpauseStore={() => {
+            handleUpdateDatabase({
+              ...database,
+              settings: {
+                ...database.settings,
+                pauseRewardStore: false,
+              },
+            });
+          }}
           onClose={() => setIsRewardStoreOpen(false)}
         />
       )}

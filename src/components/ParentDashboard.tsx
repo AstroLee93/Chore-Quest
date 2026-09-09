@@ -771,7 +771,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   }, [database.logs, activityDateFilter, activityKidFilter, activityStatusFilter, activityVerificationFilter]);
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-0 sm:px-4 sm:py-4 space-y-1 sm:space-y-4">
+    <div className="w-full max-w-6xl mx-auto p-0 sm:px-4 sm:py-4 space-y-1 sm:space-y-4 pb-20 sm:pb-24">
       {/* Parent Header Banner - Sleek, zero-padding edge-to-edge on mobile */}
       <div className="bg-indigo-900 rounded-none sm:rounded-2xl p-2.5 sm:p-5 text-white shadow-none sm:shadow-lg border-x-0 border-t-0 sm:border-2 border-yellow-300 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">

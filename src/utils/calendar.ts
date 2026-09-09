@@ -1,4 +1,12 @@
-import { CalendarEvent, CalendarEventCategory, CustomCalendarCategory, DayWeather, WeatherCondition } from '../types';
+import {
+  CalendarColorCodeMode,
+  CalendarEvent,
+  CalendarEventCategory,
+  CustomCalendarCategory,
+  DayWeather,
+  KidProfile,
+  WeatherCondition,
+} from '../types';
 
 export interface CategoryMeta {
   id: CalendarEventCategory | string;
@@ -500,4 +508,298 @@ export function getInitialSeedEvents(): CalendarEvent[] {
       isImportant: true,
     },
   ];
+}
+
+export const DEFAULT_ALL_KIDS_COLOR = '#10b981'; // Emerald Green for Entire Family / All Kids
+
+export interface PoiColorChoice {
+  id: string;
+  label: string;
+  hex: string;
+  color: string;
+  badgeBg: string;
+  description?: string;
+}
+
+export const POI_COLOR_PALETTE: PoiColorChoice[] = [
+  { id: 'emerald', label: 'Emerald / All Kids', hex: '#10b981', color: '#10b981', badgeBg: 'bg-emerald-100 text-emerald-900 border-emerald-300', description: 'Emerald green for whole family & all kids' },
+  { id: 'amber', label: 'Amber / Leo', hex: '#f59e0b', color: '#f59e0b', badgeBg: 'bg-amber-100 text-amber-900 border-amber-300', description: 'Sunny amber tint for sports and practices' },
+  { id: 'pink', label: 'Berry / Maya', hex: '#ec4899', color: '#ec4899', badgeBg: 'bg-pink-100 text-pink-900 border-pink-300', description: 'Berry rose for arts, music & recitals' },
+  { id: 'blue', label: 'Sky / Sam', hex: '#3b82f6', color: '#3b82f6', badgeBg: 'bg-blue-100 text-blue-900 border-blue-300', description: 'Sky blue for academic milestones & STEM' },
+  { id: 'purple', label: 'Royal Violet', hex: '#8b5cf6', color: '#8b5cf6', badgeBg: 'bg-purple-100 text-purple-900 border-purple-300', description: 'Royal violet for special celebrations' },
+  { id: 'cyan', label: 'Aqua Cyan', hex: '#06b6d4', color: '#06b6d4', badgeBg: 'bg-cyan-100 text-cyan-900 border-cyan-300', description: 'Aqua cyan for outdoor trips & beach outings' },
+  { id: 'rose', label: 'Ruby Red', hex: '#f43f5e', color: '#f43f5e', badgeBg: 'bg-rose-100 text-rose-900 border-rose-300', description: 'Ruby red for doctor & high-urgency appointments' },
+  { id: 'orange', label: 'Sunset Orange', hex: '#f97316', color: '#f97316', badgeBg: 'bg-orange-100 text-orange-900 border-orange-300', description: 'Sunset orange for social playdates & birthdays' },
+  { id: 'indigo', label: 'Electric Indigo', hex: '#6366f1', color: '#6366f1', badgeBg: 'bg-indigo-100 text-indigo-900 border-indigo-300', description: 'Deep indigo for school testing & finals' },
+  { id: 'teal', label: 'Sea Teal', hex: '#14b8a6', color: '#14b8a6', badgeBg: 'bg-teal-100 text-teal-900 border-teal-300', description: 'Sea teal for swim meets & water sports' },
+];
+
+export interface DateSquareColorMeta {
+  hasEvents: boolean;
+  hasImportantPoi: boolean;
+  isMultiKid: boolean;
+  allKidsInvolved: boolean;
+  involvedKids: KidProfile[];
+  primaryColor: string;
+  secondaryColor?: string;
+  containerBg: string; // CSS background value (solid or linear-gradient)
+  containerBorder: string; // CSS border-color
+  topAccentBar?: string; // CSS background for top accent stripe
+  badgeText?: string;
+  avatarList: string[]; // Emojis e.g. ["🦁"], ["🦄"], ["👨‍👩‍👧‍👦"]
+  dateNumberBg?: string; // Pill color behind date number
+  dateNumberColor?: string; // Text color
+}
+
+/**
+ * Calculates color coding styles for a calendar date square
+ * Based on the events on that date, assigned kids, POI status, and color mode
+ */
+export function getDateSquareColorMeta(
+  dayEvents: CalendarEvent[],
+  kids: KidProfile[],
+  colorMode: CalendarColorCodeMode = 'kid',
+  allKidsColor: string = DEFAULT_ALL_KIDS_COLOR,
+  isPast: boolean = false,
+  isToday: boolean = false,
+  customCategories?: CustomCalendarCategory[]
+): DateSquareColorMeta {
+  if (!dayEvents || dayEvents.length === 0) {
+    return {
+      hasEvents: false,
+      hasImportantPoi: false,
+      isMultiKid: false,
+      allKidsInvolved: false,
+      involvedKids: [],
+      primaryColor: '#94a3b8',
+      containerBg: isToday ? 'rgba(254, 243, 199, 0.95)' : isPast ? 'rgba(241, 245, 249, 0.5)' : 'rgba(255, 255, 255, 0.95)',
+      containerBorder: isToday ? '#4f46e5' : isPast ? 'rgba(226, 232, 240, 0.6)' : 'rgba(254, 240, 138, 0.9)',
+      avatarList: [],
+    };
+  }
+
+  const hasImportantPoi = dayEvents.some((e) => e.isImportant || e.isPoi);
+
+  // Check custom highlight override on any event on this date
+  const customHighlightEvent = dayEvents.find((e) => e.highlightSquareColor);
+  const customColorOverride = customHighlightEvent ? customHighlightEvent.highlightSquareColor : undefined;
+
+  // Determine kid involvement
+  let allKidsInvolved = false;
+  const involvedKidSet = new Set<string>();
+
+  dayEvents.forEach((evt) => {
+    if (evt.assignedKidIds && evt.assignedKidIds.includes('all')) {
+      allKidsInvolved = true;
+    } else if (evt.category === 'family') {
+      allKidsInvolved = true;
+    }
+
+    if (evt.assignedKidIds) {
+      evt.assignedKidIds.forEach((id) => {
+        if (id !== 'all') {
+          involvedKidSet.add(id);
+        }
+      });
+    }
+  });
+
+  const involvedKids = kids.filter((k) => involvedKidSet.has(k.id));
+  const isMultiKid = involvedKids.length > 1 || (allKidsInvolved && involvedKids.length >= 1);
+
+  // MODE 1: BY KID / FAMILY (Default requested mode)
+  if (colorMode === 'kid') {
+    // If a custom POI color is set on this date, let it take precedence
+    if (customColorOverride) {
+      const hex = customColorOverride;
+      const bgOpacity = isPast ? '18' : '28';
+      const borderOpacity = isPast ? '55' : 'aa';
+      return {
+        hasEvents: true,
+        hasImportantPoi,
+        isMultiKid,
+        allKidsInvolved,
+        involvedKids,
+        primaryColor: hex,
+        containerBg: `${hex}${bgOpacity}`,
+        containerBorder: `${hex}${borderOpacity}`,
+        topAccentBar: hex,
+        badgeText: customHighlightEvent?.title || 'Highlight POI',
+        avatarList: involvedKids.map((k) => k.avatar).concat(allKidsInvolved ? ['👨‍👩‍👧‍👦'] : []),
+        dateNumberBg: hex,
+        dateNumberColor: '#ffffff',
+      };
+    }
+
+    // Case A: Exactly ONE kid involved (e.g. Leo)
+    if (involvedKids.length === 1 && !allKidsInvolved) {
+      const kid = involvedKids[0];
+      const hex = kid.color || '#f59e0b';
+      const bgOpacity = isPast ? '18' : '26';
+      const borderOpacity = isPast ? '55' : 'aa';
+
+      return {
+        hasEvents: true,
+        hasImportantPoi,
+        isMultiKid: false,
+        allKidsInvolved: false,
+        involvedKids,
+        primaryColor: hex,
+        containerBg: `${hex}${bgOpacity}`,
+        containerBorder: `${hex}${borderOpacity}`,
+        topAccentBar: hex,
+        badgeText: kid.name,
+        avatarList: [kid.avatar],
+        dateNumberBg: hex,
+        dateNumberColor: '#ffffff',
+      };
+    }
+
+    // Case B: ONLY "All Kids" / Family involved
+    if (allKidsInvolved && involvedKids.length === 0) {
+      const hex = allKidsColor || DEFAULT_ALL_KIDS_COLOR;
+      const bgOpacity = isPast ? '18' : '26';
+      const borderOpacity = isPast ? '55' : 'aa';
+
+      return {
+        hasEvents: true,
+        hasImportantPoi,
+        isMultiKid: false,
+        allKidsInvolved: true,
+        involvedKids: [],
+        primaryColor: hex,
+        containerBg: `${hex}${bgOpacity}`,
+        containerBorder: `${hex}${borderOpacity}`,
+        topAccentBar: hex,
+        badgeText: 'All Kids',
+        avatarList: ['👨‍👩‍👧‍👦'],
+        dateNumberBg: hex,
+        dateNumberColor: '#ffffff',
+      };
+    }
+
+    // Case C: Multiple kids, or single kid + All Kids
+    if (involvedKids.length > 1 || (allKidsInvolved && involvedKids.length > 0)) {
+      const kidColors: string[] = [];
+      const avatars: string[] = [];
+
+      involvedKids.forEach((k) => {
+        kidColors.push(k.color || '#3b82f6');
+        avatars.push(k.avatar);
+      });
+
+      if (allKidsInvolved) {
+        kidColors.push(allKidsColor || DEFAULT_ALL_KIDS_COLOR);
+        avatars.push('👨‍👩‍👧‍👦');
+      }
+
+      const c1 = kidColors[0] || '#f59e0b';
+      const c2 = kidColors[1] || '#ec4899';
+      const c3 = kidColors[2];
+
+      const bgOpacity = isPast ? '16' : '24';
+      let gradientBg = `linear-gradient(135deg, ${c1}${bgOpacity} 0%, ${c2}${bgOpacity} 100%)`;
+      if (c3) {
+        gradientBg = `linear-gradient(135deg, ${c1}${bgOpacity} 0%, ${c2}${bgOpacity} 50%, ${c3}${bgOpacity} 100%)`;
+      }
+
+      const accentBar = c3
+        ? `linear-gradient(90deg, ${c1} 0%, ${c2} 50%, ${c3} 100%)`
+        : `linear-gradient(90deg, ${c1} 0%, ${c2} 100%)`;
+
+      return {
+        hasEvents: true,
+        hasImportantPoi,
+        isMultiKid: true,
+        allKidsInvolved,
+        involvedKids,
+        primaryColor: c1,
+        secondaryColor: c2,
+        containerBg: gradientBg,
+        containerBorder: isPast ? `${c1}55` : `${c1}aa`,
+        topAccentBar: accentBar,
+        badgeText: involvedKids.map((k) => k.name).join(' & '),
+        avatarList: avatars,
+        dateNumberBg: c1,
+        dateNumberColor: '#ffffff',
+      };
+    }
+  }
+
+  // MODE 2: BY CATEGORY
+  if (colorMode === 'category') {
+    const primaryEvent = dayEvents[0];
+    const catMeta = getEventCategoryMeta(primaryEvent, customCategories);
+    const hex = catMeta.color || '#6366f1';
+    const bgOpacity = isPast ? '18' : '26';
+    const borderOpacity = isPast ? '55' : 'aa';
+
+    return {
+      hasEvents: true,
+      hasImportantPoi,
+      isMultiKid,
+      allKidsInvolved,
+      involvedKids,
+      primaryColor: hex,
+      containerBg: `${hex}${bgOpacity}`,
+      containerBorder: `${hex}${borderOpacity}`,
+      topAccentBar: hex,
+      badgeText: catMeta.shortLabel,
+      avatarList: [catMeta.icon],
+      dateNumberBg: hex,
+      dateNumberColor: '#ffffff',
+    };
+  }
+
+  // MODE 3: BY POI / PRIORITY ONLY
+  if (colorMode === 'poi') {
+    if (hasImportantPoi) {
+      return {
+        hasEvents: true,
+        hasImportantPoi: true,
+        isMultiKid,
+        allKidsInvolved,
+        involvedKids,
+        primaryColor: '#f59e0b',
+        containerBg: isPast ? 'rgba(245, 158, 11, 0.20)' : 'rgba(245, 158, 11, 0.32)',
+        containerBorder: '#f59e0b',
+        topAccentBar: '#f59e0b',
+        badgeText: '⭐ POI Alert',
+        avatarList: ['⭐'],
+        dateNumberBg: '#f59e0b',
+        dateNumberColor: '#ffffff',
+      };
+    }
+
+    return {
+      hasEvents: true,
+      hasImportantPoi: false,
+      isMultiKid,
+      allKidsInvolved,
+      involvedKids,
+      primaryColor: '#6366f1',
+      containerBg: isPast ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.14)',
+      containerBorder: isPast ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.6)',
+      topAccentBar: '#6366f1',
+      avatarList: [],
+    };
+  }
+
+  // MODE 4: SUBTLE (White background with colored top accent strip)
+  const fallbackKid = involvedKids[0];
+  const hex = customColorOverride || (fallbackKid ? fallbackKid.color : allKidsInvolved ? allKidsColor : '#6366f1');
+
+  return {
+    hasEvents: true,
+    hasImportantPoi,
+    isMultiKid,
+    allKidsInvolved,
+    involvedKids,
+    primaryColor: hex,
+    containerBg: isToday ? 'rgba(254, 243, 199, 0.95)' : isPast ? 'rgba(241, 245, 249, 0.6)' : 'rgba(255, 255, 255, 0.95)',
+    containerBorder: isPast ? 'rgba(203, 213, 225, 0.6)' : `${hex}60`,
+    topAccentBar: hex,
+    badgeText: fallbackKid?.name || (allKidsInvolved ? 'All Kids' : undefined),
+    avatarList: involvedKids.map((k) => k.avatar).concat(allKidsInvolved ? ['👨‍👩‍👧‍👦'] : []),
+  };
 }

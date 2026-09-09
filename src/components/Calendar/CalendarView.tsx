@@ -19,8 +19,11 @@ import {
   Eye,
   Sliders,
   Check,
+  Palette,
+  EyeOff,
 } from 'lucide-react';
 import {
+  CalendarColorCodeMode,
   CalendarEvent,
   CalendarEventCategory,
   ChoreItem,
@@ -32,6 +35,9 @@ import {
 import {
   EVENT_CATEGORIES,
   WEATHER_CONDITIONS,
+  DEFAULT_ALL_KIDS_COLOR,
+  POI_COLOR_PALETTE,
+  getDateSquareColorMeta,
   getSeasonalWeatherForDate,
   getEventCategoryMeta,
 } from '../../utils/calendar';
@@ -76,6 +82,41 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const [isGoogleCalendarModalOpen, setIsGoogleCalendarModalOpen] = useState<boolean>(false);
   const [dateForNewEvent, setDateForNewEvent] = useState<string | undefined>(undefined);
   const [weatherModalDate, setWeatherModalDate] = useState<string | null>(null);
+
+  // Date Square Color-Coding & POI State
+  const [calendarColorMode, setCalendarColorMode] = useState<CalendarColorCodeMode>(
+    database.settings.calendarColorMode || 'kid'
+  );
+  const [allKidsColor, setAllKidsColor] = useState<string>(
+    database.settings.allKidsColor || DEFAULT_ALL_KIDS_COLOR
+  );
+  const [spotlightKidId, setSpotlightKidId] = useState<string | null>(null);
+  const [spotlightPoiOnly, setSpotlightPoiOnly] = useState<boolean>(false);
+  const [showColorCustomizer, setShowColorCustomizer] = useState<boolean>(false);
+
+  const handleSetColorMode = (mode: CalendarColorCodeMode) => {
+    sound.playTap();
+    setCalendarColorMode(mode);
+    onUpdateDatabase({
+      ...database,
+      settings: {
+        ...database.settings,
+        calendarColorMode: mode,
+      },
+    });
+  };
+
+  const handleSetAllKidsColor = (color: string) => {
+    sound.playPop();
+    setAllKidsColor(color);
+    onUpdateDatabase({
+      ...database,
+      settings: {
+        ...database.settings,
+        allKidsColor: color,
+      },
+    });
+  };
 
   const events = database.events || [];
   const weatherMap = database.weatherForecasts || {};
@@ -244,6 +285,44 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       return true;
     });
   }, [events, selectedKidId, selectedCategory]);
+
+  // Month Events & Kid Participation Statistics for Color Legend & Spotlight
+  const currentMonthStats = useMemo(() => {
+    const mEvents = events.filter((e) => {
+      const parts = e.date.split('-').map(Number);
+      return parts[0] === currentYear && parts[1] === currentMonth + 1;
+    });
+
+    const kidCounts: Record<string, number> = {};
+    database.kids.forEach((k) => {
+      kidCounts[k.id] = 0;
+    });
+
+    let allKidsCount = 0;
+    let poiCount = 0;
+
+    mEvents.forEach((e) => {
+      if (e.isImportant || e.isPoi) {
+        poiCount++;
+      }
+      if (e.assignedKidIds?.includes('all') || e.category === 'family') {
+        allKidsCount++;
+      } else {
+        database.kids.forEach((k) => {
+          if (e.assignedKidIds?.includes(k.id)) {
+            kidCounts[k.id] = (kidCounts[k.id] || 0) + 1;
+          }
+        });
+      }
+    });
+
+    return {
+      mEvents,
+      kidCounts,
+      allKidsCount,
+      poiCount,
+    };
+  }, [events, currentYear, currentMonth, database.kids]);
 
   // Calendar Grid Calculation for Month View
   const calendarDays = useMemo(() => {
@@ -587,6 +666,242 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </div>
         </div>
 
+        {/* Date Square Color-Coding Legend & Spotlight Toolbar */}
+        <div className="my-2 p-2.5 sm:p-3 bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-2.5 flex-wrap">
+          {/* Left: Color Coding Mode Selector */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-xs font-black text-slate-800">
+              <Palette className="w-3.5 h-3.5 text-indigo-700" />
+              <span>Square Color:</span>
+            </div>
+
+            <div className="flex items-center bg-slate-100/90 p-0.5 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => handleSetColorMode('kid')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  calendarColorMode === 'kid'
+                    ? 'bg-indigo-900 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Color-code date squares by assigned kid(s) or family"
+              >
+                👦 By Kid / Family
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetColorMode('category')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  calendarColorMode === 'category'
+                    ? 'bg-indigo-900 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Color-code date squares by event activity type"
+              >
+                🏷️ Activity
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetColorMode('poi')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  calendarColorMode === 'poi'
+                    ? 'bg-indigo-900 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Highlight only key Points of Interest (POI)"
+              >
+                ⭐ POI Only
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetColorMode('subtle')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  calendarColorMode === 'subtle'
+                    ? 'bg-indigo-900 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Subtle neutral squares"
+              >
+                ⚪ Subtle
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Quick Spotlight / Legend Chips */}
+          <div className="flex items-center gap-1.5 flex-wrap text-xs">
+            <span className="text-[11px] font-black text-slate-500 uppercase mr-0.5">
+              Spotlight POI:
+            </span>
+
+            {/* Kids Pills */}
+            {database.kids.map((kid) => {
+              const isSpotlight = spotlightKidId === kid.id;
+              const count = currentMonthStats.kidCounts[kid.id] || 0;
+              return (
+                <button
+                  key={kid.id}
+                  type="button"
+                  onClick={() => {
+                    sound.playTap();
+                    setSpotlightPoiOnly(false);
+                    setSpotlightKidId(isSpotlight ? null : kid.id);
+                  }}
+                  className={`px-2 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 border transition-all cursor-pointer active:scale-95 ${
+                    isSpotlight
+                      ? 'bg-indigo-900 text-white border-indigo-950 shadow-xs ring-2 ring-indigo-400/50'
+                      : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200'
+                  }`}
+                  title={`Click to spotlight ${kid.name}'s days on the calendar (${count} scheduled)`}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
+                    style={{ backgroundColor: kid.color || '#f59e0b' }}
+                  />
+                  <span>{kid.avatar}</span>
+                  <span className="font-black">{kid.name}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                      isSpotlight ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+
+            {/* All Kids / Family Pill */}
+            {(() => {
+              const isSpotlight = spotlightKidId === 'all';
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playTap();
+                    setSpotlightPoiOnly(false);
+                    setSpotlightKidId(isSpotlight ? null : 'all');
+                  }}
+                  className={`px-2 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 border transition-all cursor-pointer active:scale-95 ${
+                    isSpotlight
+                      ? 'bg-emerald-800 text-white border-emerald-900 shadow-xs ring-2 ring-emerald-400/50'
+                      : 'bg-emerald-50/70 hover:bg-emerald-100/70 text-emerald-900 border-emerald-200'
+                  }`}
+                  title={`Click to spotlight All Kids / Family days (${currentMonthStats.allKidsCount} scheduled)`}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
+                    style={{ backgroundColor: allKidsColor }}
+                  />
+                  <span>👨‍👩‍👧‍👦</span>
+                  <span>All Kids</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                      isSpotlight ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+                    }`}
+                  >
+                    {currentMonthStats.allKidsCount}
+                  </span>
+                </button>
+              );
+            })()}
+
+            {/* POI / Important Events Pill */}
+            {(() => {
+              const isSpotlight = spotlightPoiOnly;
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playTap();
+                    setSpotlightKidId(null);
+                    setSpotlightPoiOnly(!isSpotlight);
+                  }}
+                  className={`px-2 py-1 rounded-xl text-xs font-black flex items-center gap-1 border transition-all cursor-pointer active:scale-95 ${
+                    isSpotlight
+                      ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-xs ring-2 ring-amber-300'
+                      : 'bg-amber-100/80 hover:bg-amber-200/80 text-amber-950 border-amber-300'
+                  }`}
+                  title={`Click to spotlight high-priority POI days (${currentMonthStats.poiCount} scheduled)`}
+                >
+                  <span>⭐ POI</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                      isSpotlight ? 'bg-black/15 text-slate-950' : 'bg-amber-200 text-amber-900'
+                    }`}
+                  >
+                    {currentMonthStats.poiCount}
+                  </span>
+                </button>
+              );
+            })()}
+
+            {/* Clear Spotlight button */}
+            {(spotlightKidId !== null || spotlightPoiOnly) && (
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playTap();
+                  setSpotlightKidId(null);
+                  setSpotlightPoiOnly(false);
+                }}
+                className="px-2 py-1 rounded-xl text-xs font-black bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 transition-colors cursor-pointer"
+                title="Reset Spotlight and show all dates"
+              >
+                ✕ Reset
+              </button>
+            )}
+
+            {/* Color Customizer Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                sound.playTap();
+                setShowColorCustomizer(!showColorCustomizer);
+              }}
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors cursor-pointer"
+              title="Customize Family & All-Kids Square Colors"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Optional Color Customizer Panel */}
+        {showColorCustomizer && (
+          <div className="mb-3 p-3.5 rounded-2xl bg-indigo-50/90 border-2 border-indigo-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in shadow-xs">
+            <div className="space-y-0.5">
+              <h5 className="text-xs font-black text-indigo-950 uppercase tracking-wide flex items-center gap-1.5">
+                <Palette className="w-3.5 h-3.5 text-indigo-700" />
+                <span>All-Kids / Family Date Square Color</span>
+              </h5>
+              <p className="text-[11px] text-indigo-700 font-semibold">
+                Choose the color tint used on dates when all children or the entire family are involved:
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {POI_COLOR_PALETTE.map((pal) => (
+                <button
+                  key={pal.id}
+                  type="button"
+                  onClick={() => handleSetAllKidsColor(pal.color)}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 cursor-pointer transition-all ${
+                    allKidsColor === pal.color
+                      ? 'bg-indigo-900 text-white border-indigo-950 shadow-xs scale-105'
+                      : 'bg-white text-slate-700 border-indigo-200 hover:bg-indigo-100/50'
+                  }`}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full border border-black/20"
+                    style={{ backgroundColor: pal.color }}
+                  />
+                  <span>{pal.label.split('(')[0].trim()}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* --- VIEW MODE 1: MONTH GRID VIEW (With Greyed-Out Completed Days) --- */}
         {viewMode === 'month' && (
           <div className="mt-2 flex-1 flex flex-col">
@@ -612,27 +927,97 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 const isFutureDay = day.dateStr > todayStr;
 
                 const dayEvents = filteredEvents.filter((e) => e.date === day.dateStr);
+                const allEventsOnDay = events.filter((e) => e.date === day.dateStr);
                 const dayWeather = weatherMap[day.dateStr] || getSeasonalWeatherForDate(day.dateStr);
                 const weatherMeta = WEATHER_CONDITIONS[dayWeather.condition] || WEATHER_CONDITIONS.sunny;
 
-                // Completed/Past Day Styling vs Active Today vs Future Days
-                let cellContainerStyle = '';
+                // Color coding calculation for date square
+                const squareColorMeta = getDateSquareColorMeta(
+                  dayEvents.length > 0 ? dayEvents : allEventsOnDay,
+                  database.kids,
+                  calendarColorMode,
+                  allKidsColor,
+                  isPastDay,
+                  isTodayCell,
+                  database.customCalendarCategories
+                );
+
+                // Spotlight Matching
+                const isSpotlightMatched = spotlightKidId
+                  ? (spotlightKidId === 'all'
+                      ? squareColorMeta.allKidsInvolved
+                      : squareColorMeta.involvedKids.some((k) => k.id === spotlightKidId))
+                  : spotlightPoiOnly
+                  ? squareColorMeta.hasImportantPoi
+                  : true;
+
+                const isDimmedBySpotlight = (spotlightKidId !== null || spotlightPoiOnly) && !isSpotlightMatched;
+                const isHighlightedBySpotlight =
+                  (spotlightKidId !== null || spotlightPoiOnly) && isSpotlightMatched && squareColorMeta.hasEvents;
+
+                // Completed/Past Day Styling vs Active Today vs Future Days with Color Coding
+                let cellContainerStyle =
+                  'min-h-[92px] sm:min-h-[114px] p-1.5 sm:p-2 rounded-2xl border-2 transition-all flex flex-col justify-between cursor-pointer group relative overflow-hidden';
+                let cellInlineStyle: React.CSSProperties = {};
+
+                if (isDimmedBySpotlight) {
+                  cellContainerStyle += ' opacity-25 grayscale-[0.5] scale-98';
+                } else if (isHighlightedBySpotlight) {
+                  cellContainerStyle += ' ring-4 ring-indigo-500/80 shadow-xl scale-[1.02] z-20';
+                }
+
                 if (isTodayCell) {
-                  cellContainerStyle =
-                    'bg-amber-100/95 border-indigo-600 shadow-lg ring-4 ring-indigo-500/30 scale-[1.01] z-10';
+                  cellContainerStyle += ' shadow-lg ring-4 ring-indigo-600/40 scale-[1.01] z-10';
+                  cellInlineStyle = {
+                    background:
+                      squareColorMeta.hasEvents && squareColorMeta.containerBg
+                        ? squareColorMeta.containerBg
+                        : '#fef3c7',
+                    borderColor: '#4f46e5',
+                  };
                 } else if (isPastDay) {
-                  // GREYED OUT COMPLETED DAY
-                  cellContainerStyle = day.isCurrentMonth
-                    ? 'bg-slate-200/50 border-slate-300/60 opacity-45 hover:opacity-85 grayscale-[0.4] transition-all hover:bg-slate-100/80 hover:shadow-xs'
-                    : 'bg-slate-200/30 border-slate-200/40 opacity-25 grayscale-[0.6]';
+                  // Completed/Past Day
+                  if (squareColorMeta.hasEvents && squareColorMeta.containerBg) {
+                    cellContainerStyle += day.isCurrentMonth
+                      ? ' opacity-65 hover:opacity-95 hover:shadow-xs transition-opacity'
+                      : ' opacity-30 grayscale-[0.5]';
+                    cellInlineStyle = {
+                      background: squareColorMeta.containerBg,
+                      borderColor: squareColorMeta.containerBorder || '#cbd5e1',
+                    };
+                  } else {
+                    cellContainerStyle += day.isCurrentMonth
+                      ? ' bg-slate-200/50 border-slate-300/60 opacity-45 hover:opacity-85 grayscale-[0.4] transition-all hover:bg-slate-100/80 hover:shadow-xs'
+                      : ' bg-slate-200/30 border-slate-200/40 opacity-25 grayscale-[0.6]';
+                  }
                 } else if (day.isCurrentMonth) {
                   // Active upcoming current month day
-                  cellContainerStyle =
-                    'bg-white/95 backdrop-blur-sm border-yellow-200/90 hover:border-indigo-400 hover:shadow-md transition-all';
+                  if (squareColorMeta.hasEvents && squareColorMeta.containerBg) {
+                    cellContainerStyle += ' hover:shadow-md hover:scale-[1.01] transition-all';
+                    cellInlineStyle = {
+                      background: squareColorMeta.containerBg,
+                      borderColor: squareColorMeta.containerBorder || '#e2e8f0',
+                    };
+                  } else {
+                    cellContainerStyle +=
+                      ' bg-white/95 backdrop-blur-xs border-yellow-200/90 hover:border-indigo-400 hover:shadow-md transition-all';
+                  }
                 } else {
-                  // Leading/trailing outside month day
-                  cellContainerStyle =
-                    'bg-yellow-50/40 border-yellow-100/50 opacity-40 hover:opacity-75 transition-opacity';
+                  // Outside current month day
+                  if (squareColorMeta.hasEvents && squareColorMeta.containerBg) {
+                    cellContainerStyle += ' opacity-35 hover:opacity-75 transition-opacity';
+                    cellInlineStyle = {
+                      background: squareColorMeta.containerBg,
+                      borderColor: squareColorMeta.containerBorder || '#e2e8f0',
+                    };
+                  } else {
+                    cellContainerStyle +=
+                      ' bg-yellow-50/40 border-yellow-100/50 opacity-40 hover:opacity-75 transition-opacity';
+                  }
+                }
+
+                if (squareColorMeta.hasImportantPoi && !isTodayCell && !isPastDay && !isHighlightedBySpotlight) {
+                  cellContainerStyle += ' ring-2 ring-amber-400/90 shadow-xs';
                 }
 
                 return (
@@ -642,24 +1027,61 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       sound.playTap();
                       setSelectedDateForDetail(day.dateStr);
                     }}
-                    className={`min-h-[90px] sm:min-h-[110px] p-1.5 sm:p-2 rounded-2xl border-2 transition-all flex flex-col justify-between cursor-pointer group relative ${cellContainerStyle}`}
+                    className={cellContainerStyle}
+                    style={cellInlineStyle}
                   >
-                    {/* Top Row in Cell: Date Number, Past Indicator & Weather */}
+                    {/* Top Color Accent Bar */}
+                    {squareColorMeta.topAccentBar && (
+                      <div
+                        className="absolute top-0 left-0 right-0 h-1.5 rounded-t-xl overflow-hidden pointer-events-none"
+                        style={{ background: squareColorMeta.topAccentBar }}
+                      />
+                    )}
+
+                    {/* Top Row in Cell: Date Number, Avatar Badges & Weather */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
                         <span
                           className={`text-xs sm:text-sm font-black w-6 h-6 flex items-center justify-center rounded-full transition-colors ${
                             isTodayCell
                               ? 'bg-indigo-950 text-yellow-300 shadow-xs'
+                              : squareColorMeta.hasEvents && squareColorMeta.primaryColor
+                              ? 'text-white shadow-2xs font-black'
                               : isPastDay
                               ? 'text-slate-400 font-bold bg-slate-300/40'
                               : 'text-slate-800'
                           }`}
+                          style={
+                            !isTodayCell && squareColorMeta.hasEvents && squareColorMeta.primaryColor
+                              ? { backgroundColor: squareColorMeta.primaryColor }
+                              : undefined
+                          }
                         >
                           {day.dayNum}
                         </span>
 
-                        {isPastDay && day.isCurrentMonth && (
+                        {/* Kid Avatars on Date Square for instant POI identification */}
+                        {squareColorMeta.avatarList.length > 0 && (
+                          <div className="flex items-center gap-0.5" title={squareColorMeta.badgeText}>
+                            {squareColorMeta.avatarList.map((av, avIdx) => (
+                              <span key={avIdx} className="text-xs sm:text-sm drop-shadow-2xs">
+                                {av}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* POI Priority Star */}
+                        {squareColorMeta.hasImportantPoi && (
+                          <span
+                            className="text-[11px] text-amber-500 font-black animate-pulse"
+                            title="Key POI Event"
+                          >
+                            ⭐
+                          </span>
+                        )}
+
+                        {isPastDay && day.isCurrentMonth && !squareColorMeta.hasEvents && (
                           <span className="hidden sm:inline-flex items-center text-[10px] text-slate-400 font-bold">
                             <Check className="w-3 h-3 text-slate-400 stroke-[2.5]" />
                           </span>
@@ -676,7 +1098,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[10px] font-black transition-colors ${
                           isPastDay
                             ? 'bg-slate-200/60 text-slate-400 hover:bg-slate-300/60'
-                            : 'bg-yellow-100/90 hover:bg-yellow-200 text-slate-700'
+                            : 'bg-white/90 hover:bg-yellow-100 text-slate-700 border border-yellow-200 shadow-2xs'
                         }`}
                         title={`Weather: ${weatherMeta.label}, High ${dayWeather.tempHigh}°${tempUnit}`}
                       >

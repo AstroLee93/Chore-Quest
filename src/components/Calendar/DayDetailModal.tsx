@@ -190,9 +190,19 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                               <span className="font-black text-sm text-slate-800">
                                 {evt.title}
                               </span>
-                              {evt.isImportant && (
-                                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-black">
-                                  ⭐ Important
+                              {(evt.isPoi || evt.isImportant) && (
+                                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black flex items-center gap-1 shadow-2xs">
+                                  <span>⭐</span>
+                                  <span>Point of Interest (POI)</span>
+                                </span>
+                              )}
+                              {evt.highlightSquareColor && (
+                                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300 text-[10px] font-bold flex items-center gap-1">
+                                  <span
+                                    className="w-2 h-2 rounded-full border border-black/20"
+                                    style={{ backgroundColor: evt.highlightSquareColor }}
+                                  />
+                                  <span>Custom Highlight</span>
                                 </span>
                               )}
                               <span
@@ -253,8 +263,12 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                                   assignedKids.map((k) => (
                                     <span
                                       key={k.id}
-                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black text-slate-800 border border-slate-200 bg-white"
+                                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-black text-slate-800 border border-slate-200 bg-white"
                                     >
+                                      <span
+                                        className="w-2 h-2 rounded-full border border-black/20"
+                                        style={{ backgroundColor: k.color || '#f59e0b' }}
+                                      />
                                       <span>{k.avatar}</span>
                                       <span>{k.name}</span>
                                     </span>

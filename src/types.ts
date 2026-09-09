@@ -158,7 +158,11 @@ export interface CalendarEvent {
   weatherIcon?: WeatherCondition;
   isImportant?: boolean;
   remindMinutesBefore?: number;
+  highlightSquareColor?: string; // custom date square highlight color override
+  isPoi?: boolean; // Point of Interest flag
 }
+
+export type CalendarColorCodeMode = 'kid' | 'category' | 'poi' | 'subtle';
 
 export interface SnackStarTiers {
   staple: number; // Healthy/Fresh e.g. 5
@@ -182,6 +186,8 @@ export interface AppSettings {
   kioskTimeout?: KioskTimeoutOption;
   snackStarTiers?: SnackStarTiers;
   customSnackStarOverrides?: Record<string, number>; // Individual snack item star cost overrides
+  calendarColorMode?: CalendarColorCodeMode;
+  allKidsColor?: string;
 }
 
 export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';

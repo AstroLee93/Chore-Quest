@@ -110,7 +110,7 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
   return (
     <div
       id="app-nav-overlay"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/75 backdrop-blur-md transition-opacity duration-200"
+      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/75 backdrop-blur-md transition-opacity duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           sound.playTap();

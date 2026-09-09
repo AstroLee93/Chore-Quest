@@ -568,7 +568,7 @@ export default function App() {
         onOpenGoalManager={() => setIsGoalModalOpen(true)}
       />
 
-      <main className="flex-1 p-0 sm:pb-6 flex flex-col">
+      <main className="flex-1 p-0 sm:pb-6 flex flex-col relative z-20">
         {isParentMode ? (
           <ParentDashboard
             database={database}
@@ -623,6 +623,39 @@ export default function App() {
         )}
       </main>
 
+      <footer className="relative z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 sm:p-3 px-3 sm:px-6 border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-[11px] sm:text-xs gap-1 sm:gap-3">
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
+          <span className="flex items-center gap-1.5 text-slate-700">
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                isSyncConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+              }`}
+            />
+            <span>{isSyncConnected ? 'Live Multi-Device Sync Active' : 'Offline Mode (Local Cache)'}</span>
+          </span>
+          <span className="opacity-40">•</span>
+          <span>Shared Family Hub</span>
+          <span className="opacity-40">•</span>
+          <button
+            onClick={() => setIsPiGuideOpen(true)}
+            className="text-indigo-600 hover:text-indigo-800 underline transition-colors cursor-pointer flex items-center gap-1 font-black"
+          >
+            <span>📖</span>
+            <span>Family Guide & Pi Setup</span>
+          </button>
+        </div>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsPinModalOpen(true)}
+            className="text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+          >
+            Parent PIN
+          </button>
+          <span>&copy; {new Date().getFullYear()} ChoreQuest Home Server</span>
+        </div>
+      </footer>
+
+      {/* Global Application Modals (Mounted after footer for clean stacking context & z-index order) */}
       {isSnackRequestOpen && (
         <KidSnackRequestModal
           isOpen={isSnackRequestOpen}
@@ -678,38 +711,6 @@ export default function App() {
           isParentMode={isParentMode}
         />
       )}
-
-      <footer className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 sm:p-3 px-3 sm:px-6 border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-[11px] sm:text-xs gap-1 sm:gap-3">
-        <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
-          <span className="flex items-center gap-1.5 text-slate-700">
-            <span
-              className={`w-2.5 h-2.5 rounded-full ${
-                isSyncConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-              }`}
-            />
-            <span>{isSyncConnected ? 'Live Multi-Device Sync Active' : 'Offline Mode (Local Cache)'}</span>
-          </span>
-          <span className="opacity-40">•</span>
-          <span>Shared Family Hub</span>
-          <span className="opacity-40">•</span>
-          <button
-            onClick={() => setIsPiGuideOpen(true)}
-            className="text-indigo-600 hover:text-indigo-800 underline transition-colors cursor-pointer flex items-center gap-1 font-black"
-          >
-            <span>📖</span>
-            <span>Family Guide & Pi Setup</span>
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setIsPinModalOpen(true)}
-            className="text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
-          >
-            Parent PIN
-          </button>
-          <span>&copy; {new Date().getFullYear()} ChoreQuest Home Server</span>
-        </div>
-      </footer>
 
       <ParentPinModal
         isOpen={isPinModalOpen}

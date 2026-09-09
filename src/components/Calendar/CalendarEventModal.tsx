@@ -7,6 +7,7 @@ import {
   POPULAR_CUSTOM_CATEGORY_SUGGESTIONS,
   PopularCustomCategorySuggestion,
   WEATHER_CONDITIONS,
+  POI_COLOR_PALETTE,
 } from '../../utils/calendar';
 import { sound } from '../../utils/sound';
 import { EmojiPicker } from '../EmojiPicker';
@@ -52,6 +53,8 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
     weatherNote: '',
     weatherIcon: undefined,
     isImportant: false,
+    highlightSquareColor: undefined,
+    isPoi: false,
   });
 
   const [saveCategoryForFuture, setSaveCategoryForFuture] = useState<boolean>(true);
@@ -81,6 +84,8 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
           weatherNote: event.weatherNote || '',
           weatherIcon: event.weatherIcon,
           isImportant: event.isImportant || false,
+          highlightSquareColor: event.highlightSquareColor,
+          isPoi: event.isPoi || event.isImportant || false,
           id: event.id,
         });
       } else {
@@ -102,6 +107,8 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
           weatherNote: '',
           weatherIcon: undefined,
           isImportant: false,
+          highlightSquareColor: undefined,
+          isPoi: false,
         });
       }
       setSaveCategoryForFuture(true);
@@ -229,7 +236,9 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
       icon: isCustomCat ? (formData.icon || customIcon) : (formData.icon || '⭐'),
       weatherNote: formData.weatherNote?.trim() || '',
       weatherIcon: formData.weatherIcon,
-      isImportant: Boolean(formData.isImportant),
+      isImportant: Boolean(formData.isImportant || formData.isPoi),
+      isPoi: Boolean(formData.isPoi || formData.isImportant),
+      highlightSquareColor: formData.highlightSquareColor || undefined,
     };
 
     onSave(finalEvent, isCustomCat && saveCategoryForFuture);
@@ -740,18 +749,93 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
             />
           </div>
 
-          {/* Priority Star Flag */}
-          <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-yellow-200/60 border-2 border-yellow-300">
-            <input
-              type="checkbox"
-              id="isImportant"
-              checked={formData.isImportant || false}
-              onChange={(e) => setFormData({ ...formData, isImportant: e.target.checked })}
-              className="w-4 h-4 text-indigo-600 rounded-md focus:ring-indigo-500 cursor-pointer"
-            />
-            <label htmlFor="isImportant" className="text-xs font-black text-slate-800 cursor-pointer">
-              ⭐ Mark as Important / Highlighted Event on Calendar
-            </label>
+          {/* Point of Interest (POI) & Date Square Color-Coding */}
+          <div className="p-4 rounded-3xl bg-amber-50/90 border-2 border-amber-300 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black text-amber-950 uppercase tracking-wide flex items-center gap-1.5">
+                <span>⭐ Point of Interest (POI) & Calendar Date Square Color</span>
+              </label>
+              <span className="text-[10px] text-amber-700 font-bold">Helps identify at a glance</span>
+            </div>
+
+            {/* POI / Important checkbox */}
+            <div className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-white/90 border border-amber-200">
+              <input
+                type="checkbox"
+                id="isPoi"
+                checked={Boolean(formData.isPoi || formData.isImportant)}
+                onChange={(e) => {
+                  const val = e.target.checked;
+                  setFormData((prev) => ({
+                    ...prev,
+                    isPoi: val,
+                    isImportant: val,
+                  }));
+                }}
+                className="w-4 h-4 text-amber-600 rounded-md focus:ring-amber-500 cursor-pointer"
+              />
+              <label htmlFor="isPoi" className="text-xs font-black text-slate-800 cursor-pointer flex-1">
+                ⭐ Mark as Key Point of Interest (POI) / Important Event
+                <span className="block text-[10px] text-slate-500 font-medium">
+                  Spotlights this date square with a priority gold marker on the monthly calendar
+                </span>
+              </label>
+            </div>
+
+            {/* Date Square Color Option */}
+            <div>
+              <div className="text-[11px] font-black text-amber-950 mb-1.5 flex items-center justify-between">
+                <span>Date Square Color on Calendar:</span>
+                <span className="text-[10px] text-amber-700 font-bold">
+                  {formData.highlightSquareColor
+                    ? (POI_COLOR_PALETTE.find((p) => p.color === formData.highlightSquareColor)?.label || 'Custom Color')
+                    : 'Auto (From Kid / Family)'}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playTap();
+                    setFormData((prev) => ({ ...prev, highlightSquareColor: undefined }));
+                  }}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-black border transition-all cursor-pointer ${
+                    !formData.highlightSquareColor
+                      ? 'bg-indigo-900 text-white border-indigo-900 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  ⚡ Auto (Kid / Family)
+                </button>
+
+                {POI_COLOR_PALETTE.map((pal) => {
+                  const isSel = formData.highlightSquareColor === pal.color;
+                  return (
+                    <button
+                      key={pal.id}
+                      type="button"
+                      onClick={() => {
+                        sound.playTap();
+                        setFormData((prev) => ({ ...prev, highlightSquareColor: pal.color }));
+                      }}
+                      className={`px-2 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
+                        isSel
+                          ? 'bg-slate-900 text-white border-slate-950 shadow-xs scale-105'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      }`}
+                      title={pal.description}
+                    >
+                      <span
+                        className="w-3 h-3 rounded-full border border-black/20 shrink-0"
+                        style={{ backgroundColor: pal.color }}
+                      />
+                      <span className="text-[11px]">{pal.label.split('(')[0].trim()}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Action Buttons */}

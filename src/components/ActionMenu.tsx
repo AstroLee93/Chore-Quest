@@ -29,12 +29,31 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
   id,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Close when clicking outside
+  // Calculate whether menu should pop upward or downward based on viewport space
+  const checkPosition = () => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    // Typical menu height is ~160-220px. If less than 220px below and more room above, flip upward.
+    if (spaceBelow < 220 && spaceAbove > spaceBelow) {
+      setOpenUpward(true);
+    } else {
+      setOpenUpward(false);
+    }
+  };
+
+  // Close when clicking outside and handle scroll/resize position checks
   useEffect(() => {
     if (!isOpen) return;
+
+    checkPosition();
 
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -49,18 +68,29 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
       }
     };
 
+    const handleScrollOrResize = () => {
+      checkPosition();
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, true);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
     };
   }, [isOpen]);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     sound.playTap();
+    if (!isOpen) {
+      checkPosition();
+    }
     setIsOpen((prev) => !prev);
   };
 
@@ -88,7 +118,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
   };
 
   return (
-    <div className="relative inline-block text-left" ref={menuRef}>
+    <div className={`relative inline-block text-left ${isOpen ? 'z-50' : ''}`} ref={menuRef}>
       <button
         ref={buttonRef}
         id={id || `action-menu-btn-${Math.random().toString(36).substr(2, 6)}`}
@@ -114,7 +144,11 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
           aria-labelledby={id}
           className={`absolute ${
             align === 'right' ? 'right-0' : 'left-0'
-          } mt-1.5 w-56 rounded-2xl bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-50 animate-in fade-in zoom-in-95 duration-150 ${
+          } ${
+            openUpward
+              ? 'bottom-full mb-1.5 origin-bottom-right'
+              : 'top-full mt-1.5 origin-top-right'
+          } w-56 max-h-[min(380px,80vh)] overflow-y-auto rounded-2xl bg-white dark:bg-slate-800 shadow-2xl border border-slate-200 dark:border-slate-700 py-2 z-50 animate-in fade-in zoom-in-95 duration-150 ${
             menuClassName || ''
           }`}
         >

@@ -39,6 +39,7 @@ interface NavbarProps {
   onToggleGrocery?: () => void;
   onToggleKiosk?: () => void;
   onOpenGoalManager?: () => void;
+  onOpenVault?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -62,6 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleGrocery,
   onToggleKiosk,
   onOpenGoalManager,
+  onOpenVault,
 }) => {
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const todayStr = getTodayDateString();
@@ -146,6 +148,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </span>
                 </button>
 
+                {/* Kid-Coin Vault Pill */}
+                {settings.kidCoinEnabled !== false && (
+                  <button
+                    id="btn-open-kidcoin-vault"
+                    onClick={() => {
+                      sound.playCoinSound();
+                      if (onOpenVault) onOpenVault();
+                    }}
+                    className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full border-2 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs shrink-0 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-950/80 border-amber-300 dark:border-amber-700"
+                    title="Open Kid-Coin Savings Vault & Rocket Missions"
+                  >
+                    <span className="text-base sm:text-lg leading-none">🪙</span>
+                    <span className="font-black text-xs sm:text-sm leading-none text-amber-900 dark:text-amber-200">
+                      ${((activeKid.goals?.reduce((acc, g) => acc + g.currentSaved, 0) ?? 0) + (activeKid.kidCoinBalance || 0)).toFixed(2)}
+                    </span>
+                  </button>
+                )}
+
                 {/* Kid Profile Badge */}
                 <div className="hidden lg:flex items-center gap-2 bg-white/90 dark:bg-slate-800/90 p-1 pr-3 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs">
                   <div
@@ -227,6 +247,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         onToggleGrocery={onToggleGrocery}
         onToggleKiosk={onToggleKiosk}
         onOpenGoalManager={onOpenGoalManager}
+        onOpenVault={onOpenVault}
       />
     </>
   );

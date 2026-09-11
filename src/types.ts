@@ -4,6 +4,60 @@ export type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'anytime';
 
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 1 = Monday, etc.
 
+export interface SavingsMilestone {
+  percent: number; // 25, 50, 75, 100
+  label: string;   // e.g. "Troposphere Liftoff", "Low Orbit Satellites"
+  rewardXP: number;
+  reached: boolean;
+  reachedAt?: string;
+}
+
+export interface SavingsGoal {
+  id: string;
+  title: string;
+  category: string;
+  targetCost: number;
+  isVerified: boolean;
+  verifiedSource?: string;
+  currentSaved: number;
+  priority: 'primary' | 'secondary';
+  icon: string;
+  createdAt: string;
+  deadline?: string;
+  milestones: SavingsMilestone[];
+}
+
+export type KidCoinTransactionCategory =
+  | 'chore'
+  | 'allowance'
+  | 'gift'
+  | 'lemonade_stand'
+  | 'interest'
+  | 'snack'
+  | 'reward'
+  | 'deposit'
+  | 'other';
+
+export interface KidCoinTransaction {
+  id: string;
+  kidId: string;
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  category: KidCoinTransactionCategory;
+  description: string;
+  date: string;
+  goalContribution?: string; // Goal ID if contributed directly
+  choreId?: string;
+}
+
+export interface CoachAdvice {
+  headline: string;
+  milestoneTip: string;
+  fastTrackIdeas: string[];
+  spendingTradeoff: string;
+  estimatedPace: string;
+}
+
 export interface KidProfile {
   id: string;
   name: string;
@@ -14,6 +68,12 @@ export interface KidProfile {
   streakDays: number;
   lastActiveDate?: string; // YYYY-MM-DD
   pin?: string; // optional kid pin
+  kidCoinBalance?: number; // available cash in USD / Kid Coins
+  totalSaved?: number; // total in active goals in USD
+  weeklyAllowance?: number; // weekly allowance in USD
+  savingsStreakDays?: number;
+  goals?: SavingsGoal[];
+  transactions?: KidCoinTransaction[];
 }
 
 export interface CategoryTimeWindow {
@@ -192,6 +252,11 @@ export interface AppSettings {
   pauseRewardStoreReason?: string; // Custom message displayed to kids when Reward Store is paused
   pauseSnackRequests?: boolean; // When true, kids cannot submit grocery or snack requests
   pauseSnackRequestsReason?: string; // Custom message displayed to kids when snack requests are paused
+  kidCoinEnabled?: boolean; // When true, integrates Kid Coin savings, rocket tracking, and transactions
+  kidCoinRatio?: number; // Conversion ratio: dollars per star earned (default: 0.10 => 10 stars = $1.00)
+  bankInterestRateMonthlyPercent?: number; // Bank of Mom & Dad monthly matching interest (default: 5%)
+  autoDepositChoresToGoal?: boolean; // Automatically route chore earnings into primary savings goal rocket
+  lastInterestCalculatedMonth?: string; // YYYY-MM
 }
 
 export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';

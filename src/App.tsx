@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, RewardItem, RewardRedemption } from './types';
+import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, RewardItem, RewardRedemption, KidCoinTransaction } from './types';
 import { loadDatabase, saveDatabase, getTodayDateString, getSavedKioskMode, saveKioskMode, getKioskTimeoutMs } from './utils/storage';
+import { generateDefaultMilestones } from './utils/kidCoin';
 import { fetchServerDatabase, pushServerDatabase, subscribeToDatabaseSync } from './utils/api';
 import { sound } from './utils/sound';
 import { checkCategoryTimeWindow } from './utils/timeWindow';
@@ -18,6 +19,7 @@ import { FamilyGoalModal } from './components/FamilyGoalModal';
 import { WeeklyMenuModal } from './components/WeeklyMenuModal';
 import { WeeklyGroceryModal } from './components/WeeklyGroceryModal';
 import { KidSnackRequestModal } from './components/KidSnackRequestModal';
+import { KidCoinVaultModal } from './components/KidCoin/KidCoinVaultModal';
 import { Home } from 'lucide-react';
 
 export default function App() {
@@ -28,6 +30,7 @@ export default function App() {
   const [isKioskKidSession, setIsKioskKidSession] = useState<boolean>(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
   const [isRewardStoreOpen, setIsRewardStoreOpen] = useState<boolean>(false);
+  const [isKidCoinVaultOpen, setIsKidCoinVaultOpen] = useState<boolean>(false);
   const [isPiGuideOpen, setIsPiGuideOpen] = useState<boolean>(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
@@ -214,20 +217,97 @@ export default function App() {
       newLog,
     ];
 
+    const isKidCoinEnabled = database.settings.kidCoinEnabled !== false;
+    const coinRatio = database.settings.kidCoinRatio ?? 0.10;
+    const earnedCoins = isKidCoinEnabled ? Number(((chore.stars || 1) * coinRatio).toFixed(2)) : 0;
+    let playedFanfare = false;
+
     const updatedKids = database.kids.map((k) => {
       if (k.id === activeKid.id) {
         const isNewActiveDay = k.lastActiveDate !== todayStr;
         const newStreak = isNewActiveDay ? k.streakDays + 1 : Math.max(1, k.streakDays);
+
+        let goals = k.goals || [];
+        let kidCoinBalance = k.kidCoinBalance || 0;
+        let totalSaved = k.totalSaved || 0;
+        let transactions = k.transactions || [];
+
+        if (earnedCoins > 0) {
+          const primaryGoal = goals.find((g) => g.priority === 'primary') || goals[0];
+          const autoDeposit = database.settings.autoDepositChoresToGoal !== false;
+
+          if (autoDeposit && primaryGoal) {
+            const oldPercent = (primaryGoal.currentSaved / primaryGoal.targetCost) * 100;
+            const newSaved = Number((primaryGoal.currentSaved + earnedCoins).toFixed(2));
+            const newPercent = (newSaved / primaryGoal.targetCost) * 100;
+
+            if (
+              (oldPercent < 25 && newPercent >= 25) ||
+              (oldPercent < 50 && newPercent >= 50) ||
+              (oldPercent < 75 && newPercent >= 75) ||
+              (oldPercent < 100 && newPercent >= 100)
+            ) {
+              playedFanfare = true;
+            }
+
+            goals = goals.map((g) => {
+              if (g.id === primaryGoal.id) {
+                return {
+                  ...g,
+                  currentSaved: newSaved,
+                  milestones: generateDefaultMilestones(g.targetCost, newSaved),
+                };
+              }
+              return g;
+            });
+            totalSaved = goals.reduce((acc, g) => acc + g.currentSaved, 0);
+
+            const tx: KidCoinTransaction = {
+              id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+              kidId: k.id,
+              type: 'deposit',
+              amount: earnedCoins,
+              category: 'chore',
+              description: `Chore Fuel Deposit: ${chore.title}`,
+              date: todayStr,
+              goalContribution: primaryGoal.id,
+            };
+            transactions = [tx, ...transactions];
+          } else {
+            kidCoinBalance = Number((kidCoinBalance + earnedCoins).toFixed(2));
+            const tx: KidCoinTransaction = {
+              id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+              kidId: k.id,
+              type: 'deposit',
+              amount: earnedCoins,
+              category: 'chore',
+              description: `Chore Mission: ${chore.title}`,
+              date: todayStr,
+            };
+            transactions = [tx, ...transactions];
+          }
+        }
+
         return {
           ...k,
           stars: k.stars + chore.stars,
           lifetimeStars: k.lifetimeStars + chore.stars,
           streakDays: newStreak,
           lastActiveDate: todayStr,
+          kidCoinBalance,
+          totalSaved,
+          goals,
+          transactions,
         };
       }
       return k;
     });
+
+    if (playedFanfare) {
+      setTimeout(() => sound.playMilestoneFanfare(), 350);
+    } else if (earnedCoins > 0) {
+      setTimeout(() => sound.playCoinSound(), 300);
+    }
 
     handleUpdateDatabase({ ...database, logs: updatedLogs, kids: updatedKids });
   }, [activeKid, database, todayStr, handleUpdateDatabase]);
@@ -576,6 +656,7 @@ export default function App() {
         onToggleGrocery={() => setIsGroceryOpen((prev) => !prev)}
         onToggleKiosk={handleEnterKiosk}
         onOpenGoalManager={() => setIsGoalModalOpen(true)}
+        onOpenVault={() => setIsKidCoinVaultOpen(true)}
       />
 
       <main className="flex-1 p-0 sm:pb-6 flex flex-col relative z-20">
@@ -752,6 +833,19 @@ export default function App() {
             });
           }}
           onClose={() => setIsRewardStoreOpen(false)}
+        />
+      )}
+
+      {isKidCoinVaultOpen && activeKid && (
+        <KidCoinVaultModal
+          isOpen={isKidCoinVaultOpen}
+          kid={activeKid}
+          database={database}
+          onClose={() => setIsKidCoinVaultOpen(false)}
+          onUpdateKid={(updatedKid) => {
+            const updatedKids = database.kids.map((k) => (k.id === updatedKid.id ? updatedKid : k));
+            handleUpdateDatabase({ ...database, kids: updatedKids });
+          }}
         />
       )}
 

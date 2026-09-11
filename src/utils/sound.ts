@@ -350,6 +350,143 @@ class SoundEngine {
   public playUndo() {
     this.playTap();
   }
+
+  // Kid-Coin metallic coin clink sound
+  public playCoinSound() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(987.77, now); // B5
+    osc1.frequency.exponentialRampToValueAtTime(1318.51, now + 0.08); // E6
+
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(1975.53, now); // B6
+    osc2.frequency.exponentialRampToValueAtTime(2637.02, now + 0.08); // E7
+
+    gainNode.gain.setValueAtTime(0.18, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    osc1.connect(gainNode);
+    osc2.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.35);
+    osc2.stop(now + 0.35);
+  }
+
+  // Milestone reached celebratory fanfare
+  public playMilestoneFanfare() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const notes = [
+      { f: 523.25, t: 0.00, d: 0.12 }, // C5
+      { f: 659.25, t: 0.12, d: 0.12 }, // E5
+      { f: 783.99, t: 0.24, d: 0.12 }, // G5
+      { f: 1046.5, t: 0.36, d: 0.40 }, // C6
+    ];
+
+    notes.forEach(({ f, t, d }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, now + t);
+
+      gain.gain.setValueAtTime(0.01, now + t);
+      gain.gain.exponentialRampToValueAtTime(0.2, now + t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + t + d);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + t);
+      osc.stop(now + t + d + 0.05);
+    });
+  }
+
+  // Savings Goal 100% Victorious Celebration
+  public playVictorySound() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const notes = [
+      { f: 523.25, t: 0.00, d: 0.15 }, // C5
+      { f: 659.25, t: 0.15, d: 0.15 }, // E5
+      { f: 783.99, t: 0.30, d: 0.15 }, // G5
+      { f: 1046.5, t: 0.45, d: 0.30 }, // C6
+      { f: 880.00, t: 0.75, d: 0.15 }, // A5
+      { f: 1046.5, t: 0.90, d: 0.50 }, // C6
+    ];
+
+    notes.forEach(({ f, t, d }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(f, now + t);
+
+      gain.gain.setValueAtTime(0.01, now + t);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + t + d);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + t);
+      osc.stop(now + t + d + 0.05);
+    });
+  }
+
+  // Rocket Thruster Rumble & Liftoff Sound
+  public playRocketLaunchSound() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // 1. Low frequency rumble thruster
+    const rumbleOsc = ctx.createOscillator();
+    const rumbleGain = ctx.createGain();
+    rumbleOsc.type = 'sawtooth';
+    rumbleOsc.frequency.setValueAtTime(55, now);
+    rumbleOsc.frequency.exponentialRampToValueAtTime(140, now + 2.5);
+
+    rumbleGain.gain.setValueAtTime(0.05, now);
+    rumbleGain.gain.linearRampToValueAtTime(0.25, now + 0.8);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
+
+    rumbleOsc.connect(rumbleGain);
+    rumbleGain.connect(ctx.destination);
+    rumbleOsc.start(now);
+    rumbleOsc.stop(now + 3.0);
+
+    // 2. Rising jet whoosh
+    const whooshOsc = ctx.createOscillator();
+    const whooshGain = ctx.createGain();
+    whooshOsc.type = 'triangle';
+    whooshOsc.frequency.setValueAtTime(220, now + 0.3);
+    whooshOsc.frequency.exponentialRampToValueAtTime(1200, now + 2.5);
+
+    whooshGain.gain.setValueAtTime(0.01, now + 0.3);
+    whooshGain.gain.linearRampToValueAtTime(0.15, now + 1.2);
+    whooshGain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
+
+    whooshOsc.connect(whooshGain);
+    whooshGain.connect(ctx.destination);
+    whooshOsc.start(now + 0.3);
+    whooshOsc.stop(now + 3.0);
+  }
 }
 
 export const sound = new SoundEngine();

@@ -48,6 +48,7 @@ export interface AppNavMenuProps {
   onToggleGrocery?: () => void;
   onToggleKiosk?: () => void;
   onOpenGoalManager?: () => void;
+  onOpenVault?: () => void;
 }
 
 export const AppNavMenu: React.FC<AppNavMenuProps> = ({
@@ -73,6 +74,7 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
   onToggleGrocery,
   onToggleKiosk,
   onOpenGoalManager,
+  onOpenVault,
 }) => {
   const [isThemeSectionExpanded, setIsThemeSectionExpanded] = useState<boolean>(false);
   const todayStr = getTodayDateString();
@@ -181,6 +183,18 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  {settings.kidCoinEnabled !== false && onOpenVault && (
+                    <button
+                      id="btn-modal-kidcoin-vault"
+                      onClick={() => handleAction(onOpenVault)}
+                      className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                      title="Open Kid-Coin Vault"
+                    >
+                      <span>🪙</span>
+                      <span>${((activeKid.goals?.reduce((acc, g) => acc + g.currentSaved, 0) ?? 0) + (activeKid.kidCoinBalance || 0)).toFixed(2)}</span>
+                    </button>
+                  )}
+
                   {onOpenRewardStore && (
                     <button
                       id="btn-modal-rewards"

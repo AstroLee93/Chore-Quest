@@ -514,7 +514,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                         const isChecked = !!checkedIngredients[idx];
                         return (
                           <div
-                            key={idx}
+                            key={`recipe-ing-${idx}`}
                             onClick={() => toggleIngredient(idx)}
                             className={`flex items-start gap-3 p-2.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${
                               isChecked
@@ -539,7 +539,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                       <div className="space-y-2">
                         {(editForm.ingredients || []).map((ing, idx) => (
                           <div
-                            key={idx}
+                            key={`edit-recipe-ing-${idx}`}
                             className="flex items-center gap-2 bg-amber-50 p-2 rounded-xl border border-amber-200"
                           >
                             <input
@@ -609,7 +609,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                         const isDone = !!completedSteps[idx];
                         return (
                           <div
-                            key={idx}
+                            key={`recipe-step-${idx}`}
                             onClick={() => toggleStep(idx)}
                             className={`flex items-start gap-3.5 p-3 rounded-2xl border-2 transition-all cursor-pointer select-none ${
                               isDone
@@ -644,7 +644,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                       <div className="space-y-2.5">
                         {(editForm.instructions || []).map((step, idx) => (
                           <div
-                            key={idx}
+                            key={`edit-recipe-step-${idx}`}
                             className="flex items-start gap-2 bg-amber-50 p-2.5 rounded-2xl border border-amber-200"
                           >
                             <span className="w-5 h-5 rounded-lg bg-amber-400 text-slate-950 text-xs font-black flex items-center justify-center shrink-0 mt-1">
@@ -714,7 +714,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                 {!isEditing ? (
                   <div className="space-y-2">
                     {(currentData.substitutions || []).map((sub, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs font-bold text-amber-950">
+                      <div key={`recipe-sub-${idx}`} className="flex items-start gap-2 text-xs font-bold text-amber-950">
                         <span className="text-amber-600 shrink-0">💡</span>
                         <span>{sub}</span>
                       </div>
@@ -730,7 +730,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
                   <div className="space-y-2">
                     {(editForm.substitutions || []).map((sub, idx) => (
                       <div
-                        key={idx}
+                        key={`edit-recipe-sub-${idx}`}
                         className="flex items-center gap-2 bg-white p-2 rounded-xl border border-yellow-200"
                       >
                         <input

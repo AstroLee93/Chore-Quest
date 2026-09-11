@@ -2,6 +2,7 @@ import { FamilyDatabase, KidProfile, ChoreCategory, ChoreItem, ChoreLog, RewardI
 import { getInitialSeedEvents } from './calendar';
 import { DEFAULT_WEEKLY_MENU } from './menu';
 import { DEFAULT_WEEKLY_GROCERY_LIST } from './grocery';
+import { createDefaultGoalsForKid, createDefaultTransactionsForKid } from './kidCoin';
 
 const STORAGE_KEY = 'chorequest_family_db_v1';
 
@@ -114,6 +115,10 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     streakBonusStars: 5,
     requireParentApprovalForRewards: false,
     kioskTimeout: '5m',
+    kidCoinEnabled: true,
+    kidCoinRatio: 0.10,
+    bankInterestRateMonthlyPercent: 5,
+    autoDepositChoresToGoal: true,
   },
   kids: [
     {
@@ -125,6 +130,12 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       lifetimeStars: 180,
       streakDays: 4,
       lastActiveDate: getTodayDateString(),
+      kidCoinBalance: 12.50,
+      totalSaved: 100.50,
+      weeklyAllowance: 5.00,
+      savingsStreakDays: 4,
+      goals: createDefaultGoalsForKid('kid-1', 'Leo'),
+      transactions: createDefaultTransactionsForKid('kid-1'),
     },
     {
       id: 'kid-2',
@@ -135,6 +146,12 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       lifetimeStars: 220,
       streakDays: 6,
       lastActiveDate: getTodayDateString(),
+      kidCoinBalance: 18.00,
+      totalSaved: 147.50,
+      weeklyAllowance: 7.00,
+      savingsStreakDays: 6,
+      goals: createDefaultGoalsForKid('kid-2', 'Maya'),
+      transactions: createDefaultTransactionsForKid('kid-2'),
     },
     {
       id: 'kid-3',
@@ -145,6 +162,12 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       lifetimeStars: 95,
       streakDays: 2,
       lastActiveDate: getTodayDateString(),
+      kidCoinBalance: 8.00,
+      totalSaved: 47.50,
+      weeklyAllowance: 4.00,
+      savingsStreakDays: 2,
+      goals: createDefaultGoalsForKid('kid-3', 'Sam'),
+      transactions: createDefaultTransactionsForKid('kid-3'),
     }
   ],
   categories: [
@@ -647,6 +670,33 @@ export const loadDatabase = (): FamilyDatabase => {
         return cat;
       });
     }
+
+    // Ensure Kid-Coin settings and kid goals are initialized
+    if (parsed.settings) {
+      parsed.settings.kidCoinEnabled = parsed.settings.kidCoinEnabled ?? true;
+      parsed.settings.kidCoinRatio = parsed.settings.kidCoinRatio ?? 0.10;
+      parsed.settings.bankInterestRateMonthlyPercent = parsed.settings.bankInterestRateMonthlyPercent ?? 5;
+      parsed.settings.autoDepositChoresToGoal = parsed.settings.autoDepositChoresToGoal ?? true;
+    }
+
+    if (parsed.kids && parsed.kids.length > 0) {
+      parsed.kids = parsed.kids.map((k) => {
+        if (!k.goals || k.goals.length === 0) {
+          const defaultGoals = createDefaultGoalsForKid(k.id, k.name);
+          return {
+            ...k,
+            kidCoinBalance: k.kidCoinBalance ?? 10.00,
+            totalSaved: defaultGoals.reduce((acc, g) => acc + g.currentSaved, 0),
+            weeklyAllowance: k.weeklyAllowance ?? 5.00,
+            savingsStreakDays: k.savingsStreakDays ?? k.streakDays ?? 1,
+            goals: defaultGoals,
+            transactions: k.transactions || createDefaultTransactionsForKid(k.id),
+          };
+        }
+        return k;
+      });
+    }
+
     return parsed;
   } catch (err) {
     console.error('Error loading database from localStorage:', err);

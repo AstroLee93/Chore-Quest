@@ -193,6 +193,7 @@ export const KidPinModal: React.FC<KidPinModalProps> = ({
           ))}
 
           <button
+            key="btn-kid-pin-clear"
             id="btn-kid-pin-clear"
             onClick={handleClear}
             className="h-14 rounded-2xl bg-white/5 hover:bg-white/15 active:bg-white/20 text-slate-400 font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center cursor-pointer border border-white/10"
@@ -201,6 +202,7 @@ export const KidPinModal: React.FC<KidPinModalProps> = ({
           </button>
 
           <button
+            key="btn-kid-pin-0"
             id="btn-kid-pin-0"
             onClick={() => handleKeyPress('0')}
             className="h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-white font-black text-2xl transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-sm border border-white/10"
@@ -209,6 +211,7 @@ export const KidPinModal: React.FC<KidPinModalProps> = ({
           </button>
 
           <button
+            key="btn-kid-pin-delete"
             id="btn-kid-pin-delete"
             onClick={handleDelete}
             className="h-14 rounded-2xl bg-white/5 hover:bg-white/15 active:bg-white/20 text-slate-300 font-black transition-all active:scale-95 flex items-center justify-center cursor-pointer border border-white/10"

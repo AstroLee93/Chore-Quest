@@ -306,7 +306,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({
           const isSelected = value === item.emoji;
           return (
             <button
-              key={`${item.emoji}-${idx}`}
+              key={item.emoji}
               type="button"
               onClick={() => handleSelect(item.emoji)}
               title={item.keywords.join(', ')}

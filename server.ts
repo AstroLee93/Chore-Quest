@@ -744,6 +744,204 @@ Important Rules:
   }
 });
 
+// --- Kid-Coin Financial Engine & Verified Wishlist Catalog ---
+
+export const VERIFIED_ITEMS = [
+  {
+    id: 'ps5-slim',
+    name: 'PlayStation 5 Slim Console',
+    category: 'Gaming',
+    currentCost: 499.99,
+    retailer: 'Official Retailers (Sony / Best Buy)',
+    verifiedDate: '2025-Q1 MSRP Checked',
+    icon: 'Gamepad2',
+    description: 'Ultra-high speed SSD, ray tracing, 4K gaming, DualSense wireless controller included.',
+  },
+  {
+    id: 'switch-oled',
+    name: 'Nintendo Switch - OLED Model',
+    category: 'Gaming',
+    currentCost: 349.99,
+    retailer: 'Nintendo Store / Target',
+    verifiedDate: '2025 MSRP Checked',
+    icon: 'Tv',
+    description: '7-inch vibrant OLED screen, wide adjustable stand, enhanced audio, portable handheld.',
+  },
+  {
+    id: 'lego-millennium-falcon',
+    name: 'LEGO Star Wars Millennium Falcon',
+    category: 'Toys & LEGO',
+    currentCost: 169.99,
+    retailer: 'LEGO Shop / Amazon',
+    verifiedDate: '2025 MSRP Checked',
+    icon: 'Boxes',
+    description: '1,351 pieces, opening cockpit, rotating gun turrets, 7 Star Wars minifigures.',
+  },
+  {
+    id: 'airpods-4',
+    name: 'Apple AirPods 4',
+    category: 'Audio',
+    currentCost: 129.00,
+    retailer: 'Apple Store',
+    verifiedDate: '2025 MSRP Checked',
+    icon: 'Headphones',
+    description: 'Personalized Spatial Audio with dynamic head tracking, USB-C charging case.',
+  },
+  {
+    id: 'electric-scooter',
+    name: 'Segway Ninebot eKickScooter for Kids',
+    category: 'Outdoors',
+    currentCost: 229.99,
+    retailer: 'Segway Official',
+    verifiedDate: '2025 MSRP Checked',
+    icon: 'Bike',
+    description: 'Safe speed limiters (10 mph max), ambient underglow lights, dual braking system.',
+  },
+  {
+    id: 'ipad-10th-gen',
+    name: 'Apple iPad 10th Gen (64GB)',
+    category: 'Electronics',
+    currentCost: 349.00,
+    retailer: 'Apple / Authorized Resellers',
+    verifiedDate: '2025 MSRP Checked',
+    icon: 'Tablet',
+    description: '10.9-inch Liquid Retina display, A14 Bionic chip, Apple Pencil support for drawing & games.',
+  },
+  {
+    id: 'roblox-10k',
+    name: '10,000 Robux Digital Gift Card',
+    category: 'Digital / Gaming',
+    currentCost: 99.99,
+    retailer: 'Roblox Official Store',
+    verifiedDate: '2025 MSRP Checked',
+    icon: 'Coins',
+    description: 'Virtual currency to customize your in-game avatar and unlock exclusive special items.',
+  },
+  {
+    id: 'bmx-bike',
+    name: 'Mongoose Legion Freestyle 20" BMX',
+    category: 'Sports',
+    currentCost: 189.99,
+    retailer: 'Bicycle Specialists',
+    verifiedDate: '2025 MSRP Checked',
+    icon: 'Sparkles',
+    description: 'Hi-Ten steel frame, 2.3-inch tires, 25x9T gearing, aluminum U-brake for park riding.',
+  },
+];
+
+// 11. Kid-Coin Verified items catalog
+app.get('/api/verified-items', (req, res) => {
+  res.json({
+    items: VERIFIED_ITEMS,
+    updatedAt: new Date().toISOString(),
+  });
+});
+
+// 12. Personalized financial tips and milestone coaching via Gemini
+app.post('/api/tips', async (req, res) => {
+  try {
+    const {
+      kidName = 'Navigator',
+      age = 10,
+      goalName = 'Dream Reward',
+      targetCost = 100,
+      currentSaved = 25,
+      weeklyAllowance = 5,
+      recentChores = [],
+    } = req.body;
+
+    const remaining = Math.max(0, targetCost - currentSaved);
+    const progressPercent = Math.min(100, Math.round((currentSaved / Math.max(1, targetCost)) * 100));
+    const effectiveWeeklyRate = Math.max(2, weeklyAllowance + 3); // allowance + typical chore earnings
+    const weeksRemaining = Math.ceil(remaining / effectiveWeeklyRate);
+
+    const ai = getGenAI();
+
+    if (ai) {
+      try {
+        const prompt = `You are "Captain Penny", an enthusiastic, encouraging astronaut savings mentor helping a kid named ${kidName} (age ${age}) save for their dream goal: "${goalName}" costing $${targetCost.toFixed(2)}.
+Current financial telemetry:
+- Current Savings: $${currentSaved.toFixed(2)} (${progressPercent}% achieved)
+- Remaining to save: $${remaining.toFixed(2)}
+- Weekly Allowance / Chore Pace: ~$${effectiveWeeklyRate.toFixed(2)}/week
+- Estimated time to liftoff: ~${weeksRemaining} weeks
+- Recent chore accomplishments: ${recentChores.length > 0 ? recentChores.join(', ') : 'Daily chore quest routines'}
+
+Provide financial advice tailored for a child in strict JSON format:
+{
+  "headline": "A short 1-sentence punchy motivational cosmic status update with an emoji",
+  "milestoneTip": "A 1-2 sentence tip about their next milestone (25% Troposphere, 50% Low Orbit, 75% Deep Space, or 100% Planetary Touchdown)",
+  "fastTrackIdeas": [
+    "Specific actionable chore/savings action 1",
+    "Specific actionable chore/savings action 2",
+    "Specific actionable chore/savings action 3"
+  ],
+  "spendingTradeoff": "A relatable kid comparison showing how holding off on a snack or impulse buy gets them closer to ${goalName}",
+  "estimatedPace": "An encouraging summary of their countdown timeline"
+}`;
+
+        const response = await callGeminiWithFallback(ai, async (modelName) => {
+          return await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+            config: {
+              responseMimeType: 'application/json',
+            },
+          });
+        });
+
+        const text = response.text?.trim();
+        if (text) {
+          const parsed = JSON.parse(text);
+          res.json({
+            advice: parsed,
+            metrics: { remaining, progressPercent, weeksRemaining },
+          });
+          return;
+        }
+      } catch (geminiErr) {
+        console.warn('[Server] Gemini tips fallback triggered:', geminiErr);
+      }
+    }
+
+    // Heuristic algorithmic fallback advice if offline or Gemini unavailable
+    let milestoneStage = 'Launchpad Prep (0%)';
+    let nextMilestoneDesc = `Reach $${(targetCost * 0.25).toFixed(2)} (25%) to blast through the atmospheric boundary!`;
+    if (progressPercent >= 75) {
+      milestoneStage = 'Deep Space Coasting (75%)';
+      nextMilestoneDesc = `Final burn! You only need $${remaining.toFixed(2)} more for 100% touchdown on ${goalName}!`;
+    } else if (progressPercent >= 50) {
+      milestoneStage = 'Low Orbit Satellites (50%)';
+      nextMilestoneDesc = `Halfway across the cosmos! Push for $${(targetCost * 0.75).toFixed(2)} (75%) to escape gravity!`;
+    } else if (progressPercent >= 25) {
+      milestoneStage = 'Troposphere Ascent (25%)';
+      nextMilestoneDesc = `Next checkpoint: 50% ($${(targetCost * 0.5).toFixed(2)}) for orbit stabilization!`;
+    }
+
+    res.json({
+      advice: {
+        headline: progressPercent >= 100
+          ? `Mission accomplished, ${kidName}! Your ${goalName} rocket is cleared for landing! 🎉`
+          : `Thrusters firing, ${kidName}! You are ${progressPercent}% of the way to ${goalName}! 🚀`,
+        milestoneTip: nextMilestoneDesc,
+        fastTrackIdeas: [
+          'Claim an extra bounty mission on the Chore Board this weekend for bonus coins.',
+          'Save 100% of your weekly allowance into your rocket vault.',
+          'Ask mom & dad if there is a special seasonal project (raking, washing car, organizing) for a savings booster.',
+        ],
+        spendingTradeoff: `Skipping one $3.50 treat or snack purchase keeps your savings intact and shaves half a week off your wait!`,
+        estimatedPace: weeksRemaining <= 1
+          ? `You're in the final countdown! Just days away from liftoff!`
+          : `At your steady pace, you are on track to touch down in ~${weeksRemaining} weeks!`,
+      },
+      metrics: { remaining, progressPercent, weeksRemaining },
+    });
+  } catch (err: any) {
+    console.error('[Server] Tips endpoint error:', err);
+    res.status(500).json({ error: 'Failed to generate savings coach tips.' });
+  }
+});
+
 // --- Server Lifecycle & Vite Middleware ---
 
 async function start() {

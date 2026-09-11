@@ -145,6 +145,7 @@ export const ParentPinModal: React.FC<ParentPinModalProps> = ({
             </button>
           ))}
           <button
+            key="pin-key-clear"
             id="pin-key-clear"
             onClick={() => {
               sound.playTap();
@@ -156,6 +157,7 @@ export const ParentPinModal: React.FC<ParentPinModalProps> = ({
             Clear
           </button>
           <button
+            key="pin-key-0"
             id="pin-key-0"
             onClick={() => handleKeyPress('0')}
             className="h-14 rounded-2xl bg-white hover:bg-yellow-100 active:bg-yellow-200 text-slate-800 font-black text-2xl transition-all shadow-2xs border-2 border-yellow-200 flex items-center justify-center active:scale-95 cursor-pointer"
@@ -163,6 +165,7 @@ export const ParentPinModal: React.FC<ParentPinModalProps> = ({
             0
           </button>
           <button
+            key="pin-key-delete"
             id="pin-key-delete"
             onClick={handleDelete}
             className="h-14 rounded-2xl bg-white hover:bg-slate-100 text-slate-600 transition-all flex items-center justify-center active:scale-95 border-2 border-slate-200 cursor-pointer"

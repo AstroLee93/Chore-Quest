@@ -8,6 +8,7 @@ import { ChoreWheelModal } from './ChoreWheelModal';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { BadgeModal } from './BadgeModal';
 import { BountyBoardModal } from './BountyBoardModal';
+import { GoalTracker } from './KidCoin/GoalTracker';
 import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getBountyChores } from '../utils/storage';
 import { calculateKidBadges } from '../utils/badges';
 import { getSeasonalWeatherForDate, EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../utils/calendar';
@@ -85,7 +86,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   // Filter chores relevant to this kid for today
   const todaysChores = useMemo(() => {
     return chores
-      .filter((c) => c.isActive)
+      .filter((c) => c.isActive && !c.isBounty)
       .filter((c) => isChoreAssignedToKid(c, kid.id))
       .filter((c) => isChoreScheduledForDate(c, todayStr))
       .sort((a, b) => a.order - b.order);
@@ -302,11 +303,26 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
         )}
 
+        {/* Kid-Coin Gamified Savings Mission & Cosmic Rocket Goal Track */}
+        {settings?.kidCoinEnabled !== false && database && (
+          <GoalTracker
+            kid={kid}
+            database={database}
+            onUpdateKid={(updatedKid) => {
+              if (onUpdateDatabase && database) {
+                const updatedKids = database.kids.map((k) => (k.id === updatedKid.id ? updatedKid : k));
+                onUpdateDatabase({ ...database, kids: updatedKids });
+              }
+            }}
+          />
+        )}
+
         {/* Filters: Categories and Time of Day */}
         <div className="flex flex-col gap-3">
           {/* Category Pills */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
+              key="filter-cat-all"
               id="filter-cat-all"
               onClick={() => {
                 sound.playTap();
@@ -466,7 +482,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
 
                 return (
                   <ChoreCard
-                    key={bounty.id}
+                    key={`bounty-${bounty.id}`}
                     chore={bounty}
                     category={category}
                     log={log}
@@ -500,10 +516,10 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
       </div>
 
       {/* Right Column: Hero Aside Level Card & Pi Privacy Shield (col-span-4) */}
-      <aside className="lg:col-span-4 flex flex-col gap-6">
+      <aside className="lg:col-span-4 flex flex-col gap-4 sm:gap-6 self-start lg:sticky lg:top-4 sm:lg:top-6">
         {/* Indigo Level & Rank Hero Card */}
-        <div className="bg-indigo-900 rounded-[2.5rem] p-6 sm:p-8 text-white relative overflow-hidden flex-1 shadow-2xl flex flex-col justify-between">
-          <div className="relative z-10">
+        <div className="bg-indigo-900 rounded-[2.5rem] p-6 sm:p-8 text-white relative overflow-hidden shadow-2xl flex flex-col">
+          <div className="relative z-10 flex flex-col">
             {/* Top avatar & level */}
             <div className="flex items-center justify-between mb-4">
               <div>

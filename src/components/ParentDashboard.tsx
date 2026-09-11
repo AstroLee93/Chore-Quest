@@ -34,6 +34,7 @@ import {
   ThumbsDown,
   PauseCircle,
   PlayCircle,
+  Coins,
 } from 'lucide-react';
 import {
   FamilyDatabase,
@@ -70,6 +71,7 @@ import { CalendarView } from './Calendar/CalendarView';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { FamilyGoalModal } from './FamilyGoalModal';
 import { WeeklyMenuModal } from './WeeklyMenuModal';
+import { ParentSavingsManagement } from './Savings/ParentSavingsManagement';
 
 interface ParentDashboardProps {
   database: FamilyDatabase;
@@ -88,7 +90,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   onOpenCalendar,
   onOpenSnackRequest,
 }) => {
-  const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'menu' | 'chores' | 'rewards' | 'kids' | 'settings'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'menu' | 'chores' | 'rewards' | 'kids' | 'savings' | 'settings'>('activity');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const todayStr = getTodayDateString();
 
@@ -832,6 +834,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           { id: 'chores', label: 'Chores & Categories', icon: FileSpreadsheet, badge: database.chores.length },
           { id: 'rewards', label: 'Rewards & Claims', icon: Gift, badge: database.redemptions.filter((r) => r.status === 'pending').length || undefined },
           { id: 'kids', label: 'Kids Profiles', icon: Users, badge: database.kids.length },
+          { id: 'savings', label: 'Kid-Coin Savings', icon: Coins },
           { id: 'settings', label: 'Settings & Pi Backup', icon: Settings },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -2652,6 +2655,16 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB: KID-COIN SAVINGS MANAGEMENT */}
+      {activeTab === 'savings' && (
+        <div className="space-y-1 sm:space-y-4 animate-fade-in">
+          <ParentSavingsManagement
+            database={database}
+            onUpdateDatabase={onUpdateDatabase}
+          />
         </div>
       )}
 

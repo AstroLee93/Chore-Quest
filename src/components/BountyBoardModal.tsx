@@ -584,10 +584,10 @@ export const BountyBoardModal: React.FC<BountyBoardModalProps> = ({
                           </span>
                           <ul className="text-[11px] font-medium text-[#4a2608] space-y-0.5 list-disc list-inside">
                             {chore.subtasks.slice(0, 3).map((sub, idx) => (
-                              <li key={idx} className="truncate">{sub}</li>
+                              <li key={`sub-${idx}-${sub.slice(0, 10)}`} className="truncate">{sub}</li>
                             ))}
                             {chore.subtasks.length > 3 && (
-                              <li className="text-[10px] italic text-[#734217]">
+                              <li key="more-subtasks" className="text-[10px] italic text-[#734217]">
                                 +{chore.subtasks.length - 3} more checklist steps...
                               </li>
                             )}
@@ -1063,6 +1063,7 @@ export const BountyBoardModal: React.FC<BountyBoardModalProps> = ({
                   </button>
                 ))}
                 <button
+                  key="pin-clear"
                   type="button"
                   onClick={() => {
                     sound.playTap();
@@ -1074,6 +1075,7 @@ export const BountyBoardModal: React.FC<BountyBoardModalProps> = ({
                   Clear
                 </button>
                 <button
+                  key="pin-digit-0"
                   type="button"
                   onClick={() => {
                     sound.playTap();
@@ -1087,6 +1089,7 @@ export const BountyBoardModal: React.FC<BountyBoardModalProps> = ({
                   0
                 </button>
                 <button
+                  key="pin-backspace"
                   type="button"
                   onClick={() => {
                     sound.playTap();

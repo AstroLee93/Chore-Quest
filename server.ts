@@ -6,6 +6,7 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { FamilyDatabase } from './src/types';
 import { DEFAULT_SEED_DATA } from './src/utils/storage';
+import { POPULAR_RETAIL_DATABASE, lookupRetailProductLocal } from './src/lib/retailCatalog';
 
 dotenv.config();
 
@@ -939,6 +940,188 @@ Provide financial advice tailored for a child in strict JSON format:
   } catch (err: any) {
     console.error('[Server] Tips endpoint error:', err);
     res.status(500).json({ error: 'Failed to generate savings coach tips.' });
+  }
+});
+
+// 12. Retail Database Samples for popular stores (Amazon, Best Buy, Target, Walmart, Micro Center, Apple, LEGO)
+app.get('/api/retail-samples', (req, res) => {
+  res.json({
+    success: true,
+    stores: ['Amazon', 'Best Buy', 'Target', 'Walmart', 'Micro Center', 'Apple', 'LEGO', 'GameStop'],
+    samples: POPULAR_RETAIL_DATABASE,
+  });
+});
+
+// 13. AI Retail Database & Barcode/SKU/Item# Lookup Endpoint
+app.post('/api/retail-lookup', async (req, res) => {
+  try {
+    const { query = '', retailer = 'all', codeType = 'auto' } = req.body;
+    const cleanQuery = String(query).trim();
+
+    if (!cleanQuery) {
+      res.status(400).json({ success: false, message: 'Query is required.' });
+      return;
+    }
+
+    // First check local verified database for instant exact matches
+    const localMatch = lookupRetailProductLocal(cleanQuery, retailer);
+
+    // Call Gemini AI model if available to identify product and retail database records
+    const ai = getGenAI();
+    if (ai) {
+      try {
+        const prompt = `You are a precision retail product identification expert and AI product database engine for a kid savings app.
+Look up this product identifier from popular retailers (including Amazon, Best Buy, Target, Walmart, Micro Center, Apple, LEGO, GameStop):
+Query/Code: "${cleanQuery}"
+Specific Retailer Filter: "${retailer && retailer !== 'all' ? retailer : 'Any / Auto-detect'}"
+Code Type Hint: "${codeType || 'auto (could be SKU, Barcode/UPC, Item#, ASIN, DPCI, or Model#)'}"
+
+Instructions:
+1. Identify the exact real-world commercial product that corresponds to this SKU, barcode/UPC, Item#, or query.
+   - Amazon format: ASIN (e.g. B0CL5KNB9M or B07NDXZV2B), Model #, or 12-digit UPC
+   - Best Buy format: 7-digit SKU (e.g. 6522854, 6470924), Model #, or UPC
+   - Target format: 9-digit DPCI (e.g. 207-00-0199 or 057-00-0089) or TCIN or UPC
+   - Walmart format: 8-9 digit Item ID (e.g. 345678912, 554321908) or UPC
+   - Micro Center format: 6-digit SKU (e.g. 654321, 589214, 621980) or Mfr Part #
+2. Determine which major retailer it belongs to (e.g., Best Buy, Target, Amazon, Walmart, Micro Center, Apple, LEGO).
+3. Determine accurate current MSRP / retail selling price in USD.
+4. Return a JSON object with:
+   - "title": string (official clean product name)
+   - "targetCost": number (e.g. 499.99)
+   - "retailer": string (e.g. "Best Buy", "Target", "Amazon", "Walmart", "Micro Center", "Apple", "LEGO")
+   - "category": string (one of "Gaming", "Electronics", "Toys & LEGO", "Tech & PC", "Audio", "Sports & Outdoors", "Fashion & Clothes")
+   - "sku": string (the SKU, DPCI, or store code for that retailer)
+   - "barcode": string (12-digit UPC or 13-digit EAN barcode)
+   - "itemNumber": string (store item #, ASIN, or DPCI)
+   - "modelNumber": string (manufacturer model number)
+   - "icon": string (one of "Gamepad2", "Tv", "Boxes", "Headphones", "Bike", "Tablet", "Coins", "Laptop", "Sparkles")
+   - "description": string (concise 1-2 sentence kid-friendly description)
+   - "specs": array of 3 concise strings highlighting key features
+   - "whyKidsLoveIt": string (fun sentence explaining why kids want to save for it)
+   - "confidence": "verified" | "high" | "estimated"
+
+Return STRICTLY valid JSON.`;
+
+        const response = await callGeminiWithFallback(ai, async (modelName) => {
+          return await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+            config: {
+              responseMimeType: 'application/json',
+            },
+          });
+        });
+
+        const text = response.text?.trim();
+        if (text) {
+          try {
+            const parsed = JSON.parse(text);
+            if (parsed.title && parsed.targetCost) {
+              const cost = typeof parsed.targetCost === 'number' ? parsed.targetCost : parseFloat(parsed.targetCost);
+              res.json({
+                success: true,
+                source: 'gemini-ai',
+                product: {
+                  ...parsed,
+                  targetCost: Number((isNaN(cost) ? 29.99 : cost).toFixed(2)),
+                  id: `goal-ai-${Date.now()}`,
+                },
+              });
+              return;
+            }
+          } catch {
+            // fallback to local database below
+          }
+        }
+      } catch (aiErr: any) {
+        console.warn('[Server] Gemini retail lookup error, falling back to local database:', aiErr?.message || aiErr);
+      }
+    }
+
+    // If local match found, return it
+    if (localMatch) {
+      res.json({
+        success: true,
+        source: 'local-database',
+        product: {
+          ...localMatch,
+          title: localMatch.name,
+          targetCost: localMatch.currentCost,
+          confidence: 'verified',
+        },
+      });
+      return;
+    }
+
+    res.status(404).json({
+      success: false,
+      message: `Could not identify product for "${cleanQuery}". Try entering a known SKU (e.g. Best Buy 6522854, Target 207-00-0199), barcode (e.g. 711719570530), or use one of the quick test presets!`,
+    });
+  } catch (error: any) {
+    console.error('[Server] Retail lookup error:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'Failed to lookup retail product',
+    });
+  }
+});
+
+// 14. Cross-App ChoreQuest & KidCoin Sync Endpoint (KidCoin Vault Protocol v1)
+app.post('/api/chorequest/sync', async (req, res) => {
+  try {
+    const { endpoint = 'http://localhost:5000', action = 'pull', database } = req.body;
+    const cleanEndpoint = String(endpoint).replace(/\/+$/, '');
+
+    if (action === 'push') {
+      if (!database) {
+        res.status(400).json({ success: false, message: 'Missing database payload to push.' });
+        return;
+      }
+      const response = await fetch(`${cleanEndpoint}/api/database`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ database, senderId: 'chorequest-app' }),
+      });
+      if (!response.ok) {
+        res.status(response.status).json({
+          success: false,
+          message: `Remote KidCoin node returned HTTP ${response.status}`,
+        });
+        return;
+      }
+      res.json({ success: true, message: 'Database pushed to KidCoin node successfully.' });
+      return;
+    }
+
+    // Pull from remote node
+    const response = await fetch(`${cleanEndpoint}/api/database`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!response.ok) {
+      res.status(response.status).json({
+        success: false,
+        message: `Remote KidCoin node returned HTTP ${response.status}`,
+      });
+      return;
+    }
+
+    const data: any = await response.json();
+    const fetchedDb = data.database || data;
+
+    if (fetchedDb && fetchedDb.kids && fetchedDb.chores) {
+      currentDatabase = fetchedDb;
+      currentDatabaseRev = Date.now();
+      currentDatabaseUpdatedAt = Date.now();
+      persistDatabaseToDisk();
+      broadcastDatabaseUpdate(currentDatabase, 'remote-kidcoin-pull');
+      res.json({ success: true, database: currentDatabase });
+      return;
+    }
+
+    res.status(422).json({ success: false, message: 'Invalid database payload from remote node.' });
+  } catch (err: any) {
+    console.error('[Server] Cross-app sync error:', err);
+    res.status(500).json({ success: false, message: err?.message || 'Cross-app sync failed.' });
   }
 });
 

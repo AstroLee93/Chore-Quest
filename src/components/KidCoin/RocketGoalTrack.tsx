@@ -1,8 +1,8 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { SavingsGoal, KidProfile } from '../../types';
 import { GoalIcon } from './GoalIcon';
-import { Rocket, Flame, Play, Sparkles } from 'lucide-react';
+import { Rocket, Flame, Play, Sparkles, Tag, Barcode, ChevronDown, ChevronUp, ExternalLink, ShieldCheck } from 'lucide-react';
 import { sound } from '../../utils/sound';
 
 interface RocketGoalTrackProps {
@@ -19,10 +19,15 @@ export const RocketGoalTrack: React.FC<RocketGoalTrackProps> = ({
   className = '',
   compact = false,
 }) => {
+  const [showRetailDrawer, setShowRetailDrawer] = useState(false);
   const targetCost = Math.max(1, goal.targetCost);
   const currentSaved = Math.max(0, goal.currentSaved);
   const percentage = Math.min(100, Math.max(0, (currentSaved / targetCost) * 100));
   const isComplete = percentage >= 100;
+
+  const hasRetailInfo = Boolean(
+    goal.retailer || goal.sku || goal.barcode || (goal.specs && goal.specs.length > 0) || goal.whyKidsLoveIt
+  );
 
   // Clamped percentage for horizontal rocket position (between 3% and 92%)
   const rocketLeftPercent = Math.min(92, Math.max(4, percentage));
@@ -282,6 +287,91 @@ export const RocketGoalTrack: React.FC<RocketGoalTrackProps> = ({
           🏆 Target Reached
         </span>
       </div>
+
+      {/* Retail Specs & Store Info Bar if Available */}
+      {hasRetailInfo && (
+        <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={() => setShowRetailDrawer(!showRetailDrawer)}
+            className="w-full flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer py-1"
+          >
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {goal.retailer && (
+                <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-[10px] font-black">
+                  🏪 {goal.retailer}
+                </span>
+              )}
+              {goal.sku && (
+                <span className="font-mono text-[10px] text-slate-400">
+                  SKU: {goal.sku}
+                </span>
+              )}
+              {goal.barcode && (
+                <span className="font-mono text-[10px] text-slate-400 hidden sm:inline">
+                  • UPC: {goal.barcode}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 text-[10px] text-indigo-600 dark:text-indigo-400 font-bold shrink-0">
+              <span>{showRetailDrawer ? 'Hide Details' : 'Product Specs & Fun Facts'}</span>
+              {showRetailDrawer ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </div>
+          </button>
+
+          <AnimatePresence>
+            {showRetailDrawer && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden space-y-2 pt-2"
+              >
+                {goal.description && (
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                    {goal.description}
+                  </p>
+                )}
+
+                {goal.whyKidsLoveIt && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/80 text-amber-900 dark:text-amber-200 text-xs">
+                    <span className="font-bold block mb-0.5">🌟 Why Kids Love This:</span>
+                    <p className="text-[11px] leading-relaxed">{goal.whyKidsLoveIt}</p>
+                  </div>
+                )}
+
+                {Array.isArray(goal.specs) && goal.specs.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {goal.specs.map((spec, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-md border border-slate-200 dark:border-slate-700"
+                      >
+                        ✓ {spec}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {goal.productUrl && (
+                  <div className="pt-1">
+                    <a
+                      href={goal.productUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                    >
+                      <span>View Official Store Page</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 };

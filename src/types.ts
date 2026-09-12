@@ -25,6 +25,16 @@ export interface SavingsGoal {
   createdAt: string;
   deadline?: string;
   milestones: SavingsMilestone[];
+  retailer?: string;
+  sku?: string;
+  barcode?: string;
+  itemNumber?: string;
+  modelNumber?: string;
+  specs?: string[];
+  description?: string;
+  whyKidsLoveIt?: string;
+  productUrl?: string;
+  confidence?: 'verified' | 'high' | 'estimated';
 }
 
 export type KidCoinTransactionCategory =

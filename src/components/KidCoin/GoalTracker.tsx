@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ChevronRight,
   PiggyBank,
+  Check,
 } from 'lucide-react';
 
 interface GoalTrackerProps {
@@ -37,6 +38,36 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
 
   const goals = kid.goals || [];
   const primaryGoal = goals.find((g) => g.priority === 'primary') || goals[0];
+
+  const handleSaveNewGoal = (newGoal: SavingsGoal) => {
+    // When adding a new goal, prioritize it as the primary active rocket mission
+    const otherGoals = goals.map((g) => ({
+      ...g,
+      priority: 'secondary' as const,
+    }));
+    const primaryNewGoal: SavingsGoal = {
+      ...newGoal,
+      priority: 'primary' as const,
+    };
+    const updated: KidProfile = {
+      ...kid,
+      goals: [primaryNewGoal, ...otherGoals],
+    };
+    onUpdateKid(updated);
+    sound.playCoinSound();
+  };
+
+  const handleSelectGoal = (goalId: string) => {
+    const updatedGoals = goals.map((g) => ({
+      ...g,
+      priority: (g.id === goalId ? 'primary' : 'secondary') as 'primary' | 'secondary',
+    }));
+    onUpdateKid({
+      ...kid,
+      goals: updatedGoals,
+    });
+    sound.playTap();
+  };
 
   if (!primaryGoal) {
     return (
@@ -67,13 +98,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
           isOpen={showNewGoalModal}
           kid={kid}
           onClose={() => setShowNewGoalModal(false)}
-          onSaveGoal={(newGoal) => {
-            const updated: KidProfile = {
-              ...kid,
-              goals: [...goals, newGoal],
-            };
-            onUpdateKid(updated);
-          }}
+          onSaveGoal={handleSaveNewGoal}
         />
       </div>
     );
@@ -113,6 +138,17 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
           <button
             onClick={() => {
               sound.playTap();
+              setShowNewGoalModal(true);
+            }}
+            className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black rounded-xl transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-xs"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Goal</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playTap();
               setShowVaultModal(true);
             }}
             className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
@@ -123,6 +159,39 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Goal Switcher Pills if Kid has multiple missions */}
+      {goals.length > 1 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-0.5">
+          <span className="text-[10px] font-black uppercase text-slate-400 shrink-0">Active Missions:</span>
+          {goals.map((g) => {
+            const isCurrent = g.id === primaryGoal.id;
+            const pct = Math.min(100, Math.round((g.currentSaved / Math.max(1, g.targetCost)) * 100));
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => handleSelectGoal(g.id)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                  isCurrent
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30 ring-1 ring-indigo-400'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                <GoalIcon icon={g.icon} className="w-3.5 h-3.5" />
+                <span className="truncate max-w-[130px]">{g.title}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                    isCurrent ? 'bg-indigo-700 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                  }`}
+                >
+                  {pct}%
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Cosmic Rocket Trajectory */}
       <RocketGoalTrack
@@ -154,6 +223,14 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
         database={database}
         onClose={() => setShowVaultModal(false)}
         onUpdateKid={onUpdateKid}
+      />
+
+      {/* New Goal Modal (accessible directly from tracker) */}
+      <NewGoalModal
+        isOpen={showNewGoalModal}
+        kid={kid}
+        onClose={() => setShowNewGoalModal(false)}
+        onSaveGoal={handleSaveNewGoal}
       />
 
       {/* Takeoff Celebration Modal */}

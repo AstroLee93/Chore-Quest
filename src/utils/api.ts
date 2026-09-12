@@ -36,9 +36,14 @@ export function computeDatabaseSignature(db: FamilyDatabase): string {
 
   const revPart = `${(db as any)._rev || 0}_${(db as any)._updatedAt || 0}`;
 
-  // Kids: id, current stars, lifetime stars, streaks, last active date
+  // Kids: id, current stars, lifetime stars, streaks, last active date, kidCoin balance, and savings goals
   const kidsPart = (db.kids || [])
-    .map((k) => `${k.id}:${k.stars}:${k.lifetimeStars || 0}:${k.streakDays}:${k.lastActiveDate || ''}`)
+    .map((k) => {
+      const goalsSig = (k.goals || [])
+        .map((g) => `${g.id}:${g.currentSaved}:${g.targetCost}:${g.priority}`)
+        .join(',');
+      return `${k.id}:${k.stars}:${k.lifetimeStars || 0}:${k.streakDays}:${k.lastActiveDate || ''}:${k.kidCoinBalance || 0}:${k.totalSaved || 0}:${goalsSig}`;
+    })
     .join('|');
 
   // Chores: count, active states, stars, and bounty statuses

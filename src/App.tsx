@@ -500,6 +500,7 @@ export default function App() {
               database={database}
               currentTheme={currentTheme}
               isKioskKidSession={true}
+              onUpdateDatabase={handleUpdateDatabase}
               onReturnToKiosk={handleReturnToKiosk}
               onToggleCompleteChore={(chore) => {
                 handleToggleCompleteChore(chore);

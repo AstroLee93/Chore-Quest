@@ -121,10 +121,10 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
 
   const handleAddGoal = (newGoal: SavingsGoal) => {
     let updatedGoals = [...goals];
-    if (newGoal.priority === 'primary') {
-      updatedGoals = updatedGoals.map((g) => ({ ...g, priority: 'secondary' }));
-    }
-    updatedGoals.push(newGoal);
+    // Set all previous goals to secondary, and the new goal as primary
+    updatedGoals = updatedGoals.map((g) => ({ ...g, priority: 'secondary' as const }));
+    const primaryNewGoal: SavingsGoal = { ...newGoal, priority: 'primary' as const };
+    updatedGoals.unshift(primaryNewGoal);
 
     const updatedKid: KidProfile = {
       ...kid,
@@ -133,6 +133,19 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
 
     onUpdateKid(updatedKid);
     setSelectedGoalId(newGoal.id);
+  };
+
+  const handleSelectGoal = (goalId: string) => {
+    setSelectedGoalId(goalId);
+    const updatedGoals = goals.map((g) => ({
+      ...g,
+      priority: (g.id === goalId ? 'primary' : 'secondary') as 'primary' | 'secondary',
+    }));
+    onUpdateKid({
+      ...kid,
+      goals: updatedGoals,
+    });
+    sound.playTap();
   };
 
   if (!isOpen) return null;
@@ -272,10 +285,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
                       return (
                         <button
                           key={g.id}
-                          onClick={() => {
-                            setSelectedGoalId(g.id);
-                            sound.playTap();
-                          }}
+                          onClick={() => handleSelectGoal(g.id)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
                             isSelected
                               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'

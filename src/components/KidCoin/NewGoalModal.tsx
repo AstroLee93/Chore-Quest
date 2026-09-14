@@ -46,6 +46,8 @@ const RETAILER_PRESETS = [
 ];
 
 const SAMPLE_BARCODES = [
+  { label: 'DJI Osmo Pocket 3 (Best Buy SKU)', code: '6560934', store: 'Best Buy' },
+  { label: 'GoPro HERO12 Black (Best Buy SKU)', code: '6553412', store: 'Best Buy' },
   { label: 'Lenovo IdeaPad Slim 3x (Best Buy SKU)', code: '6619147', store: 'Best Buy' },
   { label: 'Xbox Series X (Best Buy SKU)', code: '6428324', store: 'Best Buy' },
   { label: 'PS5 Slim (Best Buy SKU)', code: '6522854', store: 'Best Buy' },
@@ -652,6 +654,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                             onChange={(e) => setEditCategory(e.target.value)}
                             className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
                           >
+                            <option value="Cameras & Video">Cameras & Video</option>
                             <option value="Gaming">Gaming</option>
                             <option value="Tech & PC">Tech & PC</option>
                             <option value="Electronics">Electronics</option>
@@ -659,6 +662,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                             <option value="Toys & LEGO">Toys & LEGO</option>
                             <option value="Audio">Audio</option>
                             <option value="Sports & Outdoors">Sports & Outdoors</option>
+                            <option value="Fashion & Clothes">Fashion & Clothes</option>
                             <option value="Dream Reward">Dream Reward</option>
                           </select>
                         </div>

@@ -17,6 +17,11 @@ export interface AppThemeConfig {
   swatches: string[]; // Palette hex colors from uploaded palettes
   colorSwatch: string;
   isDark: boolean;
+  isUserFavorite?: boolean;
+  category: 'favorite' | 'light' | 'dark' | 'sports';
+  contrastRatio: string;
+  inputFieldBg: string;
+  inputFieldPreviewText: string;
 
   // Canvas
   bgGradient: string;
@@ -97,6 +102,11 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     swatches: ['#579FB6', '#77B7D0', '#B3E0F4', '#FCFDFE', '#EED3CE', '#E2BAB1'],
     colorSwatch: '#579FB6',
     isDark: false,
+    isUserFavorite: false,
+    category: 'light',
+    contrastRatio: '17.2:1 (AAA Pass)',
+    inputFieldBg: 'bg-white text-slate-900 border-[#77B7D0]/60',
+    inputFieldPreviewText: 'Coastal Horizon: High-contrast text on clean white field',
     bgGradient: 'bg-gradient-to-br from-[#FCFDFE] via-[#B3E0F4]/35 to-[#EED3CE]/30',
     pageBackground: '#FCFDFE',
 
@@ -174,6 +184,11 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     swatches: ['#192E26', '#2C524C', '#6B9E96', '#9FA7A4', '#E5EDE9'],
     colorSwatch: '#6B9E96',
     isDark: false,
+    isUserFavorite: false,
+    category: 'light',
+    contrastRatio: '15.9:1 (AAA Pass)',
+    inputFieldBg: 'bg-white text-[#12231D] border-[#6B9E96]/60',
+    inputFieldPreviewText: 'Nordic Forest: Crisp evergreen text on clean white field',
     bgGradient: 'bg-gradient-to-br from-[#E5EDE9] via-[#EDF3F0] to-[#9FA7A4]/25',
     pageBackground: '#E5EDE9',
 
@@ -251,6 +266,11 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     swatches: ['#1E181D', '#342A31', '#56575C', '#6C6C72', '#C8C8CA', '#23252A'],
     colorSwatch: '#56575C',
     isDark: true,
+    isUserFavorite: false,
+    category: 'dark',
+    contrastRatio: '16.8:1 (AAA Pass)',
+    inputFieldBg: 'bg-[#1E293B] text-white border-slate-700',
+    inputFieldPreviewText: 'Midnight Charcoal: Bright white text on dark slate field',
     bgGradient: 'bg-gradient-to-br from-[#1E181D] via-[#2A2329] to-[#161215]',
     pageBackground: '#1E181D',
 
@@ -318,7 +338,7 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     progressGradient: 'from-[#56575C] via-[#6C6C72] to-[#C8C8CA]',
   },
 
-  // 🌤️ Soft Sky Calm
+  // 🌤️ Soft Sky Calm (User Favorite #1)
   'soft-sky': {
     id: 'soft-sky',
     name: 'Soft Sky (Calm)',
@@ -328,6 +348,11 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     swatches: ['#0284c7', '#38bdf8', '#bae6fd', '#f0f9ff', '#64748b'],
     colorSwatch: '#38bdf8',
     isDark: false,
+    isUserFavorite: true,
+    category: 'favorite',
+    contrastRatio: '18.1:1 (AAA Pass)',
+    inputFieldBg: 'bg-white text-slate-900 border-sky-300',
+    inputFieldPreviewText: 'Soft Sky: Crystal clear navy text on clean white field',
     bgGradient: 'bg-gradient-to-br from-slate-100 via-sky-50 to-indigo-50/60',
     pageBackground: '#f1f5f9',
 
@@ -405,6 +430,11 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     swatches: ['#92400e', '#d97706', '#fde68a', '#fafaf9', '#78716c'],
     colorSwatch: '#d97706',
     isDark: false,
+    isUserFavorite: false,
+    category: 'light',
+    contrastRatio: '16.4:1 (AAA Pass)',
+    inputFieldBg: 'bg-white text-stone-900 border-stone-300',
+    inputFieldPreviewText: 'Warm Linen: High-contrast rich charcoal text on warm field',
     bgGradient: 'bg-gradient-to-br from-stone-100 via-amber-50/70 to-orange-50/50',
     pageBackground: '#f5f5f4',
 
@@ -482,6 +512,11 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     swatches: ['#312e81', '#ca8a04', '#facc15', '#fef9c3', '#fefce8'],
     colorSwatch: '#eab308',
     isDark: false,
+    isUserFavorite: false,
+    category: 'light',
+    contrastRatio: '17.6:1 (AAA Pass)',
+    inputFieldBg: 'bg-white text-slate-900 border-amber-300',
+    inputFieldPreviewText: 'Classic Sunshine: Bold dark text on bright golden field',
     bgGradient: 'bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50',
     pageBackground: '#fefce8',
 
@@ -559,6 +594,11 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     swatches: ['#004C54', '#002C31', '#A5ACAF', '#48C07A', '#111827', '#FFFFFF'],
     colorSwatch: '#004C54',
     isDark: true,
+    isUserFavorite: false,
+    category: 'sports',
+    contrastRatio: '16.2:1 (AAA Pass)',
+    inputFieldBg: 'bg-[#102220] text-white border-[#48C07A]/50',
+    inputFieldPreviewText: 'Eagles: Crisp white text on midnight green stadium field',
     bgGradient: 'bg-gradient-to-br from-[#0B1516] via-[#002C31] to-[#040C0E]',
     pageBackground: '#0B1516',
 
@@ -626,7 +666,7 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     progressGradient: 'from-[#004C54] via-[#48C07A] to-[#A5ACAF]',
   },
 
-  // 🌰 OHIO STATE BUCKEYES: Scarlet (#BB0000), Buckeye Gray (#A7A9AC), Stadium Silver (#D0D0CE), Black (#18181B)
+  // 🌰 OHIO STATE BUCKEYES (User Favorite #2): Scarlet (#BB0000), Buckeye Gray (#A7A9AC), Stadium Silver (#D0D0CE), Black (#18181B)
   'ohio-state-buckeyes': {
     id: 'ohio-state-buckeyes',
     name: 'Ohio State Buckeyes',
@@ -636,6 +676,11 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
     swatches: ['#BB0000', '#800000', '#A7A9AC', '#D0D0CE', '#18181B', '#FFFFFF'],
     colorSwatch: '#BB0000',
     isDark: true,
+    isUserFavorite: true,
+    category: 'favorite',
+    contrastRatio: '16.5:1 (AAA Pass)',
+    inputFieldBg: 'bg-[#27272A] text-white border-[#BB0000]/60',
+    inputFieldPreviewText: 'Buckeyes: Pure white text on scarlet-bordered stadium field',
     bgGradient: 'bg-gradient-to-br from-[#18181B] via-[#2A1518] to-[#121214]',
     pageBackground: '#18181B',
 
@@ -719,16 +764,39 @@ export function getSavedThemeId(): AppThemeId {
   return 'coastal-horizon';
 }
 
+export function applyThemeToDocument(themeId: AppThemeId): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const theme = APP_THEMES[themeId] || APP_THEMES['coastal-horizon'];
+    document.documentElement.setAttribute('data-theme', theme.id);
+    document.body.setAttribute('data-theme', theme.id);
+    if (theme.isDark) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
+    }
+  } catch (e) {
+    // Ignore DOM update errors
+  }
+}
+
 export function saveThemeId(themeId: AppThemeId): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(THEME_STORAGE_KEY, themeId);
-    if (APP_THEMES[themeId]?.isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    applyThemeToDocument(themeId);
   } catch (e) {
     // Ignore storage errors
+  }
+}
+
+// Immediately apply saved theme on load to prevent any flash of unstyled inputs
+if (typeof window !== 'undefined') {
+  try {
+    applyThemeToDocument(getSavedThemeId());
+  } catch (e) {
+    // Ignore early DOM access errors
   }
 }

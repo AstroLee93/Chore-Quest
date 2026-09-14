@@ -568,9 +568,17 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className="text-xl shrink-0">{theme.icon}</span>
                           <div className="min-w-0">
-                            <span className="text-xs font-black text-slate-900 dark:text-slate-100">
-                              {theme.name}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-black text-slate-900 dark:text-slate-100">
+                                {theme.name}
+                              </span>
+                              {theme.isUserFavorite && (
+                                <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-0.5">
+                                  <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                                  Favorite
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate font-medium">
                               {theme.subtitle}
                             </span>
@@ -593,6 +601,12 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
                             style={{ backgroundColor: hex }}
                           />
                         ))}
+                      </div>
+
+                      {/* Contrast ratio pill */}
+                      <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Contrast {theme.contrastRatio}</span>
+                        <span>{theme.isDark ? 'Dark Theme' : 'Light Theme'}</span>
                       </div>
                     </button>
                   );

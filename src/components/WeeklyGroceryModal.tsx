@@ -2143,7 +2143,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                         value={newItemName}
                         onChange={(e) => setNewItemName(e.target.value)}
                         placeholder="Item name (e.g. Apples, Milk, Bread, Cookies)..."
-                        className="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 bg-white font-black text-slate-900 placeholder:text-slate-400 text-xs sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                        className="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-black text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 text-xs sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                       />
                     </div>
 
@@ -2154,7 +2154,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                         value={newItemQuantity}
                         onChange={(e) => setNewItemQuantity(e.target.value)}
                         placeholder="Qty (e.g. 2 bags)"
-                        className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 bg-white font-bold text-slate-900 placeholder:text-slate-400 text-xs sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                        className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 text-xs sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                       />
                     </div>
 
@@ -2166,7 +2166,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                           setNewItemCategory(e.target.value as GroceryCategory);
                           setUserManuallySelectedCategory(true);
                         }}
-                        className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 bg-white font-bold text-slate-900 text-xs sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                        className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-bold text-slate-900 dark:text-white text-xs sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                       >
                         {GROCERY_CATEGORY_ORDER.map((cat) => (
                           <option key={cat} value={cat}>
@@ -2181,7 +2181,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                         id="select-grocery-importance"
                         value={newItemImportance}
                         onChange={(e) => setNewItemImportance(e.target.value as GroceryImportance)}
-                        className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 bg-white font-bold text-slate-900 text-xs sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                        className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-bold text-slate-900 dark:text-white text-xs sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                       >
                         <option value="staple">⭐ Staple</option>
                         <option value="common">🍎 Common</option>
@@ -2228,7 +2228,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search groceries by name, category, or importance..."
-                    className="w-full pl-9 pr-3.5 py-1.5 rounded-xl border border-slate-300 bg-white font-bold text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:border-emerald-500"
+                    className="w-full pl-9 pr-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-bold text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-hidden focus:border-emerald-500"
                   />
                   {searchQuery && (
                     <button

@@ -54,6 +54,72 @@ export const POPULAR_RETAIL_DATABASE: RetailProduct[] = [
     productUrl: 'https://www.bestbuy.com/site/sku/6506246.p',
   },
   {
+    id: 'dji-osmo-pocket-3-creator-combo-bestbuy',
+    name: 'DJI - Osmo Pocket 3 Creator Combo 3-Axis Stabilized 4K Vlog Camera with Rotatable Touchscreen - Gray',
+    retailer: 'Best Buy',
+    category: 'Cameras & Video',
+    currentCost: 669.99,
+    targetCost: 669.99,
+    sku: '6560934',
+    barcode: '190021096005',
+    itemNumber: 'Best Buy #6560934',
+    modelNumber: 'CP.OS.00000302.01',
+    icon: 'Camera',
+    description: '1" CMOS pocket gimbal camera with 4K/120fps video, 2-inch rotatable OLED touchscreen, and 3-axis mechanical stabilization. Creator Combo includes DJI Mic 2 transmitter, battery handle, mini tripod, and carrying bag.',
+    specs: [
+      '1" CMOS Sensor with 4K/120fps & 10-bit D-Log M',
+      '2" Rotatable OLED Touchscreen for Fast Horizontal & Vertical Vlogging',
+      'Creator Combo: Includes DJI Mic 2, Battery Handle & Mini Tripod',
+    ],
+    whyKidsLoveIt: 'The ultimate video and vlogging camera! Film silky smooth YouTube videos, slow-mo skate tricks, and high-quality family adventures with ease.',
+    verifiedDate: 'Best Buy Store Verified Catalog (SKU: 6560934)',
+    productUrl: 'https://www.bestbuy.com/site/sku/6560934.p',
+  },
+  {
+    id: 'dji-osmo-pocket-3-standard-bestbuy',
+    name: 'DJI - Osmo Pocket 3 3-Axis Stabilized 4K Vlog Camera with Rotatable Touchscreen - Gray',
+    retailer: 'Best Buy',
+    category: 'Cameras & Video',
+    currentCost: 519.99,
+    targetCost: 519.99,
+    sku: '6560933',
+    barcode: '190021096004',
+    itemNumber: 'Best Buy #6560933',
+    modelNumber: 'CP.OS.00000301.01',
+    icon: 'Camera',
+    description: '1" CMOS pocket gimbal camera with 4K/120fps video, 2-inch rotatable OLED touchscreen, and 3-axis mechanical stabilization in ultra-compact form.',
+    specs: [
+      '1" CMOS Sensor with 4K/120fps',
+      '2" Rotatable OLED Touchscreen',
+      '3-Axis Mechanical Gimbal Stabilization',
+    ],
+    whyKidsLoveIt: 'Ultra-compact stabilized 4K camera that fits right in your pocket for capturing amazing smooth video anywhere!',
+    verifiedDate: 'Best Buy Store Verified Catalog (SKU: 6560933)',
+    productUrl: 'https://www.bestbuy.com/site/sku/6560933.p',
+  },
+  {
+    id: 'gopro-hero12-black-bestbuy',
+    name: 'GoPro - HERO12 Black Action Camera',
+    retailer: 'Best Buy',
+    category: 'Cameras & Video',
+    currentCost: 349.99,
+    targetCost: 349.99,
+    sku: '6553412',
+    barcode: '818279030631',
+    itemNumber: 'Best Buy #6553412',
+    modelNumber: 'CHDHX-121-CN',
+    icon: 'Camera',
+    description: 'Incredible 5.3K video quality, HDR video, HyperSmooth 6.0 video stabilization, and rugged waterproof construction down to 33ft.',
+    specs: [
+      '5.3K60 + 4K120 Ultra-High Definition Video',
+      'HyperSmooth 6.0 Video Stabilization with 360° Horizon Lock',
+      'Rugged & Waterproof to 33ft (10m)',
+    ],
+    whyKidsLoveIt: 'Tough enough for bike rides, swimming pools, skateparks, and underwater adventures!',
+    verifiedDate: 'Best Buy Store Verified Catalog (SKU: 6553412)',
+    productUrl: 'https://www.bestbuy.com/site/sku/6553412.p',
+  },
+  {
     id: 'lenovo-ideapad-slim-3-bestbuy-ryzen',
     name: 'Lenovo - IdeaPad Slim 3 15.6" Full HD Laptop - AMD Ryzen 5 - 8GB Memory - 256GB SSD',
     retailer: 'Best Buy',
@@ -515,12 +581,349 @@ export function lookupRetailProductLocal(query: string, retailerFilter?: string)
 }
 
 /**
+ * Comprehensive classifier that identifies categories, icons, and realistic MSRPs
+ * from product titles, keywords, and store SKU information.
+ * Ensures cameras, drones, audio, gaming, and PCs are accurately distinguished.
+ */
+export interface ProductClassification {
+  category: string;
+  icon: string;
+  defaultCost: number;
+  detectedRetailer: string;
+  isSpecificMatch: boolean;
+}
+
+export function classifyProductDetails(
+  titleOrQuery: string,
+  fallbackRetailer?: string
+): ProductClassification {
+  const clean = (titleOrQuery || '').trim();
+  const lower = clean.toLowerCase();
+  const defRetailer = fallbackRetailer && fallbackRetailer !== 'all' ? fallbackRetailer : 'Retail Store';
+
+  // 1. Digital Cameras, Vlogging, Gimbals & Action Cams
+  if (
+    lower.includes('osmo pocket 3 creator') ||
+    (lower.includes('osmo pocket 3') && lower.includes('creator')) ||
+    lower.includes('pocket 3 creator')
+  ) {
+    return {
+      category: 'Cameras & Video',
+      icon: 'Camera',
+      defaultCost: 669.99,
+      detectedRetailer: 'Best Buy',
+      isSpecificMatch: true,
+    };
+  }
+  if (lower.includes('osmo pocket 3') || lower.includes('pocket 3')) {
+    return {
+      category: 'Cameras & Video',
+      icon: 'Camera',
+      defaultCost: 519.99,
+      detectedRetailer: 'Best Buy',
+      isSpecificMatch: true,
+    };
+  }
+  if (lower.includes('gopro') || lower.includes('hero12') || lower.includes('hero11') || lower.includes('hero10')) {
+    return {
+      category: 'Cameras & Video',
+      icon: 'Camera',
+      defaultCost: 349.99,
+      detectedRetailer: 'Best Buy',
+      isSpecificMatch: true,
+    };
+  }
+  if (
+    lower.includes('camera') ||
+    lower.includes('camcorder') ||
+    lower.includes('vlog') ||
+    lower.includes('action cam') ||
+    lower.includes('insta360') ||
+    lower.includes('gimbal') ||
+    lower.includes('stabilizer') ||
+    lower.includes('dslr') ||
+    lower.includes('mirrorless') ||
+    lower.includes('webcam') ||
+    lower.includes('tripod') ||
+    lower.includes('canon eos') ||
+    lower.includes('sony zv') ||
+    lower.includes('sony alpha') ||
+    lower.includes('nikon') ||
+    lower.includes('lumix') ||
+    lower.includes('fujifilm') ||
+    (lower.includes('dji') && !lower.includes('drone') && !lower.includes('mavic'))
+  ) {
+    return {
+      category: 'Cameras & Video',
+      icon: lower.includes('vlog') || lower.includes('video') ? 'Video' : 'Camera',
+      defaultCost: 299.99,
+      detectedRetailer: defRetailer === 'Retail Store' ? 'Best Buy' : defRetailer,
+      isSpecificMatch: true,
+    };
+  }
+
+  // 2. Drones & RC
+  if (
+    lower.includes('drone') ||
+    lower.includes('quadcopter') ||
+    lower.includes('mavic') ||
+    lower.includes('mini 4 pro') ||
+    lower.includes('mini 3') ||
+    lower.includes('air 3') ||
+    lower.includes('fpv') ||
+    lower.includes('avata')
+  ) {
+    return {
+      category: 'Cameras & Video',
+      icon: 'Rocket',
+      defaultCost: 479.99,
+      detectedRetailer: defRetailer === 'Retail Store' ? 'Best Buy' : defRetailer,
+      isSpecificMatch: true,
+    };
+  }
+
+  // 3. Gaming Consoles & Games
+  if (lower.includes('ps5') || lower.includes('playstation')) {
+    return {
+      category: 'Gaming',
+      icon: 'Gamepad2',
+      defaultCost: 499.99,
+      detectedRetailer: 'Best Buy',
+      isSpecificMatch: true,
+    };
+  }
+  if (lower.includes('xbox')) {
+    return {
+      category: 'Gaming',
+      icon: 'Gamepad2',
+      defaultCost: 499.99,
+      detectedRetailer: 'Best Buy',
+      isSpecificMatch: true,
+    };
+  }
+  if (lower.includes('switch') || lower.includes('nintendo') || lower.includes('mario') || lower.includes('zelda') || lower.includes('joy-con')) {
+    return {
+      category: 'Gaming',
+      icon: 'Tv',
+      defaultCost: 349.99,
+      detectedRetailer: 'Target',
+      isSpecificMatch: true,
+    };
+  }
+  if (lower.includes('meta quest') || lower.includes('quest 3') || lower.includes('vr headset') || lower.includes('oculus')) {
+    return {
+      category: 'Gaming',
+      icon: 'Gamepad2',
+      defaultCost: 299.99,
+      detectedRetailer: 'Amazon',
+      isSpecificMatch: true,
+    };
+  }
+  if (lower.includes('dualsense') || lower.includes('controller') || lower.includes('gamepad')) {
+    return {
+      category: 'Gaming',
+      icon: 'Gamepad2',
+      defaultCost: 74.99,
+      detectedRetailer: 'Target',
+      isSpecificMatch: true,
+    };
+  }
+  if (lower.includes('game') || lower.includes('gaming') || lower.includes('fortnite') || lower.includes('pokemon')) {
+    return {
+      category: 'Gaming',
+      icon: 'Gamepad2',
+      defaultCost: 59.99,
+      detectedRetailer: 'Target',
+      isSpecificMatch: true,
+    };
+  }
+  if (lower.includes('robux') || lower.includes('v-bucks') || lower.includes('gift card')) {
+    return {
+      category: 'Gaming',
+      icon: 'Coins',
+      defaultCost: 49.99,
+      detectedRetailer: 'Walmart',
+      isSpecificMatch: true,
+    };
+  }
+
+  // 4. Audio, Headphones & Earbuds
+  if (lower.includes('airpod') || lower.includes('airpods')) {
+    return {
+      category: 'Audio',
+      icon: 'Headphones',
+      defaultCost: 179.99,
+      detectedRetailer: 'Apple',
+      isSpecificMatch: true,
+    };
+  }
+  if (
+    lower.includes('headphone') ||
+    lower.includes('earbud') ||
+    lower.includes('headset') ||
+    lower.includes('speaker') ||
+    lower.includes('soundbar') ||
+    lower.includes('audio') ||
+    lower.includes('beats') ||
+    lower.includes('bose') ||
+    lower.includes('jbl')
+  ) {
+    return {
+      category: 'Audio',
+      icon: 'Headphones',
+      defaultCost: 129.99,
+      detectedRetailer: defRetailer === 'Retail Store' ? 'Best Buy' : defRetailer,
+      isSpecificMatch: true,
+    };
+  }
+
+  // 5. Smartphones & Mobile
+  if (lower.includes('iphone')) {
+    return {
+      category: 'Electronics',
+      icon: 'Smartphone',
+      defaultCost: 799.99,
+      detectedRetailer: 'Apple',
+      isSpecificMatch: true,
+    };
+  }
+  if (lower.includes('galaxy s') || lower.includes('galaxy z') || lower.includes('pixel') || lower.includes('smartphone') || lower.includes('cell phone')) {
+    return {
+      category: 'Electronics',
+      icon: 'Smartphone',
+      defaultCost: 699.99,
+      detectedRetailer: 'Best Buy',
+      isSpecificMatch: true,
+    };
+  }
+
+  // 6. Tablets & e-Readers
+  if (lower.includes('ipad')) {
+    return {
+      category: 'Electronics',
+      icon: 'Tablet',
+      defaultCost: 349.99,
+      detectedRetailer: 'Apple',
+      isSpecificMatch: true,
+    };
+  }
+  if (lower.includes('tablet') || lower.includes('kindle') || lower.includes('galaxy tab') || lower.includes('fire hd')) {
+    return {
+      category: 'Electronics',
+      icon: 'Tablet',
+      defaultCost: 199.99,
+      detectedRetailer: 'Amazon',
+      isSpecificMatch: true,
+    };
+  }
+
+  // 7. Smartwatches
+  if (lower.includes('apple watch') || lower.includes('smartwatch') || lower.includes('galaxy watch') || lower.includes('garmin') || lower.includes('fitbit')) {
+    return {
+      category: 'Tech & PC',
+      icon: 'Watch',
+      defaultCost: 249.99,
+      detectedRetailer: 'Best Buy',
+      isSpecificMatch: true,
+    };
+  }
+
+  // 8. Laptops, Computers & PCs (Explicit Laptop/PC detection)
+  if (
+    lower.includes('laptop') ||
+    lower.includes('notebook') ||
+    lower.includes('chromebook') ||
+    lower.includes('macbook') ||
+    lower.includes('ideapad') ||
+    lower.includes('thinkpad') ||
+    lower.includes('copilot+ pc') ||
+    lower.includes('desktop pc') ||
+    lower.includes('gaming pc') ||
+    lower.includes('alienware') ||
+    lower.includes('computer') ||
+    lower.includes('ryzen 5') ||
+    lower.includes('intel core')
+  ) {
+    return {
+      category: 'Tech & PC',
+      icon: 'Laptop',
+      defaultCost: 484.99,
+      detectedRetailer: 'Best Buy',
+      isSpecificMatch: true,
+    };
+  }
+
+  // 9. Monitors & TVs
+  if (lower.includes('tv') || lower.includes('television') || lower.includes('oled') || lower.includes('qled') || lower.includes('monitor') || lower.includes('projector')) {
+    return {
+      category: 'Electronics',
+      icon: 'Tv',
+      defaultCost: 399.99,
+      detectedRetailer: 'Best Buy',
+      isSpecificMatch: true,
+    };
+  }
+
+  // 10. Toys & LEGO
+  if (lower.includes('lego') || lower.includes('toy') || lower.includes('nerf') || lower.includes('action figure') || lower.includes('barbie') || lower.includes('hot wheels') || lower.includes('plush')) {
+    return {
+      category: 'Toys & LEGO',
+      icon: 'Boxes',
+      defaultCost: 79.99,
+      detectedRetailer: 'Target',
+      isSpecificMatch: true,
+    };
+  }
+
+  // 11. Sports & Outdoors
+  if (lower.includes('bike') || lower.includes('bicycle') || lower.includes('scooter') || lower.includes('skateboard') || lower.includes('rollerblade') || lower.includes('hoverboard')) {
+    return {
+      category: 'Sports & Outdoors',
+      icon: 'Bike',
+      defaultCost: 189.99,
+      detectedRetailer: 'Walmart',
+      isSpecificMatch: true,
+    };
+  }
+
+  // 12. Appliances
+  if (lower.includes('microwave') || lower.includes('refrigerator') || lower.includes('fridge') || lower.includes('air fryer') || lower.includes('blender') || lower.includes('appliance')) {
+    return {
+      category: 'Appliances',
+      icon: 'Tv',
+      defaultCost: 148.99,
+      detectedRetailer: 'Best Buy',
+      isSpecificMatch: true,
+    };
+  }
+
+  // 13. Fashion & Clothes
+  if (lower.includes('hoodie') || lower.includes('shoes') || lower.includes('sneakers') || lower.includes('jacket') || lower.includes('shirt') || lower.includes('backpack') || lower.includes('crocs') || lower.includes('nike') || lower.includes('adidas')) {
+    return {
+      category: 'Fashion & Clothes',
+      icon: 'ShoppingBag',
+      defaultCost: 89.99,
+      detectedRetailer: 'Target',
+      isSpecificMatch: true,
+    };
+  }
+
+  // Default fallback
+  return {
+    category: 'Dream Reward',
+    icon: 'Sparkles',
+    defaultCost: 49.99,
+    detectedRetailer: defRetailer,
+    isSpecificMatch: false,
+  };
+}
+
+/**
  * Generates an intelligent offline fallback product when external AI models
  * encounter high-demand spikes (HTTP 503) or offline network states.
  */
 export function synthesizeOfflineProduct(query: string, retailerFilter?: string): RetailProduct {
   const clean = query.trim();
-  const lower = clean.toLowerCase();
 
   // Only extract an explicit price if prefixed with $ or clearly specified as a currency amount
   // NEVER treat a bare SKU, barcode, or numeric code as a price!
@@ -545,76 +948,40 @@ export function synthesizeOfflineProduct(query: string, retailerFilter?: string)
     }
   }
 
-  // Detect category & icon
-  let category = 'Savings Goal';
-  let icon = 'Sparkles';
-  let retailer = retailerFilter && retailerFilter !== 'all' ? retailerFilter : 'Retail Store';
-  let defaultCost = 49.99;
+  // Detect category & icon using comprehensive classifier
+  const classification = classifyProductDetails(clean, retailerFilter);
+  let category = classification.category;
+  let icon = classification.icon;
+  let retailer = classification.detectedRetailer;
+  let defaultCost = classification.defaultCost;
 
-  if (lower.includes('ps5') || lower.includes('playstation') || lower.includes('xbox')) {
-    category = 'Gaming';
-    icon = 'Gamepad2';
-    defaultCost = 499.99;
-    if (retailer === 'Retail Store') retailer = 'Best Buy';
-  } else if (lower.includes('switch') || lower.includes('nintendo') || lower.includes('mario') || lower.includes('zelda')) {
-    category = 'Gaming';
-    icon = 'Tv';
-    defaultCost = 349.99;
-    if (retailer === 'Retail Store') retailer = 'Target';
-  } else if (lower.includes('laptop') || lower.includes('lenovo') || lower.includes('ideapad') || lower.includes('computer') || lower.includes('pc') || lower.includes('macbook')) {
-    category = 'Tech & PC';
-    icon = 'Laptop';
-    defaultCost = 484.99;
-    if (retailer === 'Retail Store') retailer = 'Best Buy';
-  } else if (lower.includes('lego') || lower.includes('toy') || lower.includes('nerf')) {
-    category = 'Toys & LEGO';
-    icon = 'Boxes';
-    defaultCost = 79.99;
-    if (retailer === 'Retail Store') retailer = 'Target';
-  } else if (lower.includes('headphone') || lower.includes('airpod') || lower.includes('earbud') || lower.includes('speaker')) {
-    category = 'Audio';
-    icon = 'Headphones';
-    defaultCost = 129.99;
-    if (retailer === 'Retail Store') retailer = 'Apple';
-  } else if (lower.includes('bike') || lower.includes('scooter') || lower.includes('skateboard') || lower.includes('roller')) {
-    category = 'Sports & Outdoors';
-    icon = 'Bike';
-    defaultCost = 189.99;
-    if (retailer === 'Retail Store') retailer = 'Walmart';
-  } else if (lower.includes('tablet') || lower.includes('ipad') || lower.includes('kindle') || lower.includes('phone')) {
-    category = 'Electronics';
-    icon = 'Tablet';
-    defaultCost = 299.99;
-    if (retailer === 'Retail Store') retailer = 'Amazon';
-  } else if (lower.includes('robux') || lower.includes('v-bucks') || lower.includes('card') || lower.includes('coins')) {
-    category = 'Gaming';
-    icon = 'Coins';
-    defaultCost = 49.99;
-    if (retailer === 'Retail Store') retailer = 'Walmart';
-  } else if (/^[A-Z0-9]{10}$/i.test(clean) && /^B0/i.test(clean)) {
-    // Amazon ASIN format (e.g. B0CHX1W1XY, B08N5WRWNW)
-    category = 'Electronics';
-    icon = 'Tablet';
-    retailer = 'Amazon';
-    defaultCost = 79.99;
-  } else if (/^\d{3}-?\d{2}-?\d{4}$/.test(clean)) {
-    // Target DPCI format (e.g. 207-00-0199)
-    category = 'Gaming';
-    icon = 'Gamepad2';
-    retailer = 'Target';
-    defaultCost = 59.99;
-  } else if (/^\d{12,14}$/.test(clean)) {
-    // 12 to 14 digit UPC / EAN Barcode
-    category = 'Toys & LEGO';
-    icon = 'Boxes';
-    if (retailer === 'Retail Store' || !retailerFilter || retailerFilter === 'all') retailer = 'Retail Store';
-    defaultCost = 49.99;
-  } else if (/^\d{6,8}$/.test(clean)) {
-    // 6 to 8 digit number is standard Best Buy SKU format (e.g., 6619147, 11945874, 12629840)
-    category = 'Tech & PC';
-    icon = 'Laptop';
-    if (retailer === 'Retail Store' || !retailerFilter || retailerFilter === 'all') retailer = 'Best Buy';
-    defaultCost = 149.99;
+  // Code formats
+  if (!classification.isSpecificMatch) {
+    if (/^[A-Z0-9]{10}$/i.test(clean) && /^B0/i.test(clean)) {
+      // Amazon ASIN format (e.g. B0CHX1W1XY, B08N5WRWNW)
+      category = 'Electronics';
+      icon = 'Tablet';
+      retailer = 'Amazon';
+      defaultCost = 79.99;
+    } else if (/^\d{3}-?\d{2}-?\d{4}$/.test(clean)) {
+      // Target DPCI format (e.g. 207-00-0199)
+      category = 'Gaming';
+      icon = 'Gamepad2';
+      retailer = 'Target';
+      defaultCost = 59.99;
+    } else if (/^\d{12,14}$/.test(clean)) {
+      // 12 to 14 digit UPC / EAN Barcode
+      category = 'Toys & LEGO';
+      icon = 'Boxes';
+      if (retailer === 'Retail Store' || !retailerFilter || retailerFilter === 'all') retailer = 'Retail Store';
+      defaultCost = 49.99;
+    } else if (/^\d{6,8}$/.test(clean)) {
+      // 6 to 8 digit number is standard Best Buy SKU format
+      category = 'Electronics';
+      icon = 'Sparkles';
+      if (retailer === 'Retail Store' || !retailerFilter || retailerFilter === 'all') retailer = 'Best Buy';
+      defaultCost = 99.99;
+    }
   }
 
   // Ensure safe, realistic pricing - never allow multi-million dollar estimates from mistaken codes

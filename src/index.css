@@ -82,60 +82,192 @@
   scrollbar-width: none;
 }
 
-/* Ensure inputs always have high-contrast text and explicit colors across all mobile browsers and themes */
-input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+/* =========================================================================
+   UNIVERSAL FORM INPUT CONTRAST & ACCESSIBILITY SYSTEM
+   Guarantees 100% visible, high-contrast text in all inputs, textareas,
+   and selects across both Light Themes (Soft Sky) & Dark Themes (Buckeyes)
+   ========================================================================= */
+
+/* 1. Default Baseline (Light Mode) */
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
 textarea,
 select {
   color: #0f172a;
+  background-color: #ffffff;
+  -webkit-text-fill-color: #0f172a;
+  color-scheme: light;
 }
 
-.dark input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
-.dark textarea,
-.dark select {
-  color: #f8fafc;
+/* 2. Dark Mode Baseline (Applies only when .dark is active AND not on an explicit white/light surface) */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(.bg-white):not(.bg-slate-50):not(.bg-slate-100):not(.bg-gray-50):not(.bg-yellow-50):not(.bg-amber-50),
+.dark textarea:not(.bg-white):not(.bg-slate-50):not(.bg-slate-100):not(.bg-gray-50):not(.bg-yellow-50):not(.bg-amber-50),
+.dark select:not(.bg-white):not(.bg-slate-50):not(.bg-slate-100):not(.bg-gray-50):not(.bg-yellow-50):not(.bg-amber-50) {
+  color: #ffffff !important;
+  background-color: #1e293b;
+  -webkit-text-fill-color: #ffffff !important;
+  color-scheme: dark;
 }
 
-/* Explicit class-level overrides when Tailwind dark/light text colors are specified */
-input[class*="text-slate-900"],
-textarea[class*="text-slate-900"],
-select[class*="text-slate-900"],
-input[class*="text-slate-800"],
-textarea[class*="text-slate-800"],
-select[class*="text-slate-800"] {
-  color: #0f172a;
+/* 3. Guaranteed Light-Surface Inputs:
+   When an input is explicitly white/light (or nested in a light container),
+   it MUST have crisp white background and deep charcoal text (#0f172a) in ALL themes! */
+input.bg-white,
+input.bg-slate-50,
+input.bg-slate-100,
+input.bg-gray-50,
+input.bg-gray-100,
+input.bg-zinc-50,
+input.bg-yellow-50,
+input.bg-amber-50,
+textarea.bg-white,
+textarea.bg-slate-50,
+textarea.bg-slate-100,
+textarea.bg-yellow-50,
+textarea.bg-amber-50,
+select.bg-white,
+select.bg-slate-50,
+select.bg-slate-100,
+.dark input.bg-white:not([class*="dark:bg-"]),
+.dark input.bg-slate-50:not([class*="dark:bg-"]),
+.dark input.bg-slate-100:not([class*="dark:bg-"]),
+.dark input.bg-gray-50:not([class*="dark:bg-"]),
+.dark input.bg-zinc-50:not([class*="dark:bg-"]),
+.dark input.bg-yellow-50:not([class*="dark:bg-"]),
+.dark input.bg-amber-50:not([class*="dark:bg-"]),
+.dark textarea.bg-white:not([class*="dark:bg-"]),
+.dark textarea.bg-slate-50:not([class*="dark:bg-"]),
+.dark textarea.bg-slate-100:not([class*="dark:bg-"]),
+.dark textarea.bg-yellow-50:not([class*="dark:bg-"]),
+.dark textarea.bg-amber-50:not([class*="dark:bg-"]),
+.dark select.bg-white:not([class*="dark:bg-"]),
+.dark select.bg-slate-50:not([class*="dark:bg-"]),
+.dark select.bg-slate-100:not([class*="dark:bg-"]),
+.bg-yellow-50 input:not([class*="dark:bg-"]),
+.bg-yellow-50 textarea:not([class*="dark:bg-"]),
+.bg-yellow-50 select:not([class*="dark:bg-"]),
+.bg-amber-50 input:not([class*="dark:bg-"]),
+.bg-amber-50 textarea:not([class*="dark:bg-"]),
+.bg-amber-50 select:not([class*="dark:bg-"]),
+.dark .bg-yellow-50 input:not([class*="dark:bg-"]),
+.dark .bg-yellow-50 textarea:not([class*="dark:bg-"]),
+.dark .bg-yellow-50 select:not([class*="dark:bg-"]),
+.dark .bg-amber-50 input:not([class*="dark:bg-"]),
+.dark .bg-amber-50 textarea:not([class*="dark:bg-"]),
+.dark .bg-amber-50 select:not([class*="dark:bg-"]) {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  color-scheme: light !important;
 }
 
+/* Light Surface Placeholders */
+input.bg-white::placeholder,
+input.bg-slate-50::placeholder,
+textarea.bg-white::placeholder,
+textarea.bg-slate-50::placeholder,
+.dark input.bg-white:not([class*="dark:bg-"])::placeholder,
+.dark input.bg-slate-50:not([class*="dark:bg-"])::placeholder,
+.dark textarea.bg-white:not([class*="dark:bg-"])::placeholder,
+.dark textarea.bg-slate-50:not([class*="dark:bg-"])::placeholder,
+.bg-yellow-50 input::placeholder,
+.bg-yellow-50 textarea::placeholder,
+.dark .bg-yellow-50 input::placeholder,
+.dark .bg-yellow-50 textarea::placeholder {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+  opacity: 1 !important;
+}
+
+/* 4. Guaranteed Dark-Surface Inputs:
+   When dark mode is active and the element has a dark surface,
+   the text MUST be bright crisp white (#ffffff) and never dark! */
+.dark input[class*="dark:bg-"],
+.dark textarea[class*="dark:bg-"],
+.dark select[class*="dark:bg-"],
+input.bg-slate-800,
+input.bg-slate-900,
+input.bg-zinc-800,
+input.bg-zinc-900,
+input.bg-black,
+textarea.bg-slate-800,
+textarea.bg-slate-900,
+textarea.bg-zinc-800,
+textarea.bg-zinc-900,
+select.bg-slate-800,
+select.bg-slate-900,
 .dark input[class*="dark:text-white"],
 .dark textarea[class*="dark:text-white"],
 .dark select[class*="dark:text-white"],
-input[class*="text-white"],
-textarea[class*="text-white"],
-select[class*="text-white"] {
-  color: #ffffff;
-}
-
 .dark input[class*="dark:text-slate-100"],
 .dark textarea[class*="dark:text-slate-100"],
-.dark select[class*="dark:text-slate-100"] {
-  color: #f1f5f9;
+.dark select[class*="dark:text-slate-100"],
+.dark [data-theme] input:not(.bg-white),
+.dark [data-theme] textarea:not(.bg-white),
+.dark [data-theme] select:not(.bg-white) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color-scheme: dark !important;
 }
 
-.dark input[class*="dark:text-slate-200"],
-.dark textarea[class*="dark:text-slate-200"],
-.dark select[class*="dark:text-slate-200"] {
-  color: #e2e8f0;
+/* Dark Surface Placeholders */
+.dark input[class*="dark:bg-"]::placeholder,
+.dark textarea[class*="dark:bg-"]::placeholder,
+.dark input:not(.bg-white)::placeholder,
+.dark textarea:not(.bg-white)::placeholder,
+input.bg-slate-800::placeholder,
+input.bg-slate-900::placeholder {
+  color: #cbd5e1 !important;
+  -webkit-text-fill-color: #cbd5e1 !important;
+  opacity: 1 !important;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: #94a3b8;
-  opacity: 1;
+/* 5. Light-Mode Only Direct Text Overrides (Prevent overriding dark mode with text-slate-900) */
+html:not(.dark) input.text-slate-900,
+html:not(.dark) textarea.text-slate-900,
+html:not(.dark) select.text-slate-900,
+html:not(.dark) input.text-slate-800,
+html:not(.dark) textarea.text-slate-800,
+html:not(.dark) select.text-slate-800,
+html:not(.dark) input.text-black,
+html:not(.dark) textarea.text-black {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
 }
 
-.dark input::placeholder,
-.dark textarea::placeholder {
-  color: #64748b;
-  opacity: 1;
+/* 6. Native Select Options Contrast (OS-level popups) */
+select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.dark select option {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+select.bg-white option,
+.dark select.bg-white option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* 7. Autofill Contrast Protection */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a !important;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark input:not(.bg-white):-webkit-autofill,
+.dark input:not(.bg-white):-webkit-autofill:hover,
+.dark input:not(.bg-white):-webkit-autofill:focus,
+.dark textarea:not(.bg-white):-webkit-autofill {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px #1e293b inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* Printable Guide Styles */

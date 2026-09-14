@@ -6,7 +6,7 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { FamilyDatabase } from './src/types';
 import { DEFAULT_SEED_DATA } from './src/utils/storage';
-import { POPULAR_RETAIL_DATABASE, lookupRetailProductLocal, synthesizeOfflineProduct } from './src/lib/retailCatalog';
+import { POPULAR_RETAIL_DATABASE, lookupRetailProductLocal, synthesizeOfflineProduct, classifyProductDetails } from './src/lib/retailCatalog';
 
 dotenv.config();
 
@@ -968,12 +968,14 @@ function parseStoreProductUrl(rawUrl: string): {
       const cleanTitle = titleSlug
         ? titleSlug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
         : 'Best Buy Item';
+      const classification = classifyProductDetails(cleanTitle, 'Best Buy');
       return {
         title: cleanTitle,
         retailer: 'Best Buy',
         sku: sku || 'Best Buy Link',
-        category: 'Tech & PC',
-        icon: 'Laptop',
+        category: classification.category,
+        icon: classification.icon,
+        cost: classification.defaultCost,
       };
     }
 
@@ -985,12 +987,14 @@ function parseStoreProductUrl(rawUrl: string): {
       const cleanTitle = slugMatch && slugMatch[1] !== 'dp'
         ? slugMatch[1].replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
         : (asin ? `Amazon Product (${asin})` : 'Amazon Product');
+      const classification = classifyProductDetails(cleanTitle, 'Amazon');
       return {
         title: cleanTitle,
         retailer: 'Amazon',
         sku: asin || 'Amazon Link',
-        category: 'Electronics',
-        icon: 'Tablet',
+        category: classification.category,
+        icon: classification.icon,
+        cost: classification.defaultCost,
       };
     }
 
@@ -1001,12 +1005,14 @@ function parseStoreProductUrl(rawUrl: string): {
       const cleanTitle = slugMatch
         ? slugMatch[1].replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
         : 'Target Product';
+      const classification = classifyProductDetails(cleanTitle, 'Target');
       return {
         title: cleanTitle,
         retailer: 'Target',
         sku: dpciMatch ? dpciMatch[1] : 'Target Link',
-        category: 'Gaming',
-        icon: 'Gamepad2',
+        category: classification.category,
+        icon: classification.icon,
+        cost: classification.defaultCost,
       };
     }
 
@@ -1016,12 +1022,14 @@ function parseStoreProductUrl(rawUrl: string): {
       const cleanTitle = itemMatch
         ? itemMatch[1].replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
         : 'Walmart Product';
+      const classification = classifyProductDetails(cleanTitle, 'Walmart');
       return {
         title: cleanTitle,
         retailer: 'Walmart',
         sku: itemMatch ? itemMatch[2] : 'Walmart Link',
-        category: 'Toys & LEGO',
-        icon: 'Boxes',
+        category: classification.category,
+        icon: classification.icon,
+        cost: classification.defaultCost,
       };
     }
   } catch {}
@@ -1062,31 +1070,15 @@ async function lookupBarcodeLive(barcode: string): Promise<{
         const item = data.items[0];
         const cost = item.lowest_recorded_price || item.highest_recorded_price || 39.99;
         const brand = item.brand || 'Retail Store';
-        let icon = 'Sparkles';
-        let normCat = 'Toys & LEGO';
-        const lowerTitle = (item.title || '').toLowerCase();
-
-        if (lowerTitle.includes('game') || lowerTitle.includes('nintendo') || lowerTitle.includes('playstation') || lowerTitle.includes('xbox')) {
-          icon = 'Gamepad2';
-          normCat = 'Gaming';
-        } else if (lowerTitle.includes('headphone') || lowerTitle.includes('audio') || lowerTitle.includes('speaker') || lowerTitle.includes('airpod')) {
-          icon = 'Headphones';
-          normCat = 'Audio';
-        } else if (lowerTitle.includes('laptop') || lowerTitle.includes('pc') || lowerTitle.includes('computer')) {
-          icon = 'Laptop';
-          normCat = 'Tech & PC';
-        } else if (lowerTitle.includes('bike') || lowerTitle.includes('scooter') || lowerTitle.includes('sport')) {
-          icon = 'Bike';
-          normCat = 'Sports & Outdoors';
-        } else if (lowerTitle.includes('microwave') || lowerTitle.includes('refrigerator') || lowerTitle.includes('appliance')) {
-          icon = 'Tv';
-          normCat = 'Appliances';
-        }
+        const classification = classifyProductDetails(item.title || '', brand);
+        const normCat = classification.category;
+        const icon = classification.icon;
+        const finalCost = cost > 0 ? cost : classification.defaultCost;
 
         return {
           title: item.title,
           category: normCat,
-          targetCost: Number(cost.toFixed(2)),
+          targetCost: Number(finalCost.toFixed(2)),
           retailer: brand,
           sku: clean,
           barcode: clean,
@@ -1094,7 +1086,7 @@ async function lookupBarcodeLive(barcode: string): Promise<{
           specs: [
             `Brand: ${brand}`,
             `UPC Barcode: ${clean}`,
-            `Live Registry Verified Price: $${cost.toFixed(2)}`,
+            `Live Registry Verified Price: $${finalCost.toFixed(2)}`,
           ],
           icon,
           source: 'live-upc-registry',
@@ -1156,28 +1148,27 @@ async function lookupRetailCodeWeb(cleanQuery: string, retailerHint?: string): P
         cleanTitle = cleanTitle.replace(/ - (Best Buy|Target|Amazon\.com|Walmart).*$/i, '').trim();
 
         if (cleanTitle.length > 5) {
-          let category = 'Tech & PC';
-          let icon = 'Laptop';
-          const lower = cleanTitle.toLowerCase();
-          if (lower.includes('game') || lower.includes('nintendo') || lower.includes('playstation') || lower.includes('xbox')) {
-            category = 'Gaming';
-            icon = 'Gamepad2';
-          } else if (lower.includes('microwave') || lower.includes('refrigerator') || lower.includes('appliance')) {
-            category = 'Appliances';
-            icon = 'Tv';
-          } else if (lower.includes('headphone') || lower.includes('earbud')) {
-            category = 'Audio';
-            icon = 'Headphones';
-          } else if (lower.includes('toy') || lower.includes('lego')) {
-            category = 'Toys & LEGO';
-            icon = 'Boxes';
+          const classification = classifyProductDetails(cleanTitle, targetRetailer);
+          let extractedCost = classification.defaultCost;
+          const priceMatches = html.match(/\$(\d{1,4}(?:\.\d{2})?)/g);
+          if (priceMatches && priceMatches.length > 0) {
+            for (const p of priceMatches) {
+              const val = parseFloat(p.replace('$', ''));
+              if (val > 10 && val < 10000) {
+                if (Math.abs(val - classification.defaultCost) < 150 || !classification.isSpecificMatch) {
+                  extractedCost = val;
+                  break;
+                }
+              }
+            }
           }
 
           return {
             title: cleanTitle,
-            retailer: targetRetailer,
-            category,
-            icon,
+            retailer: classification.detectedRetailer || targetRetailer,
+            category: classification.category,
+            icon: classification.icon,
+            cost: extractedCost,
             description: `Product identified for ${targetRetailer} code ${cleanQuery}.`,
           };
         }
@@ -1301,7 +1292,7 @@ app.post('/api/retail-lookup', async (req, res) => {
     if (isAsin || isDpci || isStoreSku) {
       const webResult = await lookupRetailCodeWeb(cleanQuery, retailer);
       if (webResult && webResult.title && webResult.title.length > 3) {
-        const cost = webResult.cost || (isStoreSku ? 149.99 : 59.99);
+        const cost = webResult.cost || 59.99;
         res.json({
           success: true,
           source: 'live-retail-index',
@@ -1344,27 +1335,31 @@ Specific Retailer Filter: "${retailer && retailer !== 'all' ? retailer : 'Any / 
 Code Type Hint: "${codeType || 'auto (could be SKU, Barcode/UPC, Item#, ASIN, DPCI, or Model#)'}"
 
 CRITICAL ANTI-HALLUCINATION INSTRUCTIONS:
-1. NEVER substitute or return an unrelated product. Do NOT default to a Nintendo Switch, PlayStation, or generic console unless the user explicitly searched for it.
+1. NEVER substitute or return an unrelated product. Do NOT default to a Nintendo Switch, PlayStation, or Laptop unless the user explicitly searched for it.
 2. The user queried specifically for: "${cleanQuery}".
+   - If this is Best Buy SKU "6560934", it is the DJI - Osmo Pocket 3 Creator Combo 3-Axis Stabilized 4K Vlog Camera (Category: "Cameras & Video", Icon: "Camera", Price: $669.99).
+   - If this is Best Buy SKU "6560933", it is the DJI - Osmo Pocket 3 3-Axis Stabilized 4K Vlog Camera (Category: "Cameras & Video", Icon: "Camera", Price: $519.99).
+   - If this is Best Buy SKU "6553412", it is the GoPro - HERO12 Black Action Camera (Category: "Cameras & Video", Icon: "Camera", Price: $349.99).
    - If this is Best Buy SKU "6619147", it is the Lenovo IdeaPad Slim 3x Copilot+ PC 15.3" Touchscreen Laptop (Snapdragon X 2025, 16GB RAM, 256GB SSD, Luna Grey).
    - If this is Best Buy SKU "6506246", it is the Frigidaire 36" 25.6 Cu. Ft. Side-by-Side Refrigerator Stainless Steel.
    - If this is Amazon ASIN "B076VB5JFQ", it is the TOSHIBA Countertop Microwave Oven 1.2 Cu.Ft 1000W.
-   - If this is a 7-digit Best Buy SKU, deduce the real commercial product (laptop, PC, TV, appliance, headphones, etc.) with high factual precision.
+   - If this product is a digital camera, vlogging camera, action camera, or gimbal, category MUST be "Cameras & Video" and icon MUST be "Camera" (or "Video"). NEVER classify a camera as "Laptop" or "Tech & PC"!
+   - If this is a 7-digit Best Buy SKU, deduce the real commercial product with high factual precision.
    - If this is a Target DPCI, Amazon ASIN, Walmart Item ID, or 12-digit UPC barcode, deduce the real matching product.
 3. The returned "sku" and "itemNumber" in the JSON MUST be "${cleanQuery}". NEVER return a different SKU.
 4. Accurate Pricing: Determine accurate commercial MSRP / retail selling price in USD.
-5. If the exact SKU is unknown, extrapolate the most plausible real consumer electronics, appliance, or retail product corresponding to that code format, but NEVER default to a Nintendo Switch.
+5. If the exact SKU is unknown, extrapolate the most plausible real consumer electronics, camera, appliance, or retail product corresponding to that code format.
 
 Return STRICTLY a JSON object with:
 - "title": string (official clean product name)
-- "targetCost": number (e.g. 749.99)
+- "targetCost": number (e.g. 669.99)
 - "retailer": string (e.g. "Best Buy", "Target", "Amazon", "Walmart", "Micro Center", "Apple", "LEGO")
-- "category": string (one of "Tech & PC", "Gaming", "Appliances", "Electronics", "Audio", "Toys & LEGO", "Sports & Outdoors", "Fashion & Clothes")
+- "category": string (one of "Cameras & Video", "Tech & PC", "Gaming", "Appliances", "Electronics", "Audio", "Toys & LEGO", "Sports & Outdoors", "Fashion & Clothes")
 - "sku": "${cleanQuery}"
 - "barcode": string (12-digit UPC if known, or plausible barcode)
 - "itemNumber": "${cleanQuery}"
 - "modelNumber": string (manufacturer model number)
-- "icon": string (one of "Laptop", "Gamepad2", "Tv", "Boxes", "Headphones", "Bike", "Tablet", "Coins", "Sparkles")
+- "icon": string (one of "Camera", "Video", "Laptop", "Gamepad2", "Tv", "Boxes", "Headphones", "Bike", "Tablet", "Coins", "Sparkles", "Smartphone", "Watch")
 - "description": string (concise 1-2 sentence kid-friendly description)
 - "specs": array of 3 concise strings highlighting key features
 - "whyKidsLoveIt": string (fun sentence explaining why kids want to save for it)
@@ -1405,14 +1400,22 @@ Return STRICTLY JSON.`;
             if (titleLower.includes('switch') && !isSwitchQuery) {
               console.warn(`[Retail Lookup] Suppressed false Nintendo Switch hallucination for query: "${cleanQuery}"`);
             } else {
+              // Re-classify through local classifier to fix any AI misclassification (e.g. camera classified as laptop)
+              const titleText = rawItem.title || rawItem.name;
+              const classification = classifyProductDetails(titleText, rawItem.retailer);
+              const finalCat = (classification.isSpecificMatch) ? classification.category : (rawItem.category || classification.category);
+              const finalIcon = (classification.isSpecificMatch) ? classification.icon : (rawItem.icon || classification.icon);
+
               // Sanity clamp: Prevent SKU numbers from being passed as absurd millions of dollars
-              const safeCost = (isNaN(cost) || cost <= 0) ? 99.99 : (cost > 15000 ? 484.99 : cost);
+              const safeCost = (isNaN(cost) || cost <= 0) ? classification.defaultCost : (cost > 15000 ? classification.defaultCost : cost);
               res.json({
                 success: true,
                 source: 'gemini-ai',
                 product: {
                   ...rawItem,
-                  title: rawItem.title || rawItem.name,
+                  title: titleText,
+                  category: finalCat,
+                  icon: finalIcon,
                   targetCost: Number(safeCost.toFixed(2)),
                   sku: cleanQuery,
                   itemNumber: rawItem.itemNumber || cleanQuery,

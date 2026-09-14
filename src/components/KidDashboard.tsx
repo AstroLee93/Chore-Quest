@@ -162,18 +162,18 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-400">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-300">
                   {formatDateDisplay(todayStr)}
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/90 px-2 py-0.5 rounded-full border border-slate-200/60 dark:border-slate-700">
                   <span>{WEATHER_CONDITIONS[todayWeather.condition]?.icon || '☀️'}</span>
                   <span>{todayWeather.tempHigh}°{settings.tempUnit || 'F'}</span>
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${theme.kidCardNameColor || 'text-slate-900 dark:text-white'}`}>
                 Hey, {kid.name}! 👋
               </h1>
-              <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-0.5">
+              <p className={`text-xs sm:text-sm font-semibold mt-0.5 ${theme.kidCardSubtextColor || 'text-slate-500 dark:text-slate-300'}`}>
                 {isAllComplete
                   ? "You're a superstar! All missions done today! 🚀"
                   : `You have ${todaysChores.length - completedTasksCount} mission${todaysChores.length - completedTasksCount === 1 ? '' : 's'} waiting for you today.`}

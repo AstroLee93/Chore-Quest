@@ -2568,8 +2568,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             <Lock className="w-3.5 h-3.5" />
                           </div>
                           <div>
-                            <div className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400">Child Security PIN</div>
-                            <div className="text-sm font-black font-mono text-slate-800 tracking-wider">
+                            <div className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 dark:text-slate-300">Child Security PIN</div>
+                            <div className="text-sm font-black font-mono text-slate-800 dark:text-slate-100 tracking-wider">
                               {kid.pin || '1234'}
                             </div>
                           </div>
@@ -2583,7 +2583,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       </div>
 
                       {/* Clear Reset PIN input field with touch-friendly hit targets */}
-                      <div className="flex items-center gap-2 pt-1 border-t border-slate-200/70">
+                      <div className="flex items-center gap-2 pt-1 border-t border-slate-200/70 dark:border-slate-700">
                         <input
                           id={`kid-pin-input-${kid.id}`}
                           type="text"
@@ -2596,7 +2596,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             setPinInputs((prev) => ({ ...prev, [kid.id]: val }));
                           }}
                           placeholder="New 4-digit PIN"
-                          className="flex-1 px-3 py-2 text-xs font-mono font-black text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-indigo-500 min-h-[44px]"
+                          className="flex-1 px-3 py-2 text-xs font-mono font-black text-slate-900 dark:text-white bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:outline-indigo-500 min-h-[44px]"
                         />
                         <button
                           type="button"
@@ -3674,14 +3674,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* Reward Edit Modal */}
       {editingReward && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300">
-            <h3 className="font-black text-base sm:text-xl text-slate-800 mb-3 italic">
+          <div className="bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-slate-700">
+            <h3 className="font-black text-base sm:text-xl text-slate-800 dark:text-white mb-3 italic">
               {editingReward.id ? 'Edit Reward Item' : 'New Reward Item'}
             </h3>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
                   Reward Title:
                 </label>
                 <input
@@ -3689,13 +3689,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   placeholder="e.g. 45 Mins Roblox or Fortnite"
                   value={editingReward.title || ''}
                   onChange={(e) => setEditingReward({ ...editingReward, title: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-black text-xs sm:text-sm text-slate-800 focus:outline-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-xs sm:text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-indigo-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <div>
-                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
+                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
                     Star Cost:
                   </label>
                   <input
@@ -3703,12 +3703,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     min={1}
                     value={editingReward.starCost || 20}
                     onChange={(e) => setEditingReward({ ...editingReward, starCost: Number(e.target.value) })}
-                    className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white font-black text-xs sm:text-sm text-slate-900"
+                    className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-xs sm:text-sm text-slate-900 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
+                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
                     Reward Icon (Emoji):
                   </label>
                   <EmojiPicker
@@ -3721,7 +3721,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
                   Description:
                 </label>
                 <textarea
@@ -3729,7 +3729,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   value={editingReward.description || ''}
                   onChange={(e) => setEditingReward({ ...editingReward, description: e.target.value })}
                   placeholder="How does this reward work?"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 resize-none focus:outline-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 resize-none focus:outline-indigo-500"
                 />
               </div>
             </div>
@@ -3738,7 +3738,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               <button
                 type="button"
                 onClick={() => setEditingReward(null)}
-                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-xs text-slate-700 dark:text-slate-200 cursor-pointer"
               >
                 Cancel
               </button>
@@ -3757,14 +3757,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* Kid Edit Modal */}
       {editingKid && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300">
-            <h3 className="font-black text-base sm:text-xl text-slate-800 mb-3 italic">
+          <div className="bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-slate-700">
+            <h3 className="font-black text-base sm:text-xl text-slate-800 dark:text-white mb-3 italic">
               {editingKid.id ? 'Edit Child Profile' : 'Add Child'}
             </h3>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
                   Child's Name:
                 </label>
                 <input
@@ -3772,12 +3772,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   placeholder="e.g. Leo"
                   value={editingKid.name || ''}
                   onChange={(e) => setEditingKid({ ...editingKid, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-black text-xs sm:text-sm text-slate-800 focus:outline-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-xs sm:text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
                   Avatar Character:
                 </label>
                 <EmojiPicker
@@ -3789,7 +3789,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-1">
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
                   Profile Color:
                 </label>
                 <div className="flex gap-2">
@@ -3809,13 +3809,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
               <div>
                 <div className="flex items-center justify-between mb-0.5">
-                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase">
+                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase">
                     Child 4-Digit Security PIN:
                   </label>
                   <button
                     type="button"
                     onClick={() => setEditingKid({ ...editingKid, pin: '1234' })}
-                    className="text-[10px] sm:text-[11px] font-black text-indigo-600 hover:text-indigo-800 cursor-pointer underline"
+                    className="text-[10px] sm:text-[11px] font-black text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 cursor-pointer underline"
                   >
                     Reset to 1234
                   </button>
@@ -3831,9 +3831,9 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     const val = e.target.value.replace(/\D/g, '').slice(0, 4);
                     setEditingKid({ ...editingKid, pin: val });
                   }}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-mono font-black text-sm text-slate-800 focus:outline-indigo-500 tracking-widest"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono font-black text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-indigo-500 tracking-widest"
                 />
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                <p className="text-[10px] text-slate-400 dark:text-slate-400 font-bold mt-0.5">
                   Used by {editingKid.name || 'this child'} to unlock missions and rewards.
                 </p>
               </div>
@@ -3843,7 +3843,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               <button
                 type="button"
                 onClick={() => setEditingKid(null)}
-                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-xs text-slate-700 dark:text-slate-200 cursor-pointer"
               >
                 Cancel
               </button>
@@ -3862,12 +3862,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* Bonus Star Award Modal */}
       {bonusStarModalKid && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-sm w-full shadow-2xl border-2 sm:border-4 border-yellow-300 text-center">
+          <div className="bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-sm w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-slate-700 text-center">
             <div className="text-3xl mb-1">⭐</div>
-            <h3 className="font-black text-base sm:text-xl text-slate-800 mb-0.5 italic">
+            <h3 className="font-black text-base sm:text-xl text-slate-800 dark:text-white mb-0.5 italic">
               Award Bonus Stars to {bonusStarModalKid.name}!
             </h3>
-            <p className="text-[11px] sm:text-xs text-slate-500 font-bold mb-3">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-300 font-bold mb-3">
               Reward extra effort, good behavior, or helping without being asked.
             </p>
 
@@ -3880,7 +3880,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   className={`px-2.5 py-1 rounded-lg font-black text-xs sm:text-sm border cursor-pointer transition-all ${
                     bonusStarsAmount === amt
                       ? 'bg-yellow-400 text-slate-900 border-yellow-500 shadow-xs scale-105'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   +{amt} ⭐
@@ -3889,14 +3889,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             </div>
 
             <div className="text-left mb-4">
-              <label className="block text-[11px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
+              <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-0.5">
                 Reason / Compliment:
               </label>
               <input
                 type="text"
                 value={bonusStarReason}
                 onChange={(e) => setBonusStarReason(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-indigo-500"
+                className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-indigo-500"
               />
             </div>
 
@@ -3904,7 +3904,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               <button
                 type="button"
                 onClick={() => setBonusStarModalKid(null)}
-                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white font-black text-xs text-slate-700 cursor-pointer"
+                className="flex-1 py-2 sm:py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-xs text-slate-700 dark:text-slate-200 cursor-pointer"
               >
                 Cancel
               </button>

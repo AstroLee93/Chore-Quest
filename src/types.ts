@@ -51,11 +51,12 @@ export type KidCoinTransactionCategory =
 export interface KidCoinTransaction {
   id: string;
   kidId: string;
-  type: 'deposit' | 'withdrawal';
+  type: 'deposit' | 'withdrawal' | 'interest';
   amount: number;
   category: KidCoinTransactionCategory;
   description: string;
   date: string;
+  timestamp?: number;
   goalContribution?: string; // Goal ID if contributed directly
   choreId?: string;
 }

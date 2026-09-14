@@ -25,6 +25,7 @@ import {
   ShoppingBag,
   Info,
   Check,
+  Edit3,
 } from 'lucide-react';
 
 interface NewGoalModalProps {
@@ -45,12 +46,18 @@ const RETAILER_PRESETS = [
 ];
 
 const SAMPLE_BARCODES = [
+  { label: 'Lenovo IdeaPad Slim 3x (Best Buy SKU)', code: '6619147', store: 'Best Buy' },
+  { label: 'Xbox Series X (Best Buy SKU)', code: '6428324', store: 'Best Buy' },
   { label: 'PS5 Slim (Best Buy SKU)', code: '6522854', store: 'Best Buy' },
-  { label: 'Switch OLED (Target DPCI)', code: '057-00-0089', store: 'Target' },
+  { label: 'Switch OLED (Target DPCI)', code: '207-00-0199', store: 'Target' },
+  { label: 'PS5 DualSense (Target DPCI)', code: '207-00-0250', store: 'Target' },
+  { label: 'Meta Quest 3S (Amazon ASIN)', code: 'B0D8534X6H', store: 'Amazon' },
   { label: 'LEGO Falcon (Amazon ASIN)', code: 'B07NDXZV2B', store: 'Amazon' },
-  { label: 'AirPods 4 (Apple Part)', code: 'MXP63AM/A', store: 'Apple' },
+  { label: 'Switch OLED (UPC Barcode)', code: '045496883386', store: 'Nintendo' },
+  { label: 'AirPods 4 (UPC Barcode)', code: '195949692484', store: 'Apple' },
   { label: 'RTX 4060 PC (Micro Center)', code: '654321', store: 'Micro Center' },
-  { label: 'Segway E8 (Walmart UPC)', code: '850024823019', store: 'Walmart' },
+  { label: 'Toshiba Microwave (Amazon ASIN)', code: 'B076VB5JFQ', store: 'Amazon' },
+  { label: 'Frigidaire Refrigerator (Best Buy SKU)', code: '6506246', store: 'Best Buy' },
 ];
 
 export const NewGoalModal: React.FC<NewGoalModalProps> = ({
@@ -68,7 +75,14 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<any | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [searchSource, setSearchSource] = useState<'gemini-ai' | 'local-database' | null>(null);
+  const [searchSource, setSearchSource] = useState<string | null>(null);
+
+  // Inline Result Customization / Editor State
+  const [isEditingResult, setIsEditingResult] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editCost, setEditCost] = useState('');
+  const [editRetailer, setEditRetailer] = useState('');
+  const [editCategory, setEditCategory] = useState('');
 
   // Barcode Scanner Simulator / Live Camera State
   const [showScannerModal, setShowScannerModal] = useState(false);
@@ -87,6 +101,28 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
   const [customIcon, setCustomIcon] = useState('🎯');
   const [customCategory, setCustomCategory] = useState('Dream Reward');
 
+  // Format detection helper
+  const detectCodeFormat = (query: string) => {
+    const q = query.trim();
+    if (!q) return null;
+    if (q.includes('http://') || q.includes('https://') || q.includes('.com/')) {
+      return { label: '🌐 Direct Store Product Link', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700' };
+    }
+    if (/^[A-Z0-9]{10}$/i.test(q) && /^B0/i.test(q)) {
+      return { label: '📦 Amazon ASIN Code', color: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-700' };
+    }
+    if (/^\d{3}-?\d{2}-?\d{4}$/.test(q)) {
+      return { label: '🎯 Target DPCI Store Code', color: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border-red-300 dark:border-red-700' };
+    }
+    if (/^\d{6,8}$/.test(q)) {
+      return { label: '💻 Store SKU Number', color: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-300 dark:border-blue-700' };
+    }
+    if (/^\d{8,14}$/.test(q.replace(/[-\s]/g, ''))) {
+      return { label: '🏷️ UPC / EAN Barcode', color: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-300 dark:border-purple-700' };
+    }
+    return { label: '🔍 Product Keyword Search', color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700' };
+  };
+
   // Accumulated funds ready to reallocate from the kid's active goals / vault
   const accumulatedFunds = kid
     ? (kid.totalSaved && kid.totalSaved > 0
@@ -100,6 +136,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
       setSearchError(null);
       setLookupQuery('');
       setShowScannerModal(false);
+      setIsEditingResult(false);
       stopCamera();
     }
   }, [isOpen]);
@@ -149,6 +186,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
     setIsSearching(true);
     setSearchError(null);
     setSearchResult(null);
+    setIsEditingResult(false);
 
     try {
       const resp = await fetch('/api/retail-lookup', {
@@ -159,8 +197,13 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
       const data = await resp.json();
 
       if (resp.ok && data.success && data.product) {
-        setSearchResult(data.product);
+        const prod = data.product;
+        setSearchResult(prod);
         setSearchSource(data.source || 'gemini-ai');
+        setEditTitle(prod.title || prod.name || '');
+        setEditCost(String(prod.targetCost || prod.currentCost || 29.99));
+        setEditRetailer(prod.retailer || 'Retail Store');
+        setEditCategory(prod.category || 'Dream Reward');
         sound.playCoinSound();
       } else {
         setSearchError(data.message || `No product found matching "${q}". Try checking the code digits.`);
@@ -174,25 +217,25 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
 
   // Launch a product directly as Goal
   const handleLaunchProductAsGoal = (product: any) => {
-    const rawCost =
-      typeof product.targetCost === 'number'
-        ? product.targetCost
-        : parseFloat(product.targetCost || product.currentCost || 0);
-    const cost = Number((isNaN(rawCost) ? 29.99 : rawCost).toFixed(2));
+    const finalCostVal = isEditingResult && editCost ? parseFloat(editCost) : (product.targetCost || product.currentCost || 0);
+    const cost = Number((isNaN(finalCostVal) ? 29.99 : finalCostVal).toFixed(2));
     const reallocated = Math.min(cost, accumulatedFunds);
+    const finalTitle = isEditingResult && editTitle.trim() ? editTitle.trim() : (product.title || product.name);
+    const finalRetailer = isEditingResult && editRetailer.trim() ? editRetailer.trim() : (product.retailer || 'Retail Store');
+    const finalCategory = isEditingResult && editCategory.trim() ? editCategory.trim() : (product.category || 'Dream Reward');
 
     const newGoal: SavingsGoal = {
       id: `goal-${product.sku || product.id || Date.now()}`,
-      title: product.name || product.title,
-      category: product.category || 'Dream Reward',
+      title: finalTitle,
+      category: finalCategory,
       targetCost: cost,
       isVerified: true,
-      verifiedSource: `${product.retailer || 'Retail Store'} (SKU: ${product.sku || product.itemNumber || 'Verified'})`,
+      verifiedSource: `${finalRetailer} (SKU: ${product.sku || product.itemNumber || 'Verified'})`,
       currentSaved: reallocated,
       priority: 'primary',
       icon: product.icon || 'Gamepad2',
       createdAt: new Date().toISOString().split('T')[0],
-      retailer: product.retailer,
+      retailer: finalRetailer,
       sku: product.sku,
       barcode: product.barcode,
       itemNumber: product.itemNumber,
@@ -405,7 +448,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                           handlePerformLookup();
                         }
                       }}
-                      placeholder="e.g. 6522854 (Best Buy), 207-00-0199 (Target), 711719570530 (UPC)"
+                      placeholder="e.g. 6619147 (Lenovo), 6522854 (PS5), 207-00-0199 (Target), 045496883386 (UPC)"
                       className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 font-mono"
                     />
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -435,6 +478,15 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                     <span>{isSearching ? 'Looking up...' : 'Lookup SKU / AI'}</span>
                   </button>
                 </div>
+
+                {/* Real-Time Format Detection Pill */}
+                {lookupQuery.trim() && detectCodeFormat(lookupQuery) && (
+                  <div className="flex items-center gap-1.5 pt-0.5">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${detectCodeFormat(lookupQuery)?.color}`}>
+                      {detectCodeFormat(lookupQuery)?.label}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Sample Code Pills for Fast Instant Testing */}
@@ -482,8 +534,8 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${getRetailerColor(searchResult.retailer)}`}>
-                            {searchResult.retailer || 'Verified Retail'}
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${getRetailerColor(isEditingResult ? editRetailer : searchResult.retailer)}`}>
+                            {(isEditingResult ? editRetailer : searchResult.retailer) || 'Verified Retail'}
                           </span>
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                             <ShieldCheck className="w-3.5 h-3.5" />
@@ -492,12 +544,41 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                           {searchSource === 'gemini-ai' && (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
                               <Sparkles className="w-3 h-3 text-amber-500" />
-                              <span>Gemini AI Enriched</span>
+                              <span>Gemini AI Match</span>
+                            </span>
+                          )}
+                          {searchSource === 'live-upc-registry' && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700 flex items-center gap-1">
+                              <Barcode className="w-3 h-3 text-purple-500" />
+                              <span>Live Registry Barcode</span>
+                            </span>
+                          )}
+                          {searchSource === 'live-retail-index' && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-700 flex items-center gap-1">
+                              <Search className="w-3 h-3 text-sky-500" />
+                              <span>Live Store Match</span>
+                            </span>
+                          )}
+                          {searchSource === 'store-link-parser' && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                              <ExternalLink className="w-3 h-3 text-emerald-500" />
+                              <span>Store Link Parsed</span>
+                            </span>
+                          )}
+                          {searchSource === 'offline-synthesized' && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700 flex items-center gap-1">
+                              <span>⚙️ Offline Synthesized</span>
+                            </span>
+                          )}
+                          {searchSource === 'local-database' && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 flex items-center gap-1">
+                              <Store className="w-3 h-3 text-blue-500" />
+                              <span>Verified Store Catalog</span>
                             </span>
                           )}
                         </div>
                         <h4 className="font-black text-base text-slate-900 dark:text-white mt-1">
-                          {searchResult.title || searchResult.name}
+                          {isEditingResult ? editTitle : (searchResult.title || searchResult.name)}
                         </h4>
                         <div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
                           {searchResult.sku && <span>SKU: {searchResult.sku}</span>}
@@ -507,13 +588,83 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="flex flex-col items-end gap-1">
                       <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                        ${(searchResult.targetCost || searchResult.currentCost || 0).toFixed(2)}
+                        ${Number(isEditingResult && editCost ? parseFloat(editCost) || 0 : (searchResult.targetCost || searchResult.currentCost || 0)).toFixed(2)}
                       </div>
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Target MSRP</span>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playTap();
+                          setIsEditingResult(!isEditingResult);
+                        }}
+                        className="mt-1 px-2.5 py-1 text-[11px] font-bold rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white/80 dark:bg-slate-900/80 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>{isEditingResult ? '✓ Done Editing' : '✏️ Edit Details'}</span>
+                      </button>
                     </div>
                   </div>
+
+                  {/* Inline Edit Form */}
+                  {isEditingResult && (
+                    <div className="p-3 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-indigo-200 dark:border-indigo-800 space-y-2.5 animate-in fade-in">
+                      <div className="text-xs font-black text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Customize Goal Information</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-0.5">Product Title</label>
+                          <input
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-0.5">Target Price ($ USD)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="1"
+                            value={editCost}
+                            onChange={(e) => setEditCost(e.target.value)}
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-0.5">Store / Retailer</label>
+                          <input
+                            type="text"
+                            value={editRetailer}
+                            onChange={(e) => setEditRetailer(e.target.value)}
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-0.5">Category</label>
+                          <select
+                            value={editCategory}
+                            onChange={(e) => setEditCategory(e.target.value)}
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
+                          >
+                            <option value="Gaming">Gaming</option>
+                            <option value="Tech & PC">Tech & PC</option>
+                            <option value="Electronics">Electronics</option>
+                            <option value="Appliances">Appliances</option>
+                            <option value="Toys & LEGO">Toys & LEGO</option>
+                            <option value="Audio">Audio</option>
+                            <option value="Sports & Outdoors">Sports & Outdoors</option>
+                            <option value="Dream Reward">Dream Reward</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Description & Why Kids Love It */}
                   {searchResult.description && (

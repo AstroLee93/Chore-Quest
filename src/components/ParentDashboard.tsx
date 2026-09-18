@@ -35,6 +35,9 @@ import {
   PauseCircle,
   PlayCircle,
   Coins,
+  Brain,
+  GraduationCap,
+  BookOpen,
 } from 'lucide-react';
 import {
   FamilyDatabase,
@@ -52,6 +55,7 @@ import {
   GroceryRequest,
   GroceryItem,
   GroceryImportance,
+  GradeLevel,
 } from '../types';
 import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON, getKioskTimeoutMs } from '../utils/storage';
 import { sound } from '../utils/sound';
@@ -72,6 +76,8 @@ import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { FamilyGoalModal } from './FamilyGoalModal';
 import { WeeklyMenuModal } from './WeeklyMenuModal';
 import { ParentSavingsManagement } from './Savings/ParentSavingsManagement';
+import { BrainTeaserModal } from './BrainTeaserModal';
+import { GRADE_LEVEL_LIST, getGradeLevelInfo } from '../utils/brainTeasers';
 
 interface ParentDashboardProps {
   database: FamilyDatabase;
@@ -138,6 +144,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const [bonusStarModalKid, setBonusStarModalKid] = useState<KidProfile | null>(null);
   const [bonusStarsAmount, setBonusStarsAmount] = useState<number>(5);
   const [bonusStarReason, setBonusStarReason] = useState<string>('Great attitude and helpfulness!');
+  const [isBrainTeaserPreviewOpen, setIsBrainTeaserPreviewOpen] = useState<boolean>(false);
+  const [previewTeaserKid, setPreviewTeaserKid] = useState<KidProfile | null>(null);
 
   // Settings form state
   const [settingsForm, setSettingsForm] = useState<AppSettings>(database.settings);
@@ -653,6 +661,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
     if (!kid.name?.trim()) return;
 
     const sanitizedPin = kid.pin ? kid.pin.replace(/\D/g, '').slice(0, 4) : '1234';
+    const targetGrade = (kid.gradeLevel as GradeLevel) || '1st_grade';
 
     let updatedKids: KidProfile[];
     if (kid.id) {
@@ -661,6 +670,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           ? ({
               ...k,
               ...kid,
+              gradeLevel: targetGrade,
               pin: sanitizedPin || k.pin || '1234',
             } as KidProfile)
           : k
@@ -672,6 +682,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
         avatar: kid.avatar || '⭐',
         color: kid.color || '#3b82f6',
         pin: sanitizedPin || '1234',
+        gradeLevel: targetGrade,
         stars: Number(kid.stars) || 0,
         lifetimeStars: Number(kid.stars) || 0,
         streakDays: 0,
@@ -681,6 +692,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
     }
     onUpdateDatabase({ ...database, kids: updatedKids });
     setEditingKid(null);
+  };
+
+  const handleQuickUpdateGradeLevel = (kidId: string, gradeLevel: GradeLevel) => {
+    sound.playTap();
+    const updatedKids = database.kids.map((k) =>
+      k.id === kidId ? { ...k, gradeLevel } : k
+    );
+    onUpdateDatabase({ ...database, kids: updatedKids });
   };
 
   const handleDeleteKid = (kidId: string) => {
@@ -2514,6 +2533,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                                   onClick: () => setEditingKid(kid),
                                 },
                                 {
+                                  id: 'preview-teaser',
+                                  label: '🧠 Test Brain Teaser',
+                                  icon: <Brain className="w-3.5 h-3.5 text-purple-600" />,
+                                  onClick: () => {
+                                    setPreviewTeaserKid(kid);
+                                    setIsBrainTeaserPreviewOpen(true);
+                                  },
+                                },
+                                {
                                   id: 'reset-pin',
                                   label: 'Reset Security PIN',
                                   icon: <Lock className="w-3.5 h-3.5 text-indigo-600" />,
@@ -2557,6 +2585,52 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             {kid.streakDays}d streak
                           </span>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Grade Level & Brain Teaser Quick-Assign Row */}
+                    <div className="p-2 sm:p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/60 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                        <div>
+                          <div className="text-[9px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                            Grade School Level
+                          </div>
+                          <div className="text-xs font-black text-slate-800 dark:text-white flex items-center gap-1 truncate">
+                            <span>{getGradeLevelInfo(kid.gradeLevel).icon}</span>
+                            <span>{getGradeLevelInfo(kid.gradeLevel).label} ({getGradeLevelInfo(kid.gradeLevel).ages})</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          id={`select-kid-grade-${kid.id}`}
+                          value={kid.gradeLevel || '1st_grade'}
+                          onChange={(e) => handleQuickUpdateGradeLevel(kid.id, e.target.value as GradeLevel)}
+                          className="px-2 py-1 text-[11px] font-bold rounded-lg border border-purple-300 bg-white dark:bg-slate-800 text-slate-800 dark:text-white cursor-pointer"
+                          title="Change assigned grade school level"
+                        >
+                          {GRADE_LEVEL_LIST.map((gl) => (
+                            <option key={gl.id} value={gl.id}>
+                              {gl.icon} {gl.shortLabel}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          id={`btn-preview-teaser-${kid.id}`}
+                          onClick={() => {
+                            sound.playTap();
+                            setPreviewTeaserKid(kid);
+                            setIsBrainTeaserPreviewOpen(true);
+                          }}
+                          className="px-2 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-[11px] shadow-2xs active:scale-95 cursor-pointer flex items-center gap-1 shrink-0"
+                          title="Preview brain teaser question for this child"
+                        >
+                          <Brain className="w-3 h-3" />
+                          <span>Test</span>
+                        </button>
                       </div>
                     </div>
 
@@ -2729,6 +2803,246 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 <p className="text-[10px] text-slate-400 font-bold mt-0.5">
                   Set to "Off" to prevent losing progress while adding groceries, planning meals, or viewing missions.
                 </p>
+              </div>
+            </div>
+
+            {/* Brain Teaser & Educational Settings (Admin Determined Points) */}
+            <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 dark:border-purple-800 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center text-base shadow-xs shrink-0">
+                    🧠
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-purple-950 dark:text-purple-200 flex items-center gap-1.5">
+                      <span>Daily Brain Teasers & Educational Rewards</span>
+                    </h4>
+                    <p className="text-[10px] sm:text-xs text-purple-900/80 dark:text-purple-300/80 font-bold mt-0.5">
+                      Assign grade levels per child and award custom points for correct answers.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    id="btn-preview-teasers-settings"
+                    onClick={() => {
+                      sound.playTap();
+                      setPreviewTeaserKid(database.kids[0] || null);
+                      setIsBrainTeaserPreviewOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>Test & Preview Questions</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                {/* 1. Daily Question Limit Setting */}
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      Daily Questions for Stars:
+                    </label>
+                    <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 font-black text-xs">
+                      {settingsForm.brainTeaserDailyLimit ?? 1} per day
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      id="btn-dec-teaser-daily-limit"
+                      onClick={() =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          brainTeaserDailyLimit: Math.max(1, (settingsForm.brainTeaserDailyLimit ?? 1) - 1),
+                        })
+                      }
+                      className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-800 dark:text-white font-black text-base flex items-center justify-center cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      id="input-teaser-daily-limit"
+                      min={1}
+                      max={10}
+                      value={settingsForm.brainTeaserDailyLimit ?? 1}
+                      onChange={(e) =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          brainTeaserDailyLimit: Math.max(1, Math.min(10, parseInt(e.target.value) || 1)),
+                        })
+                      }
+                      className="flex-1 px-3 py-1.5 text-center font-black text-base rounded-xl border border-purple-300 dark:border-purple-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-purple-500"
+                    />
+                    <button
+                      type="button"
+                      id="btn-inc-teaser-daily-limit"
+                      onClick={() =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          brainTeaserDailyLimit: Math.min(10, (settingsForm.brainTeaserDailyLimit ?? 1) + 1),
+                        })
+                      }
+                      className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-800 dark:text-white font-black text-base flex items-center justify-center cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] font-bold text-slate-400">Presets:</span>
+                    {[1, 2, 3, 5].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            brainTeaserDailyLimit: num,
+                          })
+                        }
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer transition-all ${
+                          (settingsForm.brainTeaserDailyLimit ?? 1) === num
+                            ? 'bg-purple-600 text-white font-black'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-purple-100'
+                        }`}
+                      >
+                        {num} {num === 1 ? 'Q (Recommended)' : 'Qs'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
+                    Caps extra points from teasers so kids prioritize their chore missions.
+                  </p>
+                </div>
+
+                {/* 2. Admin Determined Points Input */}
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                      Points Awarded per Correct Answer:
+                    </label>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-black text-xs">
+                      +{settingsForm.brainTeaserRewardStars ?? 5} Stars
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      id="btn-dec-teaser-stars"
+                      onClick={() =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          brainTeaserRewardStars: Math.max(1, (settingsForm.brainTeaserRewardStars ?? 5) - 1),
+                        })
+                      }
+                      className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-800 dark:text-white font-black text-base flex items-center justify-center cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      id="input-teaser-reward-stars"
+                      min={1}
+                      max={100}
+                      value={settingsForm.brainTeaserRewardStars ?? 5}
+                      onChange={(e) =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          brainTeaserRewardStars: Math.max(1, parseInt(e.target.value) || 1),
+                        })
+                      }
+                      className="flex-1 px-3 py-1.5 text-center font-black text-base rounded-xl border border-purple-300 dark:border-purple-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-purple-500"
+                    />
+                    <button
+                      type="button"
+                      id="btn-inc-teaser-stars"
+                      onClick={() =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          brainTeaserRewardStars: Math.min(100, (settingsForm.brainTeaserRewardStars ?? 5) + 1),
+                        })
+                      }
+                      className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-800 dark:text-white font-black text-base flex items-center justify-center cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] font-bold text-slate-400">Presets:</span>
+                    {[3, 5, 10, 15, 20].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            brainTeaserRewardStars: num,
+                          })
+                        }
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer transition-all ${
+                          (settingsForm.brainTeaserRewardStars ?? 5) === num
+                            ? 'bg-purple-600 text-white font-black'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-purple-100'
+                        }`}
+                      >
+                        +{num} {num === 5 ? '(Default)' : ''}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
+                    Max daily bonus: {(settingsForm.brainTeaserDailyLimit ?? 1) * (settingsForm.brainTeaserRewardStars ?? 5)} Stars/day.
+                  </p>
+                </div>
+
+                {/* 3. Assigned Grade Levels Summary (Locked from Kids) */}
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      Assigned Levels (Locked):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('kids')}
+                      className="text-[10px] font-black text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+                    >
+                      Edit in Kids Tab →
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {database.kids.map((k) => (
+                      <div
+                        key={k.id}
+                        className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700 text-xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm shrink-0">{k.avatar}</span>
+                          <span className="font-black text-slate-800 dark:text-white truncate">{k.name}</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-black text-[11px] shrink-0">
+                          {getGradeLevelInfo(k.gradeLevel).icon} {getGradeLevelInfo(k.gradeLevel).shortLabel}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-[10px] text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1">
+                    <span>🔒</span>
+                    <span>Kids cannot change grade level. Admin only.</span>
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -3790,6 +4104,27 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
               <div>
                 <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
+                  🎓 Grade School Level (for Brain Teasers):
+                </label>
+                <select
+                  id="select-kid-grade-level"
+                  value={editingKid.gradeLevel || '1st_grade'}
+                  onChange={(e) => setEditingKid({ ...editingKid, gradeLevel: e.target.value as GradeLevel })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-xs sm:text-sm text-slate-800 dark:text-white focus:outline-indigo-500 cursor-pointer"
+                >
+                  {GRADE_LEVEL_LIST.map((gl) => (
+                    <option key={gl.id} value={gl.id}>
+                      {gl.icon} {gl.label} ({gl.ages})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 dark:text-slate-400 font-bold mt-0.5">
+                  Tailors daily educational Brain Teaser challenges to their current school level.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
                   Profile Color:
                 </label>
                 <div className="flex gap-2">
@@ -4025,6 +4360,21 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Brain Teaser Preview / Practice Modal for Admin */}
+      {isBrainTeaserPreviewOpen && (
+        <BrainTeaserModal
+          isOpen={isBrainTeaserPreviewOpen}
+          kid={previewTeaserKid || database.kids[0] || null}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          isAdminPreview={true}
+          onClose={() => {
+            setIsBrainTeaserPreviewOpen(false);
+            setPreviewTeaserKid(null);
+          }}
+        />
       )}
     </div>
   );

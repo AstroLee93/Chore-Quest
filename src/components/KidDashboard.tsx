@@ -8,6 +8,8 @@ import { ChoreWheelModal } from './ChoreWheelModal';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { BadgeModal } from './BadgeModal';
 import { BountyBoardModal } from './BountyBoardModal';
+import { BrainTeaserModal } from './BrainTeaserModal';
+import { getDailyTeasersAnsweredToday } from '../utils/brainTeasers';
 import { GoalTracker } from './KidCoin/GoalTracker';
 import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getBountyChores } from '../utils/storage';
 import { calculateKidBadges } from '../utils/badges';
@@ -69,6 +71,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const [isBountyBoardOpen, setIsBountyBoardOpen] = useState<boolean>(false);
   const [selectedBadgeModalId, setSelectedBadgeModalId] = useState<string | null>(null);
   const [isBadgeModalOpen, setIsBadgeModalOpen] = useState<boolean>(false);
+  const [isBrainTeaserOpen, setIsBrainTeaserOpen] = useState<boolean>(false);
 
   // Dynamic badges progress calculation
   const kidBadges = useMemo(() => {
@@ -201,6 +204,36 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                     🍪 Snacks {settings?.pauseSnackRequests ? '(Paused ⏸️)' : `(${kid.stars}⭐)`}
                   </span>
                 </button>
+              )}
+
+              {database && onUpdateDatabase && (
+                (() => {
+                  const todayDateStr = getTodayDateString();
+                  const answeredCount = getDailyTeasersAnsweredToday(kid, todayDateStr);
+                  const dailyLimit = settings?.brainTeaserDailyLimit ?? 1;
+                  const isDone = answeredCount >= dailyLimit;
+                  return (
+                    <button
+                      id="btn-kid-brain-teaser"
+                      onClick={() => {
+                        sound.playTap();
+                        setIsBrainTeaserOpen(true);
+                      }}
+                      className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                        isDone
+                          ? 'bg-purple-900/60 text-purple-200 border border-purple-700/60 hover:bg-purple-800/80'
+                          : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
+                      }`}
+                      title="Answer your grade-level brain teaser for bonus points!"
+                    >
+                      {isDone ? (
+                        <span>🧠 Brain Teaser ({answeredCount}/{dailyLimit} ✓)</span>
+                      ) : (
+                        <span>🧠 Brain Teaser ({answeredCount}/{dailyLimit} • +{settings?.brainTeaserRewardStars ?? 5}⭐)</span>
+                      )}
+                    </button>
+                  );
+                })()
               )}
 
               <button
@@ -731,6 +764,17 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             setIsBountyBoardOpen(false);
             setActiveTimerChore(chore);
           }}
+        />
+      )}
+
+      {/* Daily Brain Teaser Modal */}
+      {isBrainTeaserOpen && database && onUpdateDatabase && (
+        <BrainTeaserModal
+          isOpen={isBrainTeaserOpen}
+          kid={kid}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          onClose={() => setIsBrainTeaserOpen(false)}
         />
       )}
     </div>

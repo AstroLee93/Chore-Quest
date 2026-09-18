@@ -119,6 +119,9 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     kidCoinRatio: 0.10,
     bankInterestRateMonthlyPercent: 5,
     autoDepositChoresToGoal: true,
+    brainTeaserRewardStars: 5,
+    brainTeaserDailyLimit: 1,
+    brainTeaserEnabled: true,
   },
   kids: [
     {
@@ -130,6 +133,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       lifetimeStars: 180,
       streakDays: 4,
       lastActiveDate: getTodayDateString(),
+      gradeLevel: '1st_grade',
       kidCoinBalance: 12.50,
       totalSaved: 100.50,
       weeklyAllowance: 5.00,
@@ -146,6 +150,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       lifetimeStars: 220,
       streakDays: 6,
       lastActiveDate: getTodayDateString(),
+      gradeLevel: '3rd_grade',
       kidCoinBalance: 18.00,
       totalSaved: 147.50,
       weeklyAllowance: 7.00,
@@ -162,6 +167,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       lifetimeStars: 95,
       streakDays: 2,
       lastActiveDate: getTodayDateString(),
+      gradeLevel: '5th_grade',
       kidCoinBalance: 8.00,
       totalSaved: 47.50,
       weeklyAllowance: 4.00,
@@ -671,20 +677,25 @@ export const loadDatabase = (): FamilyDatabase => {
       });
     }
 
-    // Ensure Kid-Coin settings and kid goals are initialized
+    // Ensure Kid-Coin & Brain Teaser settings and kid goals are initialized
     if (parsed.settings) {
       parsed.settings.kidCoinEnabled = parsed.settings.kidCoinEnabled ?? true;
       parsed.settings.kidCoinRatio = parsed.settings.kidCoinRatio ?? 0.10;
       parsed.settings.bankInterestRateMonthlyPercent = parsed.settings.bankInterestRateMonthlyPercent ?? 5;
       parsed.settings.autoDepositChoresToGoal = parsed.settings.autoDepositChoresToGoal ?? true;
+      parsed.settings.brainTeaserRewardStars = parsed.settings.brainTeaserRewardStars ?? 5;
+      parsed.settings.brainTeaserEnabled = parsed.settings.brainTeaserEnabled ?? true;
     }
 
     if (parsed.kids && parsed.kids.length > 0) {
-      parsed.kids = parsed.kids.map((k) => {
+      const defaultGrades: ('1st_grade' | '3rd_grade' | '5th_grade')[] = ['1st_grade', '3rd_grade', '5th_grade'];
+      parsed.kids = parsed.kids.map((k, idx) => {
+        const gradeLevel = k.gradeLevel || defaultGrades[idx % defaultGrades.length];
         if (!k.goals || k.goals.length === 0) {
           const defaultGoals = createDefaultGoalsForKid(k.id, k.name);
           return {
             ...k,
+            gradeLevel,
             kidCoinBalance: k.kidCoinBalance ?? 10.00,
             totalSaved: defaultGoals.reduce((acc, g) => acc + g.currentSaved, 0),
             weeklyAllowance: k.weeklyAllowance ?? 5.00,
@@ -693,8 +704,23 @@ export const loadDatabase = (): FamilyDatabase => {
             transactions: k.transactions || createDefaultTransactionsForKid(k.id),
           };
         }
-        return k;
+        return {
+          ...k,
+          gradeLevel,
+        };
       });
+    }
+
+    if (parsed.settings) {
+      if (parsed.settings.brainTeaserDailyLimit === undefined) {
+        parsed.settings.brainTeaserDailyLimit = 1;
+      }
+      if (parsed.settings.brainTeaserRewardStars === undefined) {
+        parsed.settings.brainTeaserRewardStars = 5;
+      }
+      if (parsed.settings.brainTeaserEnabled === undefined) {
+        parsed.settings.brainTeaserEnabled = true;
+      }
     }
 
     return parsed;
@@ -785,6 +811,9 @@ export const importDatabaseJSON = (jsonString: string): FamilyDatabase => {
       customSnackStarOverrides: parsed.settings?.customSnackStarOverrides,
       calendarColorMode: parsed.settings?.calendarColorMode || 'kid',
       allKidsColor: parsed.settings?.allKidsColor || '#10b981',
+      brainTeaserRewardStars: parsed.settings?.brainTeaserRewardStars ?? 5,
+      brainTeaserDailyLimit: parsed.settings?.brainTeaserDailyLimit ?? 1,
+      brainTeaserEnabled: parsed.settings?.brainTeaserEnabled ?? true,
     },
     kids: parsed.kids || [],
     categories: parsed.categories || [],

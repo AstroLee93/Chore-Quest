@@ -69,6 +69,25 @@ export interface CoachAdvice {
   estimatedPace: string;
 }
 
+export type GradeLevel =
+  | 'kindergarten'
+  | '1st_grade'
+  | '2nd_grade'
+  | '3rd_grade'
+  | '4th_grade'
+  | '5th_grade'
+  | 'middle_school'
+  | 'high_school';
+
+export interface BrainTeaserHistory {
+  lastCompletedDate?: string; // YYYY-MM-DD
+  todayAnsweredCount?: number; // Number of brain teaser questions completed today
+  totalAnswered?: number;
+  totalCorrect?: number;
+  totalStarsEarned?: number;
+  completedQuestionIds?: string[];
+}
+
 export interface KidProfile {
   id: string;
   name: string;
@@ -79,6 +98,8 @@ export interface KidProfile {
   streakDays: number;
   lastActiveDate?: string; // YYYY-MM-DD
   pin?: string; // optional kid pin
+  gradeLevel?: GradeLevel; // Assigned grade school level
+  brainTeaserHistory?: BrainTeaserHistory;
   kidCoinBalance?: number; // available cash in USD / Kid Coins
   totalSaved?: number; // total in active goals in USD
   weeklyAllowance?: number; // weekly allowance in USD
@@ -268,6 +289,9 @@ export interface AppSettings {
   bankInterestRateMonthlyPercent?: number; // Bank of Mom & Dad monthly matching interest (default: 5%)
   autoDepositChoresToGoal?: boolean; // Automatically route chore earnings into primary savings goal rocket
   lastInterestCalculatedMonth?: string; // YYYY-MM
+  brainTeaserRewardStars?: number; // Admin-determined points awarded for correct brain teaser answers (default: 5)
+  brainTeaserDailyLimit?: number; // Admin-determined maximum questions answered per day for points (default: 1)
+  brainTeaserEnabled?: boolean; // Toggle brain teaser challenges feature (default: true)
 }
 
 export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';

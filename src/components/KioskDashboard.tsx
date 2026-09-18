@@ -19,6 +19,8 @@ import { KidSnackRequestModal } from './KidSnackRequestModal';
 import { RewardStoreModal } from './RewardStoreModal';
 import { KidAvatarModal } from './KidAvatarModal';
 import { BountyBoardModal } from './BountyBoardModal';
+import { BrainTeaserModal } from './BrainTeaserModal';
+import { getGradeLevelInfo, getDailyTeasersAnsweredToday } from '../utils/brainTeasers';
 
 interface KioskDashboardProps {
   database: FamilyDatabase;
@@ -54,6 +56,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [rewardStoreKid, setRewardStoreKid] = useState<KidProfile | null>(null);
   const [isRewardStoreOpen, setIsRewardStoreOpen] = useState<boolean>(false);
   const [editingAvatarKid, setEditingAvatarKid] = useState<KidProfile | null>(null);
+  const [brainTeaserKid, setBrainTeaserKid] = useState<KidProfile | null>(null);
+  const [isBrainTeaserOpen, setIsBrainTeaserOpen] = useState<boolean>(false);
 
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = useMemo(() => getTodayDateString(), []);
@@ -516,8 +520,11 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                           </span>
                         )}
                       </h2>
-                      <div className="flex items-center gap-2 text-xs font-bold text-white/80 mt-0.5">
+                      <div className="flex items-center gap-2 text-xs font-bold text-white/80 mt-0.5 flex-wrap">
                         <span className="truncate">{level.icon} {level.title}</span>
+                        <span className="text-[10px] font-extrabold text-amber-200 bg-white/15 px-1.5 py-0.5 rounded-md shrink-0">
+                          {getGradeLevelInfo(kid.gradeLevel).icon} {getGradeLevelInfo(kid.gradeLevel).shortLabel}
+                        </span>
                         <span className="text-[10px] text-amber-300 font-extrabold underline opacity-0 group-hover/header:opacity-100 transition-opacity shrink-0">
                           Enter PIN
                         </span>
@@ -543,6 +550,24 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                           },
                         },
                         {
+                          id: 'brain_teaser',
+                          label: (() => {
+                            const todayStr = getTodayDateString();
+                            const answered = getDailyTeasersAnsweredToday(kid, todayStr);
+                            const limit = database.settings.brainTeaserDailyLimit ?? 1;
+                            const pts = database.settings.brainTeaserRewardStars ?? 5;
+                            if (answered >= limit) {
+                              return `🧠 Brain Teasers (Done Today ${answered}/${limit} ✓)`;
+                            }
+                            return `🧠 Daily Brain Teaser (${answered}/${limit} • +${pts} Pts)`;
+                          })(),
+                          variant: 'primary',
+                          onClick: () => {
+                            setBrainTeaserKid(kid);
+                            setIsBrainTeaserOpen(true);
+                          },
+                        },
+                        {
                           id: 'avatar',
                           label: '🎨 Change Avatar & Color',
                           onClick: () => setEditingAvatarKid(kid),
@@ -558,16 +583,10 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         {
                           id: 'snack_request',
                           label: database.settings.pauseSnackRequests ? '🍪 Snack Request (Paused ⏸️)' : '🍪 Kids Grocery & Snack Request',
-                          variant: 'primary',
                           onClick: () => {
                             setSnackKid(kid);
                             setIsSnackModalOpen(true);
                           },
-                        },
-                        {
-                          id: 'goal',
-                          label: '🏆 Family Team Goal',
-                          onClick: () => setIsGoalModalOpen(true),
                         },
                         {
                           id: 'parent',
@@ -1042,6 +1061,20 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
             );
             onUpdateDatabase({ ...database, kids: updatedKids });
             setEditingAvatarKid(null);
+          }}
+        />
+      )}
+
+      {/* Daily Brain Teaser Modal */}
+      {isBrainTeaserOpen && (
+        <BrainTeaserModal
+          isOpen={isBrainTeaserOpen}
+          kid={brainTeaserKid}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          onClose={() => {
+            setIsBrainTeaserOpen(false);
+            setBrainTeaserKid(null);
           }}
         />
       )}

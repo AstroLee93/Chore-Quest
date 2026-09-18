@@ -88,6 +88,37 @@ export interface BrainTeaserHistory {
   completedQuestionIds?: string[];
 }
 
+export interface ReadingLogEntry {
+  id: string;
+  kidId: string;
+  bookTitle: string;
+  chapterCompleted: string;
+  normalizedBookTitle: string;
+  normalizedChapter: string;
+  timestamp: string; // ISO string
+  date: string; // YYYY-MM-DD
+  minutesRead?: number;
+  notes?: string;
+  reactionEmoji?: string;
+  starsAwarded: number;
+  isBookFinished?: boolean;
+}
+
+export interface KidBookShelfItem {
+  id: string;
+  title: string;
+  author?: string;
+  coverColor?: string;
+  coverEmoji?: string;
+  lastChapterRead: string;
+  completedChapters: string[];
+  startedAt: string;
+  lastReadAt: string;
+  isFinished?: boolean;
+  finishedAt?: string;
+  totalMinutesRead?: number;
+}
+
 export interface KidProfile {
   id: string;
   name: string;
@@ -106,6 +137,7 @@ export interface KidProfile {
   savingsStreakDays?: number;
   goals?: SavingsGoal[];
   transactions?: KidCoinTransaction[];
+  readingShelf?: KidBookShelfItem[];
 }
 
 export interface CategoryTimeWindow {
@@ -507,6 +539,7 @@ export interface FamilyDatabase {
   weeklyMenu?: WeeklyDinnerMenu;
   weeklyGroceryList?: WeeklyGroceryList;
   customCalendarCategories?: CustomCalendarCategory[];
+  readingLogs?: ReadingLogEntry[];
   lastBackupDate?: string;
 }
 

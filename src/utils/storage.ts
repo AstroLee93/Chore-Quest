@@ -624,6 +624,36 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
   ],
   weeklyMenu: DEFAULT_WEEKLY_MENU,
   weeklyGroceryList: DEFAULT_WEEKLY_GROCERY_LIST,
+  readingLogs: [
+    {
+      id: 'read-seed-1',
+      kidId: 'kid-2',
+      bookTitle: 'Charlotte’s Web',
+      chapterCompleted: 'Chapter 3: Escape',
+      normalizedBookTitle: 'charlottes web',
+      normalizedChapter: 'chapter-3',
+      timestamp: new Date(Date.now() - 86400000).toISOString(),
+      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+      minutesRead: 25,
+      notes: 'Wilbur tried to escape the barnyard! So funny!',
+      reactionEmoji: '😄',
+      starsAwarded: 5,
+    },
+    {
+      id: 'read-seed-2',
+      kidId: 'kid-1',
+      bookTitle: 'Magic Tree House: Dinosaurs Before Dark',
+      chapterCompleted: 'Chapter 2: The Monster',
+      normalizedBookTitle: 'magic tree house dinosaurs before dark',
+      normalizedChapter: 'chapter-2',
+      timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
+      date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
+      minutesRead: 20,
+      notes: 'Jack and Annie saw a Pteranodon fly right over them!',
+      reactionEmoji: '🦖',
+      starsAwarded: 5,
+    },
+  ],
 };
 
 // Storage operations
@@ -721,6 +751,17 @@ export const loadDatabase = (): FamilyDatabase => {
       if (parsed.settings.brainTeaserEnabled === undefined) {
         parsed.settings.brainTeaserEnabled = true;
       }
+    }
+
+    if (!parsed.readingLogs) {
+      parsed.readingLogs = DEFAULT_SEED_DATA.readingLogs || [];
+    }
+
+    if (parsed.kids && parsed.kids.length > 0) {
+      parsed.kids = parsed.kids.map((k) => ({
+        ...k,
+        readingShelf: k.readingShelf || [],
+      }));
     }
 
     return parsed;
@@ -827,6 +868,7 @@ export const importDatabaseJSON = (jsonString: string): FamilyDatabase => {
     savedFamilyGoals: parsed.savedFamilyGoals || DEFAULT_SEED_DATA.savedFamilyGoals,
     weeklyMenu: parsed.weeklyMenu || DEFAULT_WEEKLY_MENU,
     weeklyGroceryList: parsed.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST,
+    readingLogs: parsed.readingLogs || [],
     lastBackupDate: new Date().toISOString(),
   };
 };

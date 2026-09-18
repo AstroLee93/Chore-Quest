@@ -9,7 +9,9 @@ import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { BadgeModal } from './BadgeModal';
 import { BountyBoardModal } from './BountyBoardModal';
 import { BrainTeaserModal } from './BrainTeaserModal';
+import { ReadingLogModal } from './ReadingLogModal';
 import { getDailyTeasersAnsweredToday } from '../utils/brainTeasers';
+import { isReadingCompletedToday, findReadingChore } from '../utils/reading';
 import { GoalTracker } from './KidCoin/GoalTracker';
 import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getBountyChores } from '../utils/storage';
 import { calculateKidBadges } from '../utils/badges';
@@ -72,6 +74,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const [selectedBadgeModalId, setSelectedBadgeModalId] = useState<string | null>(null);
   const [isBadgeModalOpen, setIsBadgeModalOpen] = useState<boolean>(false);
   const [isBrainTeaserOpen, setIsBrainTeaserOpen] = useState<boolean>(false);
+  const [isReadingLogOpen, setIsReadingLogOpen] = useState<boolean>(false);
 
   // Dynamic badges progress calculation
   const kidBadges = useMemo(() => {
@@ -231,6 +234,34 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                       ) : (
                         <span>🧠 Brain Teaser ({answeredCount}/{dailyLimit} • +{settings?.brainTeaserRewardStars ?? 5}⭐)</span>
                       )}
+                    </button>
+                  );
+                })()
+              )}
+
+              {/* Reading Log Quest Button */}
+              {database && onUpdateDatabase && (
+                (() => {
+                  const isReadDone = isReadingCompletedToday(database, kid.id, todayStr);
+                  const readingChore = findReadingChore(database.chores || []);
+                  const rStars = readingChore?.stars ?? 5;
+                  return (
+                    <button
+                      id="btn-kid-reading-log"
+                      onClick={() => {
+                        sound.playTap();
+                        setIsReadingLogOpen(true);
+                      }}
+                      className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                        isReadDone
+                          ? 'bg-amber-900/60 text-amber-200 border border-amber-700/60 hover:bg-amber-800/80'
+                          : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white'
+                      }`}
+                      title="Log your book and chapter to earn reading stars!"
+                    >
+                      <span>
+                        {isReadDone ? '📖 Reading Log (Done Today ✓)' : `📖 Reading Log (+${rStars}⭐)`}
+                      </span>
                     </button>
                   );
                 })()

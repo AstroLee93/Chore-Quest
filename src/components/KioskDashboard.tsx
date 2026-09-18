@@ -20,7 +20,9 @@ import { RewardStoreModal } from './RewardStoreModal';
 import { KidAvatarModal } from './KidAvatarModal';
 import { BountyBoardModal } from './BountyBoardModal';
 import { BrainTeaserModal } from './BrainTeaserModal';
+import { ReadingLogModal } from './ReadingLogModal';
 import { getGradeLevelInfo, getDailyTeasersAnsweredToday } from '../utils/brainTeasers';
+import { isReadingCompletedToday, findReadingChore } from '../utils/reading';
 
 interface KioskDashboardProps {
   database: FamilyDatabase;
@@ -58,6 +60,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [editingAvatarKid, setEditingAvatarKid] = useState<KidProfile | null>(null);
   const [brainTeaserKid, setBrainTeaserKid] = useState<KidProfile | null>(null);
   const [isBrainTeaserOpen, setIsBrainTeaserOpen] = useState<boolean>(false);
+  const [readingLogKid, setReadingLogKid] = useState<KidProfile | null>(null);
+  const [isReadingLogOpen, setIsReadingLogOpen] = useState<boolean>(false);
 
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = useMemo(() => getTodayDateString(), []);
@@ -525,6 +529,11 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         <span className="text-[10px] font-extrabold text-amber-200 bg-white/15 px-1.5 py-0.5 rounded-md shrink-0">
                           {getGradeLevelInfo(kid.gradeLevel).icon} {getGradeLevelInfo(kid.gradeLevel).shortLabel}
                         </span>
+                        {isReadingCompletedToday(database, kid.id, todayStr) && (
+                          <span className="text-[10px] font-extrabold text-emerald-200 bg-emerald-700/60 px-1.5 py-0.5 rounded-md shrink-0 flex items-center gap-1">
+                            📖 Read ✓
+                          </span>
+                        )}
                         <span className="text-[10px] text-amber-300 font-extrabold underline opacity-0 group-hover/header:opacity-100 transition-opacity shrink-0">
                           Enter PIN
                         </span>
@@ -547,6 +556,23 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                           variant: 'primary',
                           onClick: () => {
                             setSelectedKidForPin(kid);
+                          },
+                        },
+                        {
+                          id: 'reading_log',
+                          label: (() => {
+                            const isDone = isReadingCompletedToday(database, kid.id, todayStr);
+                            const readingChore = findReadingChore(database.chores || []);
+                            const stars = readingChore?.stars ?? 5;
+                            if (isDone) {
+                              return '📖 Daily Reading (Done Today ✓)';
+                            }
+                            return `📖 Log Daily Reading (+${stars} Stars)`;
+                          })(),
+                          variant: 'primary',
+                          onClick: () => {
+                            setReadingLogKid(kid);
+                            setIsReadingLogOpen(true);
                           },
                         },
                         {
@@ -1075,6 +1101,20 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           onClose={() => {
             setIsBrainTeaserOpen(false);
             setBrainTeaserKid(null);
+          }}
+        />
+      )}
+
+      {/* Daily Reading Log Modal */}
+      {isReadingLogOpen && readingLogKid && (
+        <ReadingLogModal
+          isOpen={isReadingLogOpen}
+          kid={readingLogKid}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          onClose={() => {
+            setIsReadingLogOpen(false);
+            setReadingLogKid(null);
           }}
         />
       )}

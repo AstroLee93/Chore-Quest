@@ -481,19 +481,30 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer py-1"
                   >
                     <Lightbulb className="w-3.5 h-3.5" />
-                    <span>Need a clue? Tap for a hint! 💡</span>
+                    <span>Need a thinking prompt? Tap for a clue! 💡</span>
                   </button>
                 ) : (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2.5"
+                    className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-xs flex flex-col gap-2"
                   >
-                    <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-black">Helpful Clue: </span>
-                      <span>{currentTeaser.hint}</span>
+                    <div className="flex items-start gap-2.5">
+                      <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-black">Thinking Clue: </span>
+                        <span>{currentTeaser.hint}</span>
+                      </div>
                     </div>
+                    {currentTeaser.thinkingAngle && (
+                      <div className="pl-6 border-t border-amber-200/60 dark:border-amber-800/40 pt-2 flex items-start gap-1.5 text-amber-800/90 dark:text-amber-300/90">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold">Think Outside the Box: </span>
+                          <span className="italic">{currentTeaser.thinkingAngle}</span>
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </div>

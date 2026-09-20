@@ -496,6 +496,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                   onUndo={onUndoChoreStatus}
                   onStartTimer={(c) => setActiveTimerChore(c)}
                   claimedByOtherKidName={otherKidClaimer?.name}
+                  onOpenReadingLog={() => setIsReadingLogOpen(true)}
                 />
               );
             })
@@ -806,6 +807,17 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           database={database}
           onUpdateDatabase={onUpdateDatabase}
           onClose={() => setIsBrainTeaserOpen(false)}
+        />
+      )}
+
+      {/* Daily Reading Adventure Log Modal */}
+      {isReadingLogOpen && database && onUpdateDatabase && (
+        <ReadingLogModal
+          isOpen={isReadingLogOpen}
+          kid={kid}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          onClose={() => setIsReadingLogOpen(false)}
         />
       )}
     </div>

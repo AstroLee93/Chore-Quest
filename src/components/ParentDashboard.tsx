@@ -56,6 +56,8 @@ import {
   GroceryItem,
   GroceryImportance,
   GradeLevel,
+  ReadingLogEntry,
+  KidBookShelfItem,
 } from '../types';
 import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON, getKioskTimeoutMs } from '../utils/storage';
 import { sound } from '../utils/sound';
@@ -64,6 +66,7 @@ import { GROCERY_IMPORTANCE_METADATA } from '../utils/grocery';
 import { EmojiPicker } from './EmojiPicker';
 import { ActionMenu } from './ActionMenu';
 import { fireConfetti } from '../utils/confetti';
+import { formatReadingTimestamp, getKidReadingStats } from '../utils/reading';
 import {
   CURATED_SNACK_CATALOG,
   SnackCatalogItem,
@@ -78,6 +81,8 @@ import { WeeklyMenuModal } from './WeeklyMenuModal';
 import { ParentSavingsManagement } from './Savings/ParentSavingsManagement';
 import { BrainTeaserModal } from './BrainTeaserModal';
 import { GRADE_LEVEL_LIST, getGradeLevelInfo } from '../utils/brainTeasers';
+import { RewardsManagementSection } from './RewardsManagementSection';
+import { StarValueInput } from './StarValueInput';
 
 interface ParentDashboardProps {
   database: FamilyDatabase;
@@ -96,7 +101,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   onOpenCalendar,
   onOpenSnackRequest,
 }) => {
-  const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'menu' | 'chores' | 'rewards' | 'kids' | 'savings' | 'settings'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'menu' | 'chores' | 'rewards' | 'kids' | 'reading' | 'savings' | 'settings'>('activity');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const todayStr = getTodayDateString();
 
@@ -135,6 +140,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const [activityStatusFilter, setActivityStatusFilter] = useState<'all' | 'completed' | 'skipped' | 'pending'>('all');
   const [activityVerificationFilter, setActivityVerificationFilter] = useState<'all' | 'unverified' | 'verified'>('all');
   const [isSnackPricingExpanded, setIsSnackPricingExpanded] = useState<boolean>(false);
+
+  // Reading Journey states
+  const [readingKidFilter, setReadingKidFilter] = useState<string>('all');
+  const [readingSearchQuery, setReadingSearchQuery] = useState<string>('');
+  const [readingShelfKidId, setReadingShelfKidId] = useState<string>('');
+  const [newBookTitle, setNewBookTitle] = useState<string>('');
+  const [newBookAuthor, setNewBookAuthor] = useState<string>('');
+  const [newBookEmoji, setNewBookEmoji] = useState<string>('📚');
+  const [isAddBookModalOpen, setIsAddBookModalOpen] = useState<boolean>(false);
 
   // Modals for Editing/Creating
   const [editingChore, setEditingChore] = useState<Partial<ChoreItem> | null>(null);
@@ -793,6 +807,96 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
   }, [database.logs, activityDateFilter, activityKidFilter, activityStatusFilter, activityVerificationFilter]);
 
+  // Computed: Filtered Reading Logs
+  const filteredReadingLogs = useMemo(() => {
+    return (database.readingLogs || [])
+      .filter((log) => {
+        if (readingKidFilter !== 'all' && log.kidId !== readingKidFilter) return false;
+        if (readingSearchQuery.trim()) {
+          const q = readingSearchQuery.toLowerCase();
+          const matchBook = log.bookTitle.toLowerCase().includes(q);
+          const matchChap = log.chapterCompleted.toLowerCase().includes(q);
+          const matchNotes = (log.notes || '').toLowerCase().includes(q);
+          const kid = database.kids.find((k) => k.id === log.kidId);
+          const matchKid = kid?.name.toLowerCase().includes(q);
+          if (!matchBook && !matchChap && !matchNotes && !matchKid) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+  }, [database.readingLogs, database.kids, readingKidFilter, readingSearchQuery]);
+
+  const handleDeleteReadingLog = (logId: string) => {
+    sound.playTap();
+    if (!confirm('Are you sure you want to remove this reading log entry?')) return;
+    const target = (database.readingLogs || []).find((l) => l.id === logId);
+    if (!target) return;
+
+    let updatedKids = database.kids;
+    if (target.starsAwarded > 0) {
+      if (confirm(`Deduct the ${target.starsAwarded} stars previously earned for this reading session?`)) {
+        updatedKids = database.kids.map((k) => {
+          if (k.id === target.kidId) {
+            return {
+              ...k,
+              stars: Math.max(0, k.stars - target.starsAwarded),
+              lifetimeStars: Math.max(0, k.lifetimeStars - target.starsAwarded),
+            };
+          }
+          return k;
+        });
+      }
+    }
+
+    const updatedReadingLogs = (database.readingLogs || []).filter((l) => l.id !== logId);
+    onUpdateDatabase({
+      ...database,
+      kids: updatedKids,
+      readingLogs: updatedReadingLogs,
+    });
+  };
+
+  const handleAddBookToShelf = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!readingShelfKidId || !newBookTitle.trim()) return;
+    sound.playRewardRedeemed();
+    fireConfetti({ origin: { y: 0.5 }, mode: 'snappy' });
+
+    const newBook: KidBookShelfItem = {
+      id: `book-${Date.now()}`,
+      title: newBookTitle.trim(),
+      author: newBookAuthor.trim() || undefined,
+      coverEmoji: newBookEmoji || '📖',
+      coverColor: 'bg-indigo-600',
+      lastChapterRead: '',
+      completedChapters: [],
+      isFinished: false,
+      startedAt: new Date().toISOString(),
+      lastReadAt: new Date().toISOString(),
+    };
+
+    const updatedKids = database.kids.map((k) => {
+      if (k.id === readingShelfKidId) {
+        const currentShelf = k.readingShelf || [];
+        return {
+          ...k,
+          readingShelf: [newBook, ...currentShelf],
+        };
+      }
+      return k;
+    });
+
+    onUpdateDatabase({
+      ...database,
+      kids: updatedKids,
+    });
+
+    setIsAddBookModalOpen(false);
+    setNewBookTitle('');
+    setNewBookAuthor('');
+    setNewBookEmoji('📚');
+  };
+
   return (
     <div className="w-full max-w-6xl mx-auto p-0 sm:px-4 sm:py-4 space-y-1 sm:space-y-4 pb-20 sm:pb-24">
       {/* Parent Header Banner - Sleek, zero-padding edge-to-edge on mobile */}
@@ -853,6 +957,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           { id: 'chores', label: 'Chores & Categories', icon: FileSpreadsheet, badge: database.chores.length },
           { id: 'rewards', label: 'Rewards & Claims', icon: Gift, badge: database.redemptions.filter((r) => r.status === 'pending').length || undefined },
           { id: 'kids', label: 'Kids Profiles', icon: Users, badge: database.kids.length },
+          { id: 'reading', label: 'Reading Journey', icon: BookOpen, badge: (database.readingLogs || []).length || undefined },
           { id: 'savings', label: 'Kid-Coin Savings', icon: Coins },
           { id: 'settings', label: 'Settings & Pi Backup', icon: Settings },
         ].map((tab) => {
@@ -2226,250 +2331,11 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
       {/* TAB 3: REWARDS & CLAIMS */}
       {activeTab === 'rewards' && (
-        <div className="space-y-2 sm:space-y-4 animate-fade-in">
-          {/* Quick 1-Click Kid Access Control for Reward Store */}
-          <div
-            className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs ${
-              database.settings.pauseRewardStore
-                ? 'bg-amber-50 border-amber-400 text-amber-950'
-                : 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl font-black shrink-0 ${
-                  database.settings.pauseRewardStore
-                    ? 'bg-amber-200 text-amber-800'
-                    : 'bg-emerald-200 text-emerald-800'
-                }`}
-              >
-                {database.settings.pauseRewardStore ? '⏸️' : '🎁'}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-black text-xs sm:text-sm">
-                    Reward Store Kid Access:
-                  </span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      database.settings.pauseRewardStore
-                        ? 'bg-amber-200 text-amber-950 border border-amber-300'
-                        : 'bg-emerald-200 text-emerald-950 border border-emerald-300'
-                    }`}
-                  >
-                    {database.settings.pauseRewardStore ? 'Paused for Kids' : 'Active (Open for Kids)'}
-                  </span>
-                </div>
-                <p className="text-[11px] font-bold opacity-80 mt-0.5">
-                  {database.settings.pauseRewardStore
-                    ? database.settings.pauseRewardStoreReason
-                      ? `Reason shown to kids: "${database.settings.pauseRewardStoreReason}"`
-                      : 'Kids are temporarily restricted from claiming prizes. Stars are safely preserved.'
-                    : 'Kids can browse the store catalog and redeem their earned stars for rewards.'}
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              id="btn-quick-toggle-reward-store-pause"
-              onClick={() => {
-                sound.playTap();
-                const newPaused = !database.settings.pauseRewardStore;
-                const updatedSettings = {
-                  ...database.settings,
-                  pauseRewardStore: newPaused,
-                };
-                setSettingsForm((prev) => ({ ...prev, pauseRewardStore: newPaused }));
-                onUpdateDatabase({
-                  ...database,
-                  settings: updatedSettings,
-                });
-              }}
-              className={`min-h-[40px] px-3.5 py-2 rounded-xl font-black text-xs sm:text-sm transition-all active:scale-95 cursor-pointer shadow-xs whitespace-nowrap ${
-                database.settings.pauseRewardStore
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
-              }`}
-            >
-              {database.settings.pauseRewardStore ? '▶️ Resume / Unpause Store' : '⏸️ Pause Store for Kids'}
-            </button>
-          </div>
-
-          {/* Pending Kid Claims Queue */}
-          <div className="bg-white p-2 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-pink-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
-            <div>
-              <h3 className="font-black text-slate-800 text-xs sm:text-base flex items-center gap-1.5">
-                <Gift className="w-4 h-4 text-pink-500" />
-                Kid Reward Claims Queue ({database.redemptions.length})
-              </h3>
-              <p className="hidden sm:block text-xs text-slate-500 font-bold">
-                Approve, mark fulfilled, or refund star purchases from the Reward Store.
-              </p>
-            </div>
-
-            {database.redemptions.length === 0 ? (
-              <div className="text-center py-4 sm:py-6 text-slate-400 bg-yellow-50/50 rounded-lg sm:rounded-xl border border-dashed border-yellow-200">
-                <Gift className="w-6 h-6 mx-auto mb-1 opacity-40 text-pink-500" />
-                <p className="text-xs font-bold text-slate-600">No reward claims submitted yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-1 sm:space-y-2">
-                {database.redemptions.map((redemption) => {
-                  const kid = database.kids.find((k) => k.id === redemption.kidId);
-                  return (
-                    <div
-                      key={redemption.id}
-                      className="p-2 sm:p-3 rounded-none sm:rounded-xl border-x-0 border-y sm:border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3 bg-white shadow-none sm:shadow-2xs"
-                    >
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <span className="text-xl sm:text-2xl p-1 sm:p-1.5 rounded-xl bg-yellow-100 border border-yellow-300 shrink-0">
-                          {redemption.rewardIcon || '🎁'}
-                        </span>
-                        <div>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-black text-xs sm:text-sm text-slate-800">
-                              {redemption.rewardTitle}
-                            </span>
-                            <span className="text-[10px] sm:text-xs font-black text-slate-900 bg-yellow-400 px-2 py-0.2 rounded-full border border-yellow-300">
-                              {redemption.starCost} ⭐
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-slate-500 font-bold">
-                            Claimed by <strong>{kid?.name}</strong> •{' '}
-                            {new Date(redemption.date).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </div>
-                          {redemption.notes && (
-                            <div className="text-[11px] text-pink-700 font-bold italic mt-0.5">
-                              "{redemption.notes}"
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 justify-end shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                        {redemption.status === 'pending' ? (
-                          <ActionMenu
-                            id={`menu-redemption-${redemption.id}`}
-                            label="Review"
-                            buttonClassName="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 shadow-xs cursor-pointer inline-flex items-center gap-1"
-                            items={[
-                              {
-                                id: 'fulfill',
-                                label: 'Approve & Mark Fulfilled',
-                                icon: <Check className="w-3.5 h-3.5" />,
-                                variant: 'success',
-                                onClick: () => handleUpdateRedemptionStatus(redemption.id, 'fulfilled'),
-                              },
-                              {
-                                id: 'refund',
-                                label: 'Refund Stars',
-                                icon: <RotateCcw className="w-3.5 h-3.5" />,
-                                variant: 'danger',
-                                onClick: () => handleUpdateRedemptionStatus(redemption.id, 'rejected'),
-                              },
-                            ]}
-                          />
-                        ) : (
-                          <span
-                            className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider ${
-                              redemption.status === 'fulfilled'
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                : 'bg-rose-100 text-rose-800 border border-rose-300'
-                            }`}
-                          >
-                            {redemption.status}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Reward Catalog Management */}
-          <div className="bg-white p-2 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-yellow-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
-            <div className="flex items-center justify-between gap-1.5">
-              <div>
-                <h3 className="font-black text-slate-800 text-xs sm:text-base">
-                  Reward Catalog Items ({database.rewards.length})
-                </h3>
-                <p className="hidden sm:block text-xs text-slate-500 font-bold">
-                  Set up motivating rewards, treats, screen time passes, or allowance bonuses.
-                </p>
-              </div>
-              <button
-                id="btn-add-reward"
-                onClick={() => {
-                  sound.playTap();
-                  setEditingReward({
-                    starCost: 25,
-                    category: 'treat',
-                    maxPerWeek: 2,
-                    isActive: true,
-                  });
-                }}
-                className="px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs flex items-center gap-1 transition-all shadow-xs active:scale-95 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                <span>Add Item</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 sm:gap-3">
-              {database.rewards.map((reward) => (
-                <div
-                  key={reward.id}
-                  className="p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl border border-slate-200 flex flex-col justify-between hover:border-yellow-400 transition-all bg-white shadow-none sm:shadow-2xs"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-2xl p-1.5 rounded-xl bg-yellow-100 border border-yellow-300 shadow-2xs">
-                        {reward.icon || '🎁'}
-                      </span>
-                      <span className="font-black text-slate-900 bg-yellow-400 px-2.5 py-0.5 rounded-full text-xs border border-yellow-300">
-                        ⭐ {reward.starCost}
-                      </span>
-                    </div>
-                    <h4 className="font-black text-slate-800 text-xs sm:text-sm mb-0.5">{reward.title}</h4>
-                    <p className="text-[11px] text-slate-500 font-bold mb-2 line-clamp-2">{reward.description}</p>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-                    <span className="text-[10px] text-slate-400 capitalize font-bold">
-                      {reward.category.replace('_', ' ')}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <ActionMenu
-                        id={`menu-reward-${reward.id}`}
-                        label="Menu"
-                        items={[
-                          {
-                            id: 'edit',
-                            label: 'Edit Reward',
-                            icon: <Edit2 className="w-3.5 h-3.5" />,
-                            onClick: () => setEditingReward(reward),
-                          },
-                          {
-                            id: 'delete',
-                            label: 'Delete Reward',
-                            icon: <Trash2 className="w-3.5 h-3.5" />,
-                            variant: 'danger',
-                            onClick: () => handleDeleteReward(reward.id),
-                          },
-                        ]}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="animate-fade-in">
+          <RewardsManagementSection
+            database={database}
+            onUpdateDatabase={onUpdateDatabase}
+          />
         </div>
       )}
 
@@ -2739,6 +2605,432 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             database={database}
             onUpdateDatabase={onUpdateDatabase}
           />
+        </div>
+      )}
+
+      {/* TAB: READING JOURNEY & PROGRESS AUDIT */}
+      {activeTab === 'reading' && (
+        <div className="space-y-3 sm:space-y-6 animate-fade-in">
+          {/* Header Banner & Stats */}
+          <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 rounded-2xl p-4 sm:p-6 text-white shadow-md border-2 border-amber-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-2xl sm:text-3xl border border-white/30 shadow-xs shrink-0">
+                  📖
+                </div>
+                <div>
+                  <h3 className="font-black text-lg sm:text-2xl text-white tracking-tight flex items-center gap-2">
+                    Kids Reading Adventure Hub
+                  </h3>
+                  <p className="text-xs sm:text-sm text-amber-100 font-medium max-w-xl">
+                    Reliable progress tracking for books and chapters read. Anti-duplicate verification ensures genuine progress without turning reading into a punishment.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    sound.playTap();
+                    if (database.kids.length > 0) {
+                      setReadingShelfKidId(database.kids[0].id);
+                      setIsAddBookModalOpen(true);
+                    }
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-white text-amber-950 hover:bg-amber-50 font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 text-amber-700" />
+                  <span>Recommend / Add Book</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-amber-500/50">
+              <div className="bg-black/15 rounded-xl p-2.5">
+                <div className="text-[10px] sm:text-xs text-amber-200 font-bold uppercase tracking-wider">Total Sessions</div>
+                <div className="text-xl sm:text-2xl font-black text-white mt-0.5">
+                  {(database.readingLogs || []).length} logged
+                </div>
+              </div>
+              <div className="bg-black/15 rounded-xl p-2.5">
+                <div className="text-[10px] sm:text-xs text-amber-200 font-bold uppercase tracking-wider">Total Reading Time</div>
+                <div className="text-xl sm:text-2xl font-black text-white mt-0.5">
+                  {(database.readingLogs || []).reduce((acc, curr) => acc + (curr.minutesRead || 20), 0)} min
+                </div>
+              </div>
+              <div className="bg-black/15 rounded-xl p-2.5">
+                <div className="text-[10px] sm:text-xs text-amber-200 font-bold uppercase tracking-wider">Active Books</div>
+                <div className="text-xl sm:text-2xl font-black text-white mt-0.5">
+                  {database.kids.reduce((acc, k) => acc + (k.readingShelf?.length || 0), 0)} on shelves
+                </div>
+              </div>
+              <div className="bg-black/15 rounded-xl p-2.5">
+                <div className="text-[10px] sm:text-xs text-amber-200 font-bold uppercase tracking-wider">Read Today</div>
+                <div className="text-xl sm:text-2xl font-black text-emerald-300 mt-0.5">
+                  {database.kids.filter((k) => (database.readingLogs || []).some((l) => l.kidId === k.id && l.date === todayStr)).length} / {database.kids.length} kids
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Kids Shelves and Reading Progress Overview */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                  <span>📚 Current Books & Kid Progress</span>
+                </h4>
+                <p className="text-xs text-slate-500 font-medium">
+                  What each child is currently exploring and their latest chapter completed.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {database.kids.map((k) => {
+                const stats = getKidReadingStats(
+                  database.readingLogs || [],
+                  k.readingShelf,
+                  k.id,
+                  todayStr
+                );
+                const latestLog = (database.readingLogs || [])
+                  .filter((l) => l.kidId === k.id)
+                  .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''))[0];
+
+                return (
+                  <div
+                    key={k.id}
+                    className="p-3.5 sm:p-4 rounded-2xl border-2 border-slate-200 hover:border-amber-400 transition-all bg-slate-50/50 space-y-3"
+                  >
+                    {/* Kid Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-xl border-2 shadow-xs"
+                          style={{ borderColor: k.color || '#f59e0b', backgroundColor: '#fff' }}
+                        >
+                          {k.avatar || '🦁'}
+                        </div>
+                        <div>
+                          <div className="font-black text-sm text-slate-900">{k.name}</div>
+                          <div className="text-[11px] font-bold text-slate-500">
+                            {stats.totalChapters} chapters ({stats.totalMinutes}m)
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Today status badge */}
+                      {stats.readToday ? (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-300">
+                          Read Today ✓
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black border border-amber-300">
+                          Pending Today
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Streak indicator */}
+                    {stats.streak > 0 && (
+                      <div className="p-2 rounded-xl bg-orange-50 border border-orange-200 text-orange-950 text-xs font-black flex items-center gap-1.5">
+                        <span>🔥</span>
+                        <span>{stats.streak} Day Reading Streak!</span>
+                      </div>
+                    )}
+
+                    {/* Current / Latest Book */}
+                    <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1.5 shadow-2xs">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Current Book on Shelf
+                      </div>
+                      {stats.activeBook ? (
+                        <div>
+                          <div className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                            <span>{stats.activeBook.coverEmoji || '📖'}</span>
+                            <span className="truncate">{stats.activeBook.title}</span>
+                          </div>
+                          {stats.activeBook.author && (
+                            <div className="text-[11px] text-slate-500 font-medium">by {stats.activeBook.author}</div>
+                          )}
+                          <div className="mt-1.5 text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md inline-block">
+                            {stats.activeBook.lastChapterRead
+                              ? `Last Finished: ${stats.activeBook.lastChapterRead}`
+                              : 'Ready for chapter 1!'}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-slate-400 italic text-xs py-1">
+                          No active book assigned. Click below to recommend one!
+                        </div>
+                      )}
+
+                      {latestLog && (
+                        <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                          <span className="font-bold text-slate-700">Latest entry: </span>
+                          <span>{latestLog.chapterCompleted} ({formatReadingTimestamp(latestLog.timestamp)})</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => {
+                          sound.playTap();
+                          setReadingShelfKidId(k.id);
+                          setIsAddBookModalOpen(true);
+                        }}
+                        className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-xs flex items-center justify-center gap-1 cursor-pointer transition-all"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Book</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          sound.playStarEarned();
+                          fireConfetti({ origin: { y: 0.5 }, mode: 'snappy' });
+                          const bonusStars = 5;
+                          const updatedKids = database.kids.map((kid) =>
+                            kid.id === k.id
+                              ? { ...kid, stars: kid.stars + bonusStars, lifetimeStars: kid.lifetimeStars + bonusStars }
+                              : kid
+                          );
+                          onUpdateDatabase({ ...database, kids: updatedKids });
+                        }}
+                        className="py-1.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95 transition-all"
+                        title="Award 5 bonus stars for great reading dedication"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
+                        <span>+5 ⭐</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Chronological Audit Log & Verification */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                  <span>⏱️ Reading Log Audit History</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
+                    {filteredReadingLogs.length} entries
+                  </span>
+                </h4>
+                <p className="text-xs text-slate-500 font-medium">
+                  Verified chapter check-ins with timestamps and anti-duplicate records.
+                </p>
+              </div>
+
+              {/* Filters */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Kid Filter */}
+                <select
+                  value={readingKidFilter}
+                  onChange={(e) => setReadingKidFilter(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-slate-50 focus:ring-2 focus:ring-amber-400"
+                >
+                  <option value="all">All Kids</option>
+                  {database.kids.map((k) => (
+                    <option key={k.id} value={k.id}>
+                      {k.avatar} {k.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Search query */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search book or chapter..."
+                    value={readingSearchQuery}
+                    onChange={(e) => setReadingSearchQuery(e.target.value)}
+                    className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 bg-slate-50 w-44 sm:w-56 focus:ring-2 focus:ring-amber-400"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* List of reading log entries */}
+            {filteredReadingLogs.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="text-4xl mb-2">📖</div>
+                <div className="font-black text-slate-700 text-sm">No reading sessions found</div>
+                <p className="text-xs text-slate-500 font-medium mt-0.5 max-w-sm mx-auto">
+                  When kids complete their daily reading and name their book & chapter, entries will appear here with full timestamps!
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white">
+                {filteredReadingLogs.map((log) => {
+                  const kid = database.kids.find((k) => k.id === log.kidId);
+
+                  return (
+                    <div
+                      key={log.id}
+                      className="p-3.5 sm:p-4 hover:bg-slate-50/70 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-xl border-2 shadow-2xs shrink-0 mt-0.5"
+                          style={{ borderColor: kid?.color || '#f59e0b', backgroundColor: '#fff' }}
+                        >
+                          {kid?.avatar || '⭐'}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-black text-xs sm:text-sm text-slate-900">
+                              {kid?.name || 'Child'}
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                              {log.reactionEmoji || '📖'} {log.bookTitle}
+                            </span>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              {log.chapterCompleted}
+                            </span>
+                          </div>
+
+                          {log.notes && (
+                            <p className="text-xs text-slate-600 font-medium mt-1 italic">
+                              "{log.notes}"
+                            </p>
+                          )}
+
+                          <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium mt-1.5 flex-wrap">
+                            <span className="flex items-center gap-1 font-bold text-slate-700">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              <span>{formatReadingTimestamp(log.timestamp)}</span>
+                            </span>
+                            <span>•</span>
+                            <span className="text-amber-700 font-bold">
+                              ⏱️ {log.minutesRead || 20} min focus
+                            </span>
+                            <span>•</span>
+                            <span className="text-emerald-700 font-bold flex items-center gap-1">
+                              <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                              <span>Verified chapter log (+{log.starsAwarded} ⭐)</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <button
+                          onClick={() => handleDeleteReadingLog(log.id)}
+                          className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                          title="Delete entry"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Add Book Recommendation Modal */}
+          {isAddBookModalOpen && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+              <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-4 border-amber-300 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">📖</span>
+                    <h3 className="font-black text-slate-900 text-lg">Recommend / Add Book</h3>
+                  </div>
+                  <button
+                    onClick={() => setIsAddBookModalOpen(false)}
+                    className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAddBookToShelf} className="space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1">Add to Child's Shelf</label>
+                    <select
+                      value={readingShelfKidId}
+                      onChange={(e) => setReadingShelfKidId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border-2 border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 focus:ring-2 focus:ring-amber-400"
+                    >
+                      {database.kids.map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.avatar} {k.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1">Book Title *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. The Wild Robot, Percy Jackson..."
+                      value={newBookTitle}
+                      onChange={(e) => setNewBookTitle(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 rounded-xl border-2 border-slate-200 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1">Author (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Peter Brown, Rick Riordan..."
+                      value={newBookAuthor}
+                      onChange={(e) => setNewBookAuthor(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border-2 border-slate-200 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1">Cover Icon / Emoji</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {['📖', '🤖', '🦖', '⚡', '🐶', '🧙‍♂️', '🧀', '🐉', '🚀', '👑'].map((em) => (
+                        <button
+                          key={em}
+                          type="button"
+                          onClick={() => setNewBookEmoji(em)}
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg border-2 cursor-pointer transition-all ${
+                            newBookEmoji === em ? 'border-amber-500 bg-amber-100 scale-110' : 'border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {em}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddBookModalOpen(false)}
+                      className="flex-1 py-2.5 rounded-xl border-2 border-slate-200 text-slate-700 font-black text-xs hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md active:scale-95 transition-all cursor-pointer"
+                    >
+                      Add to Shelf 📚
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -4007,31 +4299,28 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <div>
-                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
-                    Star Cost:
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={editingReward.starCost || 20}
-                    onChange={(e) => setEditingReward({ ...editingReward, starCost: Number(e.target.value) })}
-                    className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-xs sm:text-sm text-slate-900 dark:text-white"
-                  />
-                </div>
+              <div>
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
+                  Reward Icon (Emoji):
+                </label>
+                <EmojiPicker
+                  value={editingReward.icon || '🎁'}
+                  onChange={(emoji) => setEditingReward({ ...editingReward, icon: emoji })}
+                  title="Choose Reward Icon"
+                  categoryFilter="rewards"
+                />
+              </div>
 
-                <div>
-                  <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
-                    Reward Icon (Emoji):
-                  </label>
-                  <EmojiPicker
-                    value={editingReward.icon || '🎁'}
-                    onChange={(emoji) => setEditingReward({ ...editingReward, icon: emoji })}
-                    title="Choose Reward Icon"
-                    categoryFilter="rewards"
-                  />
-                </div>
+              <div>
+                <StarValueInput
+                  value={editingReward.starCost || 20}
+                  onChange={(newCost) => setEditingReward({ ...editingReward, starCost: newCost })}
+                  label="Star Cost (Points Required)"
+                  sublabel="Easy steppers, presets, or slider for fast tuning"
+                  showPresets={true}
+                  showSlider={true}
+                  showEffortGuide={true}
+                />
               </div>
 
               <div>

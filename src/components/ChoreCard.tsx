@@ -15,6 +15,7 @@ interface ChoreCardProps {
   onUndo: (choreId: string) => void;
   onStartTimer?: (chore: ChoreItem) => void;
   claimedByOtherKidName?: string;
+  onOpenReadingLog?: () => void;
 }
 
 export const ChoreCard: React.FC<ChoreCardProps> = ({
@@ -26,9 +27,15 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   onUndo,
   onStartTimer,
   claimedByOtherKidName,
+  onOpenReadingLog,
 }) => {
   const isCompleted = log?.status === 'completed';
   const isSkipped = log?.status === 'skipped';
+
+  const isReadingChore =
+    chore.id === 'chore-6' ||
+    chore.title.toLowerCase().includes('reading') ||
+    chore.icon === '📖';
 
   // Subtasks local state (synced or tracked per session)
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -68,6 +75,13 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
       sound.playWarning();
       setShowTimeLockAlert(true);
       setTimeout(() => setShowTimeLockAlert(false), 5000);
+      return;
+    }
+
+    // If this is the Reading chore and we have a specialized reading log modal, open it!
+    if (isReadingChore && onOpenReadingLog) {
+      sound.playTap();
+      onOpenReadingLog();
       return;
     }
 
@@ -317,6 +331,34 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
               </div>
             )}
 
+            {/* Book Logged Details for Reading Chore */}
+            {isReadingChore && isCompleted && log?.completedSubtasks && log.completedSubtasks.length > 0 && (
+              <div className="mt-2.5 p-2.5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-200">
+                <div className="font-black flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <span>📖 Reading Log Entry:</span>
+                  </span>
+                  {onOpenReadingLog && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenReadingLog();
+                      }}
+                      className="text-[11px] font-bold text-amber-700 dark:text-amber-300 underline cursor-pointer hover:text-amber-900"
+                    >
+                      View Journal &rarr;
+                    </button>
+                  )}
+                </div>
+                <div className="mt-1 space-y-0.5 text-xs font-semibold text-amber-900 dark:text-amber-300">
+                  {log.completedSubtasks.map((st, i) => (
+                    <p key={i}>{st}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Time-Lock Info Notice or Alert if locked */}
             {isTimeLocked && !isCompleted && (
               <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/80 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
@@ -453,6 +495,16 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                       {timeWindowStatus.startTimeFormatted}
                     </div>
                   </div>
+                </button>
+              ) : isReadingChore ? (
+                <button
+                  id={`btn-complete-${chore.id}`}
+                  onClick={handleCompleteClick}
+                  className="px-3.5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 rounded-2xl flex items-center gap-1.5 text-white font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer shrink-0 ring-2 ring-amber-300"
+                  title="Log Book & Chapter"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-200" />
+                  <span>Log Chapter 📖</span>
                 </button>
               ) : (
                 <button

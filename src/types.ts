@@ -543,3 +543,5 @@ export interface FamilyDatabase {
   lastBackupDate?: string;
 }
 
+export type AppDatabase = FamilyDatabase;
+

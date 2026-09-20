@@ -11,7 +11,13 @@ import { BountyBoardModal } from './BountyBoardModal';
 import { BrainTeaserModal } from './BrainTeaserModal';
 import { ReadingLogModal } from './ReadingLogModal';
 import { getDailyTeasersAnsweredToday } from '../utils/brainTeasers';
-import { isReadingCompletedToday, findReadingChore } from '../utils/reading';
+import {
+  isReadingCompletedToday,
+  findReadingChore,
+  getReadingRewardStars,
+  getReadingDailyClaimLimit,
+  getReadingClaimsCountForDate,
+} from '../utils/reading';
 import { GoalTracker } from './KidCoin/GoalTracker';
 import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getBountyChores } from '../utils/storage';
 import { calculateKidBadges } from '../utils/badges';
@@ -242,9 +248,10 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
               {/* Reading Log Quest Button */}
               {database && onUpdateDatabase && (
                 (() => {
-                  const isReadDone = isReadingCompletedToday(database, kid.id, todayStr);
-                  const readingChore = findReadingChore(database.chores || []);
-                  const rStars = readingChore?.stars ?? 5;
+                  const rStars = getReadingRewardStars(database);
+                  const dailyLimit = getReadingDailyClaimLimit(database.settings);
+                  const claimsCount = getReadingClaimsCountForDate(database.readingLogs || [], kid.id, todayStr);
+                  const isLimitReached = dailyLimit > 0 && claimsCount >= dailyLimit;
                   return (
                     <button
                       id="btn-kid-reading-log"
@@ -253,14 +260,20 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                         setIsReadingLogOpen(true);
                       }}
                       className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                        isReadDone
+                        isLimitReached
                           ? 'bg-amber-900/60 text-amber-200 border border-amber-700/60 hover:bg-amber-800/80'
                           : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white'
                       }`}
                       title="Log your book and chapter to earn reading stars!"
                     >
                       <span>
-                        {isReadDone ? '📖 Reading Log (Done Today ✓)' : `📖 Reading Log (+${rStars}⭐)`}
+                        {dailyLimit === 0
+                          ? (claimsCount > 0 ? `📖 Reading Log (${claimsCount} Done • +${rStars}⭐)` : `📖 Reading Log (+${rStars}⭐)`)
+                          : isLimitReached
+                          ? `📖 Reading Log (Limit Done ${claimsCount}/${dailyLimit} ✓)`
+                          : claimsCount > 0
+                          ? `📖 Reading Log (${claimsCount}/${dailyLimit} Claimed • +${rStars}⭐)`
+                          : `📖 Reading Log (+${rStars}⭐)`}
                       </span>
                     </button>
                   );

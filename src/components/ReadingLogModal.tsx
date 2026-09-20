@@ -29,6 +29,9 @@ import {
   formatReadingTimestamp,
   getKidReadingStats,
   findReadingChore,
+  getReadingRewardStars,
+  getReadingDailyClaimLimit,
+  getReadingClaimsCountForDate,
   normalizeBookTitle,
   normalizeChapter,
   STARTER_BOOK_IDEAS,
@@ -66,12 +69,20 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
 
   const todayStr = getTodayDateString();
   const readingChore = findReadingChore(database.chores || []);
-  const rewardStars = readingChore?.stars ?? 5;
+  const rewardStars = getReadingRewardStars(database);
+  const dailyClaimLimit = getReadingDailyClaimLimit(database.settings);
 
   // Kid's reading shelf and existing logs
   const allLogs = database.readingLogs || [];
   const kidShelf = kid.readingShelf || [];
   const stats = useMemo(() => getKidReadingStats(allLogs, kidShelf, kid.id, todayStr), [allLogs, kidShelf, kid.id, todayStr]);
+
+  // Number of times stars have been claimed today
+  const claimsToday = useMemo(
+    () => getReadingClaimsCountForDate(allLogs, kid.id, todayStr),
+    [allLogs, kid.id, todayStr]
+  );
+  const isLimitReached = dailyClaimLimit > 0 && claimsToday >= dailyClaimLimit;
 
   // Active sub-view: 'log' | 'shelf' | 'timer' | 'journal'
   const [activeTab, setActiveTab] = useState<'log' | 'timer' | 'journal'>('log');
@@ -94,6 +105,8 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
     bookTitle: string;
     chapter: string;
     timestamp: string;
+    limitReached?: boolean;
+    dailyClaimLimit?: number;
   } | null>(null);
 
   // Reading Focus Timer State
@@ -198,6 +211,9 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
     const timestampISO = now.toISOString();
     const formattedTimestamp = formatReadingTimestamp(timestampISO);
 
+    // Calculate stars to award based on admin claim limit
+    const starsEarned = isLimitReached ? 0 : rewardStars;
+
     // 1. Create new ReadingLogEntry
     const newEntry: ReadingLogEntry = {
       id: `read-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -211,8 +227,9 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
       minutesRead,
       notes: notes.trim() || undefined,
       reactionEmoji: selectedReaction,
-      starsAwarded: rewardStars,
+      starsAwarded: starsEarned,
       isBookFinished,
+      claimLimitReached: isLimitReached,
     };
 
     // 2. Update Kid's Reading Shelf
@@ -257,7 +274,6 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
 
     // 3. Mark the reading chore as completed for today in database.logs
     let updatedLogs = [...(database.logs || [])];
-    let starsEarned = rewardStars;
 
     if (readingChore) {
       const existingChoreLogIndex = updatedLogs.findIndex(
@@ -286,7 +302,7 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
           date: todayStr,
           status: 'completed',
           completedAt: timestampISO,
-          starsAwarded: readingChore.stars,
+          starsAwarded: starsEarned,
           completedSubtasks: choreSubtaskLog,
         });
       }
@@ -317,7 +333,9 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
     onUpdateDatabase(updatedDatabase);
 
     // Sound & Confetti celebration
-    sound.playStarEarned();
+    if (starsEarned > 0) {
+      sound.playStarEarned();
+    }
     sound.playChoreComplete();
     fireConfetti();
 
@@ -326,6 +344,8 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
       bookTitle: bookTitle.trim(),
       chapter: chapterCompleted.trim(),
       timestamp: formattedTimestamp,
+      limitReached: isLimitReached,
+      dailyClaimLimit,
     });
     setIsSuccess(true);
   };
@@ -359,9 +379,15 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
                 <h2 className="text-xl sm:text-2xl font-black text-amber-950 font-serif tracking-tight">
                   Reading Adventure
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-xs font-black flex items-center gap-1">
+                <span className="px-2.5 py-1 rounded-full bg-amber-200 text-amber-900 text-xs font-black flex items-center gap-1 shadow-xs">
                   <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-600" />
-                  +{rewardStars} Stars
+                  {dailyClaimLimit === 0 ? (
+                    <span>+{rewardStars} Stars • Unlimited Claims</span>
+                  ) : isLimitReached ? (
+                    <span className="text-amber-950">Limit Reached ({claimsToday}/{dailyClaimLimit} today)</span>
+                  ) : (
+                    <span>+{rewardStars} Stars • Claim {claimsToday + 1} of {dailyClaimLimit}</span>
+                  )}
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-0.5 text-xs font-bold text-amber-800">
@@ -471,10 +497,17 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 mb-6 px-4 py-2 rounded-2xl bg-amber-100 border border-amber-300 text-amber-900 font-black text-sm shadow-sm">
-                <Star className="w-5 h-5 fill-amber-500 text-amber-600" />
-                <span>Earned +{successInfo.starsAwarded} Bonus Stars for reading!</span>
-              </div>
+              {successInfo.starsAwarded > 0 ? (
+                <div className="flex items-center gap-2 mb-6 px-4 py-2 rounded-2xl bg-amber-100 border border-amber-300 text-amber-900 font-black text-sm shadow-sm">
+                  <Star className="w-5 h-5 fill-amber-500 text-amber-600" />
+                  <span>Earned +{successInfo.starsAwarded} Stars for reading adventure!</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mb-6 px-4 py-2.5 rounded-2xl bg-sky-100 border border-sky-300 text-sky-900 font-extrabold text-xs sm:text-sm shadow-sm text-center">
+                  <Sparkles className="w-5 h-5 text-sky-600 shrink-0" />
+                  <span>Daily star claim limit reached for today ({successInfo.dailyClaimLimit} of {successInfo.dailyClaimLimit}). Chapter logged & streak preserved!</span>
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <button
@@ -946,6 +979,19 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
                 />
               </div>
 
+              {/* Daily Claim Limit Info Banner if reached */}
+              {isLimitReached && (
+                <div className="p-3.5 rounded-2xl bg-amber-100/90 border-2 border-amber-300 text-amber-950 text-xs flex items-start gap-2.5 shadow-xs">
+                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-black">Daily Star Limit Reached ({claimsToday}/{dailyClaimLimit} claimed today). </span>
+                    <span className="font-medium text-amber-900">
+                      You've already claimed all star rewards for today! You can still log this chapter to keep your reading streak alive, expand your bookshelf, and track your focus minutes.
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Submit Button */}
               <div className="pt-2">
                 <button
@@ -955,13 +1001,17 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
                   className={`w-full min-h-[52px] py-3.5 px-6 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 ${
                     !bookTitle.trim() || !chapterCompleted.trim() || !!duplicateLog
                       ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                      : isLimitReached
+                      ? 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white cursor-pointer ring-2 ring-amber-300'
                       : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-600 hover:to-orange-600 text-white cursor-pointer ring-2 ring-amber-300'
                   }`}
                 >
                   <Sparkles className="w-5 h-5 text-amber-200" />
                   <span>
                     {duplicateLog
-                      ? 'Duplicate Chapter - Change Chapter to Claim Stars'
+                      ? 'Duplicate Chapter - Change Chapter to Continue'
+                      : isLimitReached
+                      ? `Log Adventure to Bookshelf (0 ⭐ • Limit Reached ${claimsToday}/${dailyClaimLimit})`
                       : `Claim +${rewardStars} Stars & Log Adventure ✨`}
                   </span>
                 </button>

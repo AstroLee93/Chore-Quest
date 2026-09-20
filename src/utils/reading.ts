@@ -1,4 +1,4 @@
-import { ReadingLogEntry, KidBookShelfItem, ChoreItem, FamilyDatabase, KidProfile } from '../types';
+import { ReadingLogEntry, KidBookShelfItem, ChoreItem, FamilyDatabase, KidProfile, AppSettings } from '../types';
 
 /**
  * Normalizes a book title for consistent comparison
@@ -82,6 +82,55 @@ export function isReadingCompletedToday(
   }
 
   return false;
+}
+
+/**
+ * Returns the admin-configured star reward for Reading Adventure
+ */
+export function getReadingRewardStars(database: FamilyDatabase): number {
+  if (database.settings.readingRewardStars !== undefined && database.settings.readingRewardStars > 0) {
+    return database.settings.readingRewardStars;
+  }
+  const readingChore = findReadingChore(database.chores || []);
+  return readingChore?.stars ?? 5;
+}
+
+/**
+ * Returns the admin-determined maximum times stars can be claimed per day
+ * 0 = Unlimited claims
+ * 1 = Once per day (Default)
+ * 2, 3, etc. = Specific times per day
+ */
+export function getReadingDailyClaimLimit(settings?: AppSettings): number {
+  if (settings?.readingDailyClaimLimit !== undefined) {
+    return settings.readingDailyClaimLimit;
+  }
+  return 1;
+}
+
+/**
+ * Returns the number of times a child has claimed stars for Reading Adventure on a given date
+ */
+export function getReadingClaimsCountForDate(
+  logs: ReadingLogEntry[],
+  kidId: string,
+  dateStr: string
+): number {
+  return logs.filter((l) => l.kidId === kidId && l.date === dateStr && (l.starsAwarded || 0) > 0).length;
+}
+
+/**
+ * Checks if the kid has already claimed the maximum allowed star rewards for Reading Adventure today
+ */
+export function isReadingClaimLimitReached(
+  database: FamilyDatabase,
+  kidId: string,
+  dateStr: string
+): boolean {
+  const limit = getReadingDailyClaimLimit(database.settings);
+  if (limit === 0) return false; // 0 means unlimited
+  const claims = getReadingClaimsCountForDate(database.readingLogs || [], kidId, dateStr);
+  return claims >= limit;
 }
 
 /**

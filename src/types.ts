@@ -102,6 +102,8 @@ export interface ReadingLogEntry {
   reactionEmoji?: string;
   starsAwarded: number;
   isBookFinished?: boolean;
+  claimLimitReached?: boolean; // True if logged after reaching daily star claim limit
+  manuallyEditedByAdmin?: boolean; // True if stars were manually edited by an admin/parent
 }
 
 export interface KidBookShelfItem {
@@ -324,6 +326,8 @@ export interface AppSettings {
   brainTeaserRewardStars?: number; // Admin-determined points awarded for correct brain teaser answers (default: 5)
   brainTeaserDailyLimit?: number; // Admin-determined maximum questions answered per day for points (default: 1)
   brainTeaserEnabled?: boolean; // Toggle brain teaser challenges feature (default: true)
+  readingRewardStars?: number; // Admin-determined points awarded for Reading Adventure (default: 5)
+  readingDailyClaimLimit?: number; // Admin-determined maximum times stars can be claimed per day (e.g. 1 = once daily [default], 2 = 2x/day, 3 = 3x/day, 0 = unlimited)
 }
 
 export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';

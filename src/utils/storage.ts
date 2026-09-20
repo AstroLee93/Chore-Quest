@@ -122,6 +122,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     brainTeaserRewardStars: 5,
     brainTeaserDailyLimit: 1,
     brainTeaserEnabled: true,
+    readingRewardStars: 5,
+    readingDailyClaimLimit: 1,
   },
   kids: [
     {
@@ -751,6 +753,12 @@ export const loadDatabase = (): FamilyDatabase => {
       if (parsed.settings.brainTeaserEnabled === undefined) {
         parsed.settings.brainTeaserEnabled = true;
       }
+      if (parsed.settings.readingRewardStars === undefined) {
+        parsed.settings.readingRewardStars = 5;
+      }
+      if (parsed.settings.readingDailyClaimLimit === undefined) {
+        parsed.settings.readingDailyClaimLimit = 1;
+      }
     }
 
     if (!parsed.readingLogs) {
@@ -855,6 +863,8 @@ export const importDatabaseJSON = (jsonString: string): FamilyDatabase => {
       brainTeaserRewardStars: parsed.settings?.brainTeaserRewardStars ?? 5,
       brainTeaserDailyLimit: parsed.settings?.brainTeaserDailyLimit ?? 1,
       brainTeaserEnabled: parsed.settings?.brainTeaserEnabled ?? true,
+      readingRewardStars: parsed.settings?.readingRewardStars ?? 5,
+      readingDailyClaimLimit: parsed.settings?.readingDailyClaimLimit ?? 1,
     },
     kids: parsed.kids || [],
     categories: parsed.categories || [],

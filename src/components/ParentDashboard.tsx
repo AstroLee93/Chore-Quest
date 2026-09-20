@@ -38,6 +38,7 @@ import {
   Brain,
   GraduationCap,
   BookOpen,
+  Target,
 } from 'lucide-react';
 import {
   FamilyDatabase,
@@ -66,7 +67,13 @@ import { GROCERY_IMPORTANCE_METADATA } from '../utils/grocery';
 import { EmojiPicker } from './EmojiPicker';
 import { ActionMenu } from './ActionMenu';
 import { fireConfetti } from '../utils/confetti';
-import { formatReadingTimestamp, getKidReadingStats } from '../utils/reading';
+import {
+  formatReadingTimestamp,
+  getKidReadingStats,
+  getReadingRewardStars,
+  getReadingDailyClaimLimit,
+  getReadingClaimsCountForDate,
+} from '../utils/reading';
 import {
   CURATED_SNACK_CATALOG,
   SnackCatalogItem,
@@ -149,6 +156,32 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const [newBookAuthor, setNewBookAuthor] = useState<string>('');
   const [newBookEmoji, setNewBookEmoji] = useState<string>('📚');
   const [isAddBookModalOpen, setIsAddBookModalOpen] = useState<boolean>(false);
+
+  // Reading Adventure Star Calibration & Manual Edit States
+  const [readingRewardStarsForm, setReadingRewardStarsForm] = useState<number>(
+    () => database.settings.readingRewardStars ?? 5
+  );
+  const [readingDailyClaimLimitForm, setReadingDailyClaimLimitForm] = useState<number>(
+    () => database.settings.readingDailyClaimLimit ?? 1
+  );
+  const [readingSettingsSaved, setReadingSettingsSaved] = useState<boolean>(false);
+  const [editingReadingLogStars, setEditingReadingLogStars] = useState<{
+    logId: string;
+    kidId: string;
+    currentStars: number;
+    newStars: number;
+    bookTitle: string;
+    chapter: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (database.settings.readingRewardStars !== undefined) {
+      setReadingRewardStarsForm(database.settings.readingRewardStars);
+    }
+    if (database.settings.readingDailyClaimLimit !== undefined) {
+      setReadingDailyClaimLimitForm(database.settings.readingDailyClaimLimit);
+    }
+  }, [database.settings.readingRewardStars, database.settings.readingDailyClaimLimit]);
 
   // Modals for Editing/Creating
   const [editingChore, setEditingChore] = useState<Partial<ChoreItem> | null>(null);
@@ -854,6 +887,82 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       kids: updatedKids,
       readingLogs: updatedReadingLogs,
     });
+  };
+
+  const handleUpdateReadingSettings = (newStars: number, newClaimLimit: number) => {
+    sound.playTap();
+    const cleanStars = Math.max(1, Math.min(100, Math.round(newStars)));
+    const cleanLimit = Math.max(0, Math.min(20, Math.round(newClaimLimit)));
+
+    setReadingRewardStarsForm(cleanStars);
+    setReadingDailyClaimLimitForm(cleanLimit);
+
+    const updatedSettings: AppSettings = {
+      ...database.settings,
+      readingRewardStars: cleanStars,
+      readingDailyClaimLimit: cleanLimit,
+    };
+
+    setSettingsForm((prev) => ({
+      ...prev,
+      readingRewardStars: cleanStars,
+      readingDailyClaimLimit: cleanLimit,
+    }));
+
+    // Synchronize chore-6 reading chore in database.chores
+    const updatedChores = (database.chores || []).map((c) => {
+      if (c.id === 'chore-6' || c.title.toLowerCase().includes('reading') || c.icon === '📖') {
+        return { ...c, stars: cleanStars };
+      }
+      return c;
+    });
+
+    onUpdateDatabase({
+      ...database,
+      settings: updatedSettings,
+      chores: updatedChores,
+    });
+
+    setReadingSettingsSaved(true);
+    setTimeout(() => setReadingSettingsSaved(false), 2400);
+  };
+
+  const handleSaveReadingLogStars = () => {
+    if (!editingReadingLogStars) return;
+    const { logId, kidId, currentStars, newStars } = editingReadingLogStars;
+    const cleanNewStars = Math.max(0, Math.min(100, Math.round(newStars)));
+    const diff = cleanNewStars - currentStars;
+
+    const updatedKids = database.kids.map((k) => {
+      if (k.id === kidId) {
+        return {
+          ...k,
+          stars: Math.max(0, k.stars + diff),
+          lifetimeStars: Math.max(0, (k.lifetimeStars || k.stars) + diff),
+        };
+      }
+      return k;
+    });
+
+    const updatedReadingLogs = (database.readingLogs || []).map((l) => {
+      if (l.id === logId) {
+        return {
+          ...l,
+          starsAwarded: cleanNewStars,
+          manuallyEditedByAdmin: true,
+        };
+      }
+      return l;
+    });
+
+    sound.playStarEarned();
+    fireConfetti({ origin: { y: 0.5 }, mode: 'snappy' });
+    onUpdateDatabase({
+      ...database,
+      kids: updatedKids,
+      readingLogs: updatedReadingLogs,
+    });
+    setEditingReadingLogStars(null);
   };
 
   const handleAddBookToShelf = (e: React.FormEvent) => {
@@ -2674,6 +2783,183 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             </div>
           </div>
 
+          {/* Admin Star Value & Daily Claim Limits Calibration */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border-2 border-amber-200 dark:border-amber-900/50 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-100 dark:border-amber-900/40 pb-3">
+              <div>
+                <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <span className="text-xl">⚙️</span>
+                  <span>Reading Adventure Rules: Star Value & Claim Limits</span>
+                  {readingSettingsSaved && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-extrabold flex items-center gap-1 animate-pulse">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      Saved & Synced!
+                    </span>
+                  )}
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  Configure star rewards awarded when completing reading chapters and determine how many times stars can be claimed per day.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 1. Star Reward per Chapter */}
+              <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-slate-900/60 border border-amber-200 dark:border-slate-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                    Stars Earned Per Chapter:
+                  </label>
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900/60 text-amber-950 dark:text-amber-100 font-black text-xs">
+                    +{readingRewardStarsForm} Stars
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    id="btn-dec-reading-stars"
+                    onClick={() => {
+                      const val = Math.max(1, readingRewardStarsForm - 1);
+                      handleUpdateReadingSettings(val, readingDailyClaimLimitForm);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-amber-200 dark:border-slate-600 text-slate-800 dark:text-white font-black text-lg flex items-center justify-center cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    id="input-reading-reward-stars"
+                    min={1}
+                    max={100}
+                    value={readingRewardStarsForm}
+                    onChange={(e) => {
+                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                      handleUpdateReadingSettings(val, readingDailyClaimLimitForm);
+                    }}
+                    className="flex-1 py-2 px-3 text-center font-black text-lg rounded-xl border border-amber-300 dark:border-amber-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-amber-500 shadow-inner"
+                  />
+                  <button
+                    type="button"
+                    id="btn-inc-reading-stars"
+                    onClick={() => {
+                      const val = Math.min(100, readingRewardStarsForm + 1);
+                      handleUpdateReadingSettings(val, readingDailyClaimLimitForm);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-amber-200 dark:border-slate-600 text-slate-800 dark:text-white font-black text-lg flex items-center justify-center cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-[10px] font-bold text-slate-400">Presets:</span>
+                  {[3, 5, 8, 10, 15, 20].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => handleUpdateReadingSettings(num, readingDailyClaimLimitForm)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                        readingRewardStarsForm === num
+                          ? 'bg-amber-500 text-white font-black shadow-xs'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-amber-200 dark:border-slate-600 hover:bg-amber-100 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      +{num} {num === 5 ? '(Default)' : ''}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  Automatically syncs with the Reading Adventure quest in the daily chores list.
+                </p>
+              </div>
+
+              {/* 2. Daily Claim Limit */}
+              <div className="p-4 rounded-xl bg-sky-50/70 dark:bg-slate-900/60 border border-sky-200 dark:border-slate-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Target className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                    Daily Star Claim Limit:
+                  </label>
+                  <span className="px-2.5 py-0.5 rounded-full bg-sky-200 dark:bg-sky-900/60 text-sky-950 dark:text-sky-100 font-black text-xs">
+                    {readingDailyClaimLimitForm === 0
+                      ? 'Unlimited Claims (∞)'
+                      : `${readingDailyClaimLimitForm}x Per Day`}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    id="btn-dec-reading-limit"
+                    onClick={() => {
+                      const val = Math.max(0, readingDailyClaimLimitForm - 1);
+                      handleUpdateReadingSettings(readingRewardStarsForm, val);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-sky-200 dark:border-slate-600 text-slate-800 dark:text-white font-black text-lg flex items-center justify-center cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    id="input-reading-claim-limit"
+                    min={0}
+                    max={20}
+                    value={readingDailyClaimLimitForm}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value) || 0);
+                      handleUpdateReadingSettings(readingRewardStarsForm, val);
+                    }}
+                    className="flex-1 py-2 px-3 text-center font-black text-lg rounded-xl border border-sky-300 dark:border-sky-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-sky-500 shadow-inner"
+                  />
+                  <button
+                    type="button"
+                    id="btn-inc-reading-limit"
+                    onClick={() => {
+                      const val = Math.min(20, readingDailyClaimLimitForm + 1);
+                      handleUpdateReadingSettings(readingRewardStarsForm, val);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-sky-200 dark:border-slate-600 text-slate-800 dark:text-white font-black text-lg flex items-center justify-center cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* Preset Options for Claim Limits */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-[10px] font-bold text-slate-400">Presets:</span>
+                  {[
+                    { label: '1x (Default)', val: 1 },
+                    { label: '2x', val: 2 },
+                    { label: '3x', val: 3 },
+                    { label: '5x', val: 5 },
+                    { label: 'Unlimited (∞)', val: 0 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.val}
+                      type="button"
+                      onClick={() => handleUpdateReadingSettings(readingRewardStarsForm, preset.val)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                        readingDailyClaimLimitForm === preset.val
+                          ? 'bg-sky-600 text-white font-black shadow-xs'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-sky-200 dark:border-slate-600 hover:bg-sky-100 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  {readingDailyClaimLimitForm === 0
+                    ? 'Kids earn stars every time they read and log a chapter.'
+                    : `Kids earn stars for their first ${readingDailyClaimLimitForm} chapter(s) each day. Subsequent logs keep habits going without awarding extra stars.`}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Kids Shelves and Reading Progress Overview */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
@@ -2914,15 +3200,44 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                               ⏱️ {log.minutesRead || 20} min focus
                             </span>
                             <span>•</span>
-                            <span className="text-emerald-700 font-bold flex items-center gap-1">
+                            <span className="text-emerald-700 font-bold flex items-center gap-1.5 flex-wrap">
                               <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
                               <span>Verified chapter log (+{log.starsAwarded} ⭐)</span>
+                              {log.manuallyEditedByAdmin && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 font-extrabold border border-amber-300 dark:border-amber-700">
+                                  ✏️ Admin Edited
+                                </span>
+                              )}
+                              {log.claimLimitReached && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-sky-100 dark:bg-sky-900/60 text-sky-800 dark:text-sky-200 font-extrabold border border-sky-300 dark:border-sky-700">
+                                  Daily Limit Reached
+                                </span>
+                              )}
                             </span>
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 self-end sm:self-center">
+                        <button
+                          id={`btn-edit-stars-reading-${log.id}`}
+                          onClick={() => {
+                            sound.playTap();
+                            setEditingReadingLogStars({
+                              logId: log.id,
+                              kidId: log.kidId,
+                              currentStars: log.starsAwarded ?? 0,
+                              newStars: log.starsAwarded ?? 0,
+                              bookTitle: log.bookTitle,
+                              chapter: log.chapterCompleted,
+                            });
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-black text-xs flex items-center gap-1.5 border border-amber-300 shadow-2xs cursor-pointer transition-all active:scale-95"
+                          title="Manually adjust or edit stars awarded for this reading session"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-amber-700" />
+                          <span>Edit Stars</span>
+                        </button>
                         <button
                           onClick={() => handleDeleteReadingLog(log.id)}
                           className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
@@ -2937,6 +3252,183 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
             )}
           </div>
+
+          {/* Manually Edit Reading Log Stars Modal */}
+          {editingReadingLogStars && (() => {
+            const targetKid = database.kids.find((k) => k.id === editingReadingLogStars.kidId);
+            const currentKidStars = targetKid?.stars ?? 0;
+            const diff = editingReadingLogStars.newStars - editingReadingLogStars.currentStars;
+            const projectedBalance = Math.max(0, currentKidStars + diff);
+
+            return (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-4 border-amber-300 dark:border-amber-500 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">✏️</span>
+                      <div>
+                        <h3 className="font-black text-slate-900 dark:text-white text-lg">
+                          Edit Reading Stars
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
+                          Manual adjustment by Admin
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setEditingReadingLogStars(null)}
+                      className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Reading Session Summary Card */}
+                  <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-slate-900/60 border border-amber-200 dark:border-slate-700 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-8 h-8 rounded-xl flex items-center justify-center text-base border-2 shadow-2xs"
+                          style={{ borderColor: targetKid?.color || '#f59e0b', backgroundColor: '#fff' }}
+                        >
+                          {targetKid?.avatar || '🦁'}
+                        </div>
+                        <span className="font-black text-sm text-slate-900 dark:text-white">
+                          {targetKid?.name || 'Child'}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                        Current: {editingReadingLogStars.currentStars} ⭐
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-amber-200 dark:border-slate-700 text-amber-900 dark:text-amber-200">
+                        📖 {editingReadingLogStars.bookTitle}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-emerald-200 dark:border-slate-700 text-emerald-900 dark:text-emerald-200">
+                        {editingReadingLogStars.chapter}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Star Stepper and Input */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      Stars to Award for this Session:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingReadingLogStars({
+                            ...editingReadingLogStars,
+                            newStars: Math.max(0, editingReadingLogStars.newStars - 1),
+                          })
+                        }
+                        className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-black text-xl flex items-center justify-center cursor-pointer shadow-2xs active:scale-95"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        id="input-manual-reading-stars"
+                        min={0}
+                        max={100}
+                        value={editingReadingLogStars.newStars}
+                        onChange={(e) =>
+                          setEditingReadingLogStars({
+                            ...editingReadingLogStars,
+                            newStars: Math.max(0, parseInt(e.target.value) || 0),
+                          })
+                        }
+                        className="flex-1 py-2 px-3 text-center font-black text-xl rounded-xl border-2 border-amber-300 dark:border-amber-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-amber-500 shadow-inner"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingReadingLogStars({
+                            ...editingReadingLogStars,
+                            newStars: Math.min(100, editingReadingLogStars.newStars + 1),
+                          })
+                        }
+                        className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-black text-xl flex items-center justify-center cursor-pointer shadow-2xs active:scale-95"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                      <span className="text-[10px] font-bold text-slate-400">Presets:</span>
+                      {[0, 3, 5, 10, 15, 20].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() =>
+                            setEditingReadingLogStars({
+                              ...editingReadingLogStars,
+                              newStars: num,
+                            })
+                          }
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                            editingReadingLogStars.newStars === num
+                              ? 'bg-amber-500 text-white font-black shadow-xs'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-amber-100 dark:hover:bg-slate-600'
+                          }`}
+                        >
+                          {num === 0 ? '0 ⭐ (None)' : `+${num} ⭐`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Impact on child's balance */}
+                  <div
+                    className={`p-3 rounded-xl border text-xs font-bold ${
+                      diff > 0
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-900 dark:text-emerald-200'
+                        : diff < 0
+                        ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 text-amber-900 dark:text-amber-200'
+                        : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>Child Balance Adjustment:</span>
+                      <span className="font-black text-sm">
+                        {diff > 0 ? `+${diff} ⭐` : diff < 0 ? `${diff} ⭐` : 'No Change'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-medium mt-1">
+                      {targetKid?.name || 'Child'}'s balance will change from{' '}
+                      <span className="font-bold">{currentKidStars} ⭐</span> to{' '}
+                      <span className="font-black text-slate-900 dark:text-white">{projectedBalance} ⭐</span>.
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingReadingLogStars(null)}
+                      className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      id="btn-confirm-edit-reading-stars"
+                      onClick={handleSaveReadingLogStars}
+                      className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs shadow-md active:scale-95 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>Save & Apply Stars</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Add Book Recommendation Modal */}
           {isAddBookModalOpen && (
@@ -3334,6 +3826,186 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     <span>🔒</span>
                     <span>Kids cannot change grade level. Admin only.</span>
                   </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Reading Adventure Quest Configuration (Stars & Daily Claim Limits) */}
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-50/70 dark:bg-slate-800/80 border-2 border-amber-300 dark:border-amber-700/60 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
+                    <BookOpen className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                    <span>📖 Reading Adventure Rules: Star Value & Daily Claim Limits</span>
+                  </h4>
+                  <p className="text-[10px] sm:text-xs text-amber-900/80 dark:text-amber-300/80 font-bold mt-0.5">
+                    Determine how many stars are awarded per chapter read, and how many times stars can be claimed per day.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('reading')}
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-amber-200 hover:bg-amber-300 dark:bg-amber-900/60 dark:hover:bg-amber-800 text-amber-950 dark:text-amber-200 border border-amber-400 dark:border-amber-600 cursor-pointer"
+                >
+                  View Reading Journey Tab →
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {/* 1. Star Reward per Chapter */}
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                      Stars Earned Per Chapter:
+                    </label>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 font-black text-xs">
+                      +{settingsForm.readingRewardStars ?? 5} Stars
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      id="btn-dec-settings-reading-stars"
+                      onClick={() => {
+                        const val = Math.max(1, (settingsForm.readingRewardStars ?? 5) - 1);
+                        setSettingsForm({ ...settingsForm, readingRewardStars: val });
+                        handleUpdateReadingSettings(val, settingsForm.readingDailyClaimLimit ?? 1);
+                      }}
+                      className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-800 dark:text-white font-black text-base flex items-center justify-center cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      id="input-settings-reading-stars"
+                      min={1}
+                      max={100}
+                      value={settingsForm.readingRewardStars ?? 5}
+                      onChange={(e) => {
+                        const val = Math.max(1, parseInt(e.target.value) || 1);
+                        setSettingsForm({ ...settingsForm, readingRewardStars: val });
+                        handleUpdateReadingSettings(val, settingsForm.readingDailyClaimLimit ?? 1);
+                      }}
+                      className="flex-1 px-3 py-1.5 text-center font-black text-base rounded-xl border border-amber-300 dark:border-amber-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-amber-500"
+                    />
+                    <button
+                      type="button"
+                      id="btn-inc-settings-reading-stars"
+                      onClick={() => {
+                        const val = Math.min(100, (settingsForm.readingRewardStars ?? 5) + 1);
+                        setSettingsForm({ ...settingsForm, readingRewardStars: val });
+                        handleUpdateReadingSettings(val, settingsForm.readingDailyClaimLimit ?? 1);
+                      }}
+                      className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-800 dark:text-white font-black text-base flex items-center justify-center cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] font-bold text-slate-400">Presets:</span>
+                    {[3, 5, 8, 10, 15, 20].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => {
+                          setSettingsForm({ ...settingsForm, readingRewardStars: num });
+                          handleUpdateReadingSettings(num, settingsForm.readingDailyClaimLimit ?? 1);
+                        }}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer transition-all ${
+                          (settingsForm.readingRewardStars ?? 5) === num
+                            ? 'bg-amber-500 text-white font-black'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-amber-100'
+                        }`}
+                      >
+                        +{num} {num === 5 ? '(Default)' : ''}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Daily Claim Limit */}
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Target className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                      Daily Star Claim Limit:
+                    </label>
+                    <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 dark:bg-sky-900/60 dark:text-sky-200 font-black text-xs">
+                      {(settingsForm.readingDailyClaimLimit ?? 1) === 0
+                        ? 'Unlimited (∞)'
+                        : `${settingsForm.readingDailyClaimLimit ?? 1}x / day`}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      id="btn-dec-settings-reading-limit"
+                      onClick={() => {
+                        const val = Math.max(0, (settingsForm.readingDailyClaimLimit ?? 1) - 1);
+                        setSettingsForm({ ...settingsForm, readingDailyClaimLimit: val });
+                        handleUpdateReadingSettings(settingsForm.readingRewardStars ?? 5, val);
+                      }}
+                      className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-800 dark:text-white font-black text-base flex items-center justify-center cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      id="input-settings-reading-limit"
+                      min={0}
+                      max={20}
+                      value={settingsForm.readingDailyClaimLimit ?? 1}
+                      onChange={(e) => {
+                        const val = Math.max(0, parseInt(e.target.value) || 0);
+                        setSettingsForm({ ...settingsForm, readingDailyClaimLimit: val });
+                        handleUpdateReadingSettings(settingsForm.readingRewardStars ?? 5, val);
+                      }}
+                      className="flex-1 px-3 py-1.5 text-center font-black text-base rounded-xl border border-sky-300 dark:border-sky-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-sky-500"
+                    />
+                    <button
+                      type="button"
+                      id="btn-inc-settings-reading-limit"
+                      onClick={() => {
+                        const val = Math.min(20, (settingsForm.readingDailyClaimLimit ?? 1) + 1);
+                        setSettingsForm({ ...settingsForm, readingDailyClaimLimit: val });
+                        handleUpdateReadingSettings(settingsForm.readingRewardStars ?? 5, val);
+                      }}
+                      className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-800 dark:text-white font-black text-base flex items-center justify-center cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] font-bold text-slate-400">Presets:</span>
+                    {[
+                      { label: '1x (Default)', val: 1 },
+                      { label: '2x', val: 2 },
+                      { label: '3x', val: 3 },
+                      { label: '5x', val: 5 },
+                      { label: 'Unlimited (∞)', val: 0 },
+                    ].map((p) => (
+                      <button
+                        key={p.val}
+                        type="button"
+                        onClick={() => {
+                          setSettingsForm({ ...settingsForm, readingDailyClaimLimit: p.val });
+                          handleUpdateReadingSettings(settingsForm.readingRewardStars ?? 5, p.val);
+                        }}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer transition-all ${
+                          (settingsForm.readingDailyClaimLimit ?? 1) === p.val
+                            ? 'bg-sky-600 text-white font-black'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-sky-100'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

@@ -22,7 +22,13 @@ import { BountyBoardModal } from './BountyBoardModal';
 import { BrainTeaserModal } from './BrainTeaserModal';
 import { ReadingLogModal } from './ReadingLogModal';
 import { getGradeLevelInfo, getDailyTeasersAnsweredToday } from '../utils/brainTeasers';
-import { isReadingCompletedToday, findReadingChore } from '../utils/reading';
+import {
+  isReadingCompletedToday,
+  findReadingChore,
+  getReadingRewardStars,
+  getReadingDailyClaimLimit,
+  getReadingClaimsCountForDate,
+} from '../utils/reading';
 
 interface KioskDashboardProps {
   database: FamilyDatabase;
@@ -561,11 +567,20 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         {
                           id: 'reading_log',
                           label: (() => {
-                            const isDone = isReadingCompletedToday(database, kid.id, todayStr);
-                            const readingChore = findReadingChore(database.chores || []);
-                            const stars = readingChore?.stars ?? 5;
-                            if (isDone) {
-                              return '📖 Daily Reading (Done Today ✓)';
+                            const stars = getReadingRewardStars(database);
+                            const dailyLimit = getReadingDailyClaimLimit(database.settings);
+                            const claimsCount = getReadingClaimsCountForDate(database.readingLogs || [], kid.id, todayStr);
+                            const isLimitReached = dailyLimit > 0 && claimsCount >= dailyLimit;
+                            if (dailyLimit === 0) {
+                              return claimsCount > 0
+                                ? `📖 Reading Log (${claimsCount} Done • +${stars} Stars)`
+                                : `📖 Log Daily Reading (+${stars} Stars)`;
+                            }
+                            if (isLimitReached) {
+                              return `📖 Daily Reading (Limit Reached ${claimsCount}/${dailyLimit} ✓)`;
+                            }
+                            if (claimsCount > 0) {
+                              return `📖 Daily Reading (${claimsCount}/${dailyLimit} Claimed • +${stars} Stars)`;
                             }
                             return `📖 Log Daily Reading (+${stars} Stars)`;
                           })(),

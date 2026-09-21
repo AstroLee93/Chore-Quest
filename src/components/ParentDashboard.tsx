@@ -2528,17 +2528,47 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                                   },
                                 },
                                 {
-                                  id: 'add-stars',
-                                  label: 'Award +5 Stars',
+                                  id: 'award-bonus-modal',
+                                  label: 'Award Custom Bonus...',
                                   icon: <Sparkles className="w-3.5 h-3.5 text-amber-500" />,
                                   variant: 'warning',
-                                  onClick: () => handleAdjustKidStars(kid.id, 5),
+                                  onClick: () => setBonusStarModalKid(kid),
                                 },
                                 {
-                                  id: 'deduct-stars',
-                                  label: 'Subtract -5 Stars',
-                                  icon: <Star className="w-3.5 h-3.5" />,
-                                  onClick: () => handleAdjustKidStars(kid.id, -5),
+                                  id: 'add-1-star',
+                                  label: 'Add +1 Star',
+                                  icon: <Star className="w-3.5 h-3.5 text-amber-500" />,
+                                  onClick: () => handleAdjustKidStars(kid.id, 1),
+                                },
+                                {
+                                  id: 'add-10-stars',
+                                  label: 'Add +10 Stars',
+                                  icon: <Sparkles className="w-3.5 h-3.5 text-amber-500" />,
+                                  onClick: () => handleAdjustKidStars(kid.id, 10),
+                                },
+                                {
+                                  id: 'add-20-stars',
+                                  label: 'Add +20 Stars',
+                                  icon: <Sparkles className="w-3.5 h-3.5 text-amber-500" />,
+                                  onClick: () => handleAdjustKidStars(kid.id, 20),
+                                },
+                                {
+                                  id: 'deduct-1-star',
+                                  label: 'Subtract -1 Star',
+                                  icon: <Star className="w-3.5 h-3.5 text-rose-500" />,
+                                  onClick: () => handleAdjustKidStars(kid.id, -1),
+                                },
+                                {
+                                  id: 'deduct-10-stars',
+                                  label: 'Subtract -10 Stars',
+                                  icon: <Star className="w-3.5 h-3.5 text-rose-500" />,
+                                  onClick: () => handleAdjustKidStars(kid.id, -10),
+                                },
+                                {
+                                  id: 'deduct-20-stars',
+                                  label: 'Subtract -20 Stars',
+                                  icon: <Star className="w-3.5 h-3.5 text-rose-500" />,
+                                  onClick: () => handleAdjustKidStars(kid.id, -20),
                                 },
                                 {
                                   id: 'delete',
@@ -2669,34 +2699,63 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       </div>
                     </div>
 
-                    {/* Star Balance & Quick Adjuster */}
-                    <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-yellow-50/70 border border-yellow-200 flex items-center justify-between">
-                      <div>
-                        <div className="text-[10px] sm:text-[11px] text-slate-500 font-black uppercase">Current Star Bank</div>
-                        <div className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-1">
-                          <span>⭐</span>
-                          <span>{kid.stars}</span>
-                          <span className="text-[10px] sm:text-xs font-bold text-slate-400 ml-0.5">
-                            ({kid.lifetimeStars} life)
-                          </span>
+                    {/* Star Balance & Quick Adjuster with 1, 5, 10, 20 Plus & Minus Options */}
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-yellow-50/80 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/40 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-wider">Current Star Bank</div>
+                          <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-1">
+                            <span>⭐</span>
+                            <span>{kid.stars}</span>
+                            <span className="text-[10px] sm:text-xs font-bold text-slate-400 ml-0.5">
+                              ({kid.lifetimeStars} life)
+                            </span>
+                          </div>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setBonusStarModalKid(kid)}
+                          className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black shadow-2xs border border-amber-300 cursor-pointer flex items-center gap-1 active:scale-95 transition-all"
+                          title="Award custom bonus stars with compliment note"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Custom Award</span>
+                        </button>
                       </div>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleAdjustKidStars(kid.id, -5)}
-                          className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-xs font-black text-slate-700 hover:bg-slate-100 cursor-pointer"
-                          title="Subtract 5 stars"
-                        >
-                          -5
-                        </button>
-                        <button
-                          onClick={() => handleAdjustKidStars(kid.id, 5)}
-                          className="px-2.5 py-1 rounded-lg bg-yellow-400 text-slate-900 text-xs font-black hover:bg-yellow-500 shadow-2xs border border-yellow-300 cursor-pointer"
-                          title="Add 5 stars"
-                        >
-                          +5 ⭐
-                        </button>
+                      {/* Quick Adjust Buttons: 1, 5, 10, 20 options for Plus and Minus */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pt-1.5 border-t border-yellow-200/70 dark:border-yellow-900/40">
+                        {/* Minus Options (-20, -10, -5, -1) */}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-wider mr-0.5">Deduct:</span>
+                          {[-20, -10, -5, -1].map((amt) => (
+                            <button
+                              key={amt}
+                              onClick={() => handleAdjustKidStars(kid.id, amt)}
+                              className="px-2 py-0.5 sm:py-1 rounded-md bg-white dark:bg-slate-800 border border-rose-200 dark:border-rose-900/50 text-xs font-black text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-95 shadow-2xs transition-all cursor-pointer"
+                              title={`Subtract ${Math.abs(amt)} star${Math.abs(amt) === 1 ? '' : 's'}`}
+                            >
+                              {amt}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Plus Options (+1, +5, +10, +20) */}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider mr-0.5">Add:</span>
+                          {[1, 5, 10, 20].map((amt) => (
+                            <button
+                              key={amt}
+                              onClick={() => handleAdjustKidStars(kid.id, amt)}
+                              className="px-2 py-0.5 sm:py-1 rounded-md bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black active:scale-95 shadow-2xs border border-amber-300 transition-all cursor-pointer flex items-center gap-0.5"
+                              title={`Add ${amt} star${amt === 1 ? '' : 's'}`}
+                            >
+                              <span>+{amt}</span>
+                              <span className="text-[10px]">⭐</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -5133,6 +5192,51 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   Used by {editingKid.name || 'this child'} to unlock missions and rewards.
                 </p>
               </div>
+
+              <div>
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1">
+                  ⭐ Current Star Bank:
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    value={editingKid.stars ?? 0}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value) || 0);
+                      setEditingKid({
+                        ...editingKid,
+                        stars: val,
+                        lifetimeStars: Math.max(editingKid.lifetimeStars || 0, val),
+                      });
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-indigo-500"
+                  />
+                  <div className="flex items-center gap-1 shrink-0">
+                    {[1, 10, 20].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => {
+                          const current = editingKid.stars ?? 0;
+                          const next = current + amt;
+                          setEditingKid({
+                            ...editingKid,
+                            stars: next,
+                            lifetimeStars: (editingKid.lifetimeStars || 0) + amt,
+                          });
+                        }}
+                        className="px-2 py-1 rounded-lg bg-amber-300 hover:bg-amber-400 text-slate-900 font-black text-xs cursor-pointer border border-amber-400"
+                      >
+                        +{amt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 dark:text-slate-400 font-bold mt-0.5">
+                  Directly adjust their current spendable star points.
+                </p>
+              </div>
             </div>
 
             <div className="flex gap-2 sm:gap-3 mt-5">
@@ -5168,7 +5272,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             </p>
 
             <div className="flex justify-center gap-1.5 mb-3">
-              {[2, 5, 10, 15].map((amt) => (
+              {[1, 5, 10, 20].map((amt) => (
                 <button
                   key={amt}
                   type="button"

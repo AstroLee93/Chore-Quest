@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home } from 'lucide-react';
+import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home, Sun, Brain, BookOpen } from 'lucide-react';
 import { KidProfile, ChoreItem, ChoreCategory, ChoreLog, AppSettings, RewardItem, CalendarEvent, FamilyDatabase } from '../types';
 import { ChoreCard } from './ChoreCard';
 import { SkipReasonModal } from './SkipReasonModal';
@@ -130,6 +130,22 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const progressPercent = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
   const isAllComplete = totalTasksCount > 0 && completedTasksCount === totalTasksCount;
 
+  // Total stars earned today from completed chores and reading logs
+  const starsEarnedToday = useMemo(() => {
+    const choreStars = todaysLogs
+      .filter((l) => l.status === 'completed')
+      .reduce((sum, l) => {
+        const chore = chores.find((c) => c.id === l.choreId);
+        return sum + (l.starsAwarded !== undefined ? l.starsAwarded : (chore?.stars || 0));
+      }, 0);
+
+    const readingStars = (database?.readingLogs || [])
+      .filter((rl) => rl.kidId === kid.id && rl.date === todayStr)
+      .reduce((sum, rl) => sum + (rl.starsAwarded || 0), 0);
+
+    return choreStars + readingStars;
+  }, [todaysLogs, chores, database?.readingLogs, kid.id, todayStr]);
+
   // Filtered view
   const visibleChores = useMemo(() => {
     return todaysChores.filter((c) => {
@@ -142,169 +158,374 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const levelInfo = getKidLevelInfo(kid.lifetimeStars);
 
   return (
-    <div className="max-w-7xl mx-auto px-1 sm:px-8 py-1.5 sm:py-8 grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-6 animate-fade-in w-full">
-      {/* Left / Main Column (col-span-8) */}
-      <div className="lg:col-span-8 flex flex-col gap-2 sm:gap-6">
-        {/* Family Goal Banner if database is provided */}
-        {database && (
-          <FamilyGoalBanner
-            database={database}
-            currentTheme={currentTheme}
-            onEditGoal={onOpenGoalManager}
-          />
-        )}
+    <div className="max-w-7xl mx-auto px-1 sm:px-8 py-1.5 sm:py-8 flex flex-col gap-4 sm:gap-6 animate-fade-in w-full">
+      {/* Family Goal Banner if database is provided */}
+      {database && (
+        <FamilyGoalBanner
+          database={database}
+          currentTheme={currentTheme}
+          onEditGoal={onOpenGoalManager}
+        />
+      )}
 
-        {/* Kid Greeting & Live Progress Header */}
-        <div
-          style={{
-            borderColor: kid.color || '#3b82f6',
-          }}
-          className={`${theme.kidCardBg} rounded-2xl sm:rounded-3xl p-3.5 sm:p-7 border-b-4 sm:border-b-8 border-r-2 sm:border-r-4 border-t border-l border-t-black/5 border-l-black/5 shadow-xs relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6`}
-        >
-          <div className="flex items-center gap-4">
+      {/* Kid Greeting & Live Progress Header (Redesigned Profile Card) */}
+      <div
+        id="kid-profile-card"
+        className="bg-white dark:bg-slate-900 rounded-[30px] sm:rounded-[36px] p-4 sm:p-7 border-2 sm:border-[2.5px] border-[#ffd5e2] dark:border-pink-900/50 shadow-md shadow-pink-100/30 dark:shadow-none space-y-4 sm:space-y-6 relative overflow-hidden"
+      >
+          {/* Top Header Row: Date | Weather | Streak */}
+          <div className="flex items-center justify-between gap-2 border-b border-pink-100/70 dark:border-pink-900/30 pb-3 sm:pb-4">
+            {/* Left: Date */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500 stroke-[2.5]" />
+              <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                {formatDateDisplay(todayStr).toUpperCase()}
+              </span>
+            </div>
+
+            {/* Center: Weather */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-sm sm:text-base">☀️</span>
+              <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white">
+                {todayWeather.tempHigh}°{settings.tempUnit || 'F'}
+              </span>
+            </div>
+
+            {/* Right: Streak */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-sm sm:text-base">🔥</span>
+              <span className="text-xs sm:text-sm font-black text-[#e11d48]">
+                {kid.streakDays || 1}-day streak
+              </span>
+            </div>
+          </div>
+
+          {/* Middle Row: Circular Avatar + Greeting & Live Stats */}
+          <div className="flex items-center gap-4 sm:gap-6 pt-0.5 sm:pt-1">
+            {/* Circular Avatar */}
             <div
-              style={{ backgroundColor: `${kid.color}20` }}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl shrink-0 shadow-inner overflow-hidden"
+              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#fce7f3] dark:bg-pink-950/40 border-2 border-[#fbcfe8] dark:border-pink-900/50 flex items-center justify-center text-4xl sm:text-5xl shrink-0 shadow-inner overflow-hidden"
             >
               {kid.avatar && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
                 <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
               ) : (
-                <span className="leading-none">{kid.avatar || '⭐'}</span>
+                <span className="leading-none select-none">{kid.avatar || '⭐'}</span>
               )}
             </div>
+
+            {/* Greeting & Subtitle */}
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-300">
-                  {formatDateDisplay(todayStr)}
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                Hey, {kid.name}! <span className="inline-block">👋</span>
+              </h1>
+              <div className="flex items-center gap-2 mt-1 sm:mt-1.5 text-sm sm:text-base flex-wrap">
+                <span className="font-extrabold text-[#f43f5e] tracking-tight">
+                  {isAllComplete
+                    ? 'All missions done! 🚀'
+                    : `${todaysChores.length - completedTasksCount} mission${todaysChores.length - completedTasksCount === 1 ? '' : 's'}`}
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/90 px-2 py-0.5 rounded-full border border-slate-200/60 dark:border-slate-700">
-                  <span>{WEATHER_CONDITIONS[todayWeather.condition]?.icon || '☀️'}</span>
-                  <span>{todayWeather.tempHigh}°{settings.tempUnit || 'F'}</span>
+                <span className="text-slate-300 dark:text-slate-600 font-bold">•</span>
+                <span className="font-extrabold flex items-center gap-1.5">
+                  <span className="text-amber-500 font-black">
+                    {starsEarnedToday > 0 ? starsEarnedToday : kid.stars}
+                  </span>
+                  <span>⭐</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-extrabold">
+                    {starsEarnedToday > 0 ? 'today' : 'balance'}
+                  </span>
                 </span>
               </div>
-              <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${theme.kidCardNameColor || 'text-slate-900 dark:text-white'}`}>
-                Hey, {kid.name}! 👋
-              </h1>
-              <p className={`text-xs sm:text-sm font-semibold mt-0.5 ${theme.kidCardSubtextColor || 'text-slate-500 dark:text-slate-300'}`}>
-                {isAllComplete
-                  ? "You're a superstar! All missions done today! 🚀"
-                  : `You have ${todaysChores.length - completedTasksCount} mission${todaysChores.length - completedTasksCount === 1 ? '' : 's'} waiting for you today.`}
-              </p>
             </div>
           </div>
 
-          {/* Mini Action Badges: Chore Roulette Button, Snack Request & Progress Count */}
-          <div className="flex items-center gap-2.5 sm:gap-4 self-stretch sm:self-center flex-wrap sm:flex-nowrap justify-between sm:justify-end shrink-0">
-            <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-              {onOpenSnackRequest && (
+          {/* Bottom Row: 3 Action Cards (Snacks, Brain Teaser, Reading Log) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-1 sm:pt-2">
+            {/* Card 1: Snacks */}
+            {onOpenSnackRequest && (
+              <button
+                id="btn-kid-snacks"
+                onClick={() => {
+                  sound.playTap();
+                  onOpenSnackRequest(kid);
+                }}
+                className="p-3 sm:p-3.5 rounded-2xl sm:rounded-[22px] bg-[#edf8f1] dark:bg-emerald-950/30 hover:bg-[#e2f5e8] dark:hover:bg-emerald-950/50 border border-[#c4ebd1] dark:border-emerald-800/40 flex items-center gap-3 transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.98] text-left group"
+                title={settings?.pauseSnackRequests ? 'Snack requests currently paused by parents' : 'Spend your stars to request delicious snacks & treats!'}
+              >
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#5bb87a] text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                  <svg className="w-6 h-6 stroke-[2.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z" />
+                    <path d="M10 2c1 .5 2 2 2 5" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-black text-sm sm:text-base text-[#1b4d2b] dark:text-emerald-200 leading-tight">
+                    Snacks
+                  </div>
+                  <div className="font-extrabold text-xs sm:text-sm text-[#276e40] dark:text-emerald-300 flex items-center gap-1 mt-0.5">
+                    {settings?.pauseSnackRequests ? (
+                      <span className="text-amber-700 dark:text-amber-400">Paused ⏸️</span>
+                    ) : (
+                      <>
+                        <span>{kid.stars}</span>
+                        <span>⭐</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </button>
+            )}
+
+            {/* Card 2: Brain Teaser */}
+            {database && onUpdateDatabase && (() => {
+              const todayDateStr = getTodayDateString();
+              const answeredCount = getDailyTeasersAnsweredToday(kid, todayDateStr);
+              const dailyLimit = settings?.brainTeaserDailyLimit ?? 1;
+              const isDone = answeredCount >= dailyLimit;
+              const rewardStars = settings?.brainTeaserRewardStars ?? 5;
+
+              return (
+                <button
+                  id="btn-kid-brain-teaser"
+                  onClick={() => {
+                    sound.playTap();
+                    setIsBrainTeaserOpen(true);
+                    setIsReadingLogOpen(false);
+                    setIsBadgeModalOpen(false);
+                  }}
+                  className="p-3 sm:p-3.5 rounded-2xl sm:rounded-[22px] bg-[#f4effc] dark:bg-purple-950/30 hover:bg-[#eae0fa] dark:hover:bg-purple-950/50 border border-[#decff7] dark:border-purple-800/40 flex items-center gap-3 transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.98] text-left group"
+                  title="Answer your grade-level brain teaser for bonus points!"
+                >
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#825ec7] text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                    <Brain className="w-6 h-6 stroke-[2.2]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-black text-sm sm:text-base text-[#382260] dark:text-purple-200 leading-tight">
+                      Brain Teaser
+                    </div>
+                    <div className="font-extrabold text-xs sm:text-sm text-[#6442a5] dark:text-purple-300 flex items-center gap-1 mt-0.5">
+                      {isDone ? (
+                        <span className="text-purple-700 dark:text-purple-300">
+                          {answeredCount}/{dailyLimit} ✓ Done
+                        </span>
+                      ) : (
+                        <>
+                          <span>{answeredCount}/{dailyLimit}</span>
+                          <span>•</span>
+                          <span>+{rewardStars}</span>
+                          <span>⭐</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })()}
+
+            {/* Card 3: Reading Log */}
+            {database && onUpdateDatabase && (() => {
+              const rStars = getReadingRewardStars(database);
+              const dailyLimit = getReadingDailyClaimLimit(database.settings);
+              const claimsCount = getReadingClaimsCountForDate(database.readingLogs || [], kid.id, todayStr);
+              const isLimitReached = dailyLimit > 0 && claimsCount >= dailyLimit;
+
+              return (
+                <button
+                  id="btn-kid-reading-log"
+                  onClick={() => {
+                    sound.playTap();
+                    setIsReadingLogOpen(true);
+                    setIsBrainTeaserOpen(false);
+                    setIsBadgeModalOpen(false);
+                  }}
+                  className="p-3 sm:p-3.5 rounded-2xl sm:rounded-[22px] bg-[#fcf3e8] dark:bg-amber-950/30 hover:bg-[#f7ebd8] dark:hover:bg-amber-950/50 border border-[#f1d7ba] dark:border-amber-800/40 flex items-center gap-3 transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.98] text-left group"
+                  title="Log your book and chapter to earn reading stars!"
+                >
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#c99554] text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                    <BookOpen className="w-6 h-6 stroke-[2.2]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-black text-sm sm:text-base text-[#5c3713] dark:text-amber-200 leading-tight">
+                      Reading Log
+                    </div>
+                    <div className="font-extrabold text-xs sm:text-sm text-[#8c5a2b] dark:text-amber-300 flex items-center gap-1 mt-0.5">
+                      {dailyLimit === 0 ? (
+                        claimsCount > 0 ? (
+                          <span>{claimsCount} read • +{rStars} ⭐</span>
+                        ) : (
+                          <span>+{rStars} ⭐ per chapter</span>
+                        )
+                      ) : isLimitReached ? (
+                        <span className="text-amber-800 dark:text-amber-300">
+                          {claimsCount}/{dailyLimit} Done ✓
+                        </span>
+                      ) : claimsCount > 0 ? (
+                        <span>{claimsCount}/{dailyLimit} • +{rStars} ⭐</span>
+                      ) : (
+                        <span>+{rStars} ⭐ per chapter</span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })()}
+          </div>
+        </div>
+
+      {/* Level, Badges & Rewards Hub (Balanced 2-Card Layout - Zero Dead Space) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+        {/* Card 1: Level, Star Bank, Next Rank & Reward Store (7 cols on desktop) */}
+        <div className="lg:col-span-7 bg-indigo-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 text-white relative overflow-hidden shadow-xl flex flex-col justify-between">
+          <div className="relative z-10 space-y-4">
+            {/* Top avatar & level */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-black italic tracking-tight">
+                  Level {levelInfo.level}
+                </h2>
+                <p className="text-indigo-300 font-extrabold uppercase tracking-wider text-xs sm:text-sm mt-0.5">
+                  {levelInfo.title}
+                </p>
+              </div>
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-800/80 border-2 border-indigo-400/40 flex items-center justify-center text-2xl sm:text-3xl shadow-lg overflow-hidden shrink-0">
+                {kid.avatar && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
+                  <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="leading-none">{kid.avatar || '⭐'}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Star Bank & Streak */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="bg-indigo-950/60 p-3 rounded-2xl border border-indigo-800 flex items-center gap-2.5">
+                <span className="text-2xl">⭐</span>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-indigo-300">Star Bank</div>
+                  <div className="text-lg font-black text-yellow-400 leading-tight">{kid.stars}</div>
+                </div>
+              </div>
+              <div className="bg-indigo-950/60 p-3 rounded-2xl border border-indigo-800 flex items-center gap-2.5">
+                <Flame className="w-6 h-6 text-orange-400 fill-orange-400" />
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-indigo-300">Streak</div>
+                  <div className="text-lg font-black text-orange-400 leading-tight">{kid.streakDays} Days</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Next Reward Progress Bar */}
+            <div>
+              <div className="flex justify-between text-xs sm:text-sm font-black mb-1.5">
+                <span className="uppercase tracking-wider text-indigo-200">
+                  {levelInfo.isMaxLevel ? 'MAX LEVEL REACHED' : 'Next Rank Progress'}
+                </span>
+                <span className="text-yellow-400">{levelInfo.progressPercent}%</span>
+              </div>
+              <div className="w-full bg-indigo-950 h-4 sm:h-5 rounded-full overflow-hidden border-2 border-indigo-700 p-0.5 sm:p-1">
+                <div
+                  className="bg-gradient-to-r from-yellow-400 to-orange-500 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${levelInfo.progressPercent}%` }}
+                />
+              </div>
+              <p className="text-[11px] sm:text-xs text-indigo-300 mt-1.5 text-center font-medium">
+                {levelInfo.isMaxLevel ? 'Chore Legend Status Unlocked!' : `Only ${levelInfo.starsNeededForNextLevel} points to Level ${levelInfo.level + 1}!`}
+              </p>
+            </div>
+
+            {/* Launch Reward Store Button */}
+            <button
+              id="btn-open-rewards-aside"
+              onClick={() => {
+                sound.playTap();
+                onOpenRewardStore();
+              }}
+              className={`w-full py-3 px-4 rounded-2xl active:scale-95 text-slate-900 font-black text-xs sm:text-sm shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                settings?.pauseRewardStore
+                  ? 'bg-gradient-to-r from-amber-300 to-amber-400 hover:from-amber-200 hover:to-amber-300 shadow-amber-500/25'
+                  : 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 shadow-orange-500/25'
+              }`}
+            >
+              <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-slate-900" />
+              <span>{settings?.pauseRewardStore ? 'Reward Store (Paused ⏸️)' : 'Open Reward Store 🎁'}</span>
+            </button>
+          </div>
+
+          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+        </div>
+
+        {/* Card 2: Quest Badges Showcase & Privacy Shield (5 cols on desktop) */}
+        <div className="lg:col-span-5 bg-indigo-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 text-white relative overflow-hidden shadow-xl flex flex-col justify-between space-y-4">
+          <div className="relative z-10 flex-1 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-black text-yellow-400 text-xs sm:text-sm uppercase tracking-wider flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-amber-300" />
+                  <span>Quest Badges ({kidBadges.filter((b) => b.isUnlocked).length}/{kidBadges.length})</span>
+                </h4>
                 <button
                   onClick={() => {
                     sound.playTap();
-                    onOpenSnackRequest(kid);
+                    setSelectedBadgeModalId(kidBadges[0]?.badge.id || null);
+                    setIsBadgeModalOpen(true);
+                    setIsBrainTeaserOpen(false);
+                    setIsReadingLogOpen(false);
                   }}
-                  className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                    settings?.pauseSnackRequests
-                      ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700'
-                      : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'
-                  }`}
-                  title={settings?.pauseSnackRequests ? 'Snack requests currently paused by parents' : 'Spend your stars to request delicious snacks & treats!'}
+                  className="text-xs font-black text-amber-300 hover:text-amber-200 underline cursor-pointer"
                 >
-                  <span>
-                    🍪 Snacks {settings?.pauseSnackRequests ? '(Paused ⏸️)' : `(${kid.stars}⭐)`}
-                  </span>
+                  View All
                 </button>
-              )}
+              </div>
 
-              {database && onUpdateDatabase && (
-                (() => {
-                  const todayDateStr = getTodayDateString();
-                  const answeredCount = getDailyTeasersAnsweredToday(kid, todayDateStr);
-                  const dailyLimit = settings?.brainTeaserDailyLimit ?? 1;
-                  const isDone = answeredCount >= dailyLimit;
-                  return (
-                    <button
-                      id="btn-kid-brain-teaser"
-                      onClick={() => {
-                        sound.playTap();
-                        setIsBrainTeaserOpen(true);
-                      }}
-                      className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                        isDone
-                          ? 'bg-purple-900/60 text-purple-200 border border-purple-700/60 hover:bg-purple-800/80'
-                          : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
-                      }`}
-                      title="Answer your grade-level brain teaser for bonus points!"
-                    >
-                      {isDone ? (
-                        <span>🧠 Brain Teaser ({answeredCount}/{dailyLimit} ✓)</span>
-                      ) : (
-                        <span>🧠 Brain Teaser ({answeredCount}/{dailyLimit} • +{settings?.brainTeaserRewardStars ?? 5}⭐)</span>
-                      )}
-                    </button>
-                  );
-                })()
-              )}
+              <div className="grid grid-cols-3 gap-2">
+                {kidBadges.map(({ badge, isUnlocked, progressText }) => (
+                  <button
+                    key={badge.id}
+                    id={`btn-badge-${badge.id}`}
+                    onClick={() => {
+                      sound.playTap();
+                      setSelectedBadgeModalId(badge.id);
+                      setIsBadgeModalOpen(true);
+                      setIsBrainTeaserOpen(false);
+                      setIsReadingLogOpen(false);
+                    }}
+                    className={`relative rounded-xl p-2 flex flex-col items-center justify-center transition-all cursor-pointer group active:scale-95 border-2 ${
+                      isUnlocked
+                        ? `bg-gradient-to-br ${badge.bgGradient} border-amber-300 text-slate-950 shadow-md shadow-amber-500/20 hover:scale-105`
+                        : 'bg-indigo-950/60 border-indigo-700/80 text-indigo-300 opacity-60 hover:opacity-90 grayscale hover:grayscale-0'
+                    }`}
+                    title={`${badge.title} (${isUnlocked ? 'UNLOCKED' : 'LOCKED: ' + progressText}) - Tap to inspect`}
+                  >
+                    <span className="text-2xl filter drop-shadow-sm select-none">{badge.icon}</span>
+                    <span className="text-[10px] font-black leading-tight mt-1 truncate max-w-full text-center">
+                      {badge.title}
+                    </span>
+                    {!isUnlocked && (
+                      <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-900 border border-slate-700 text-white flex items-center justify-center text-[9px]">
+                        🔒
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
 
-              {/* Reading Log Quest Button */}
-              {database && onUpdateDatabase && (
-                (() => {
-                  const rStars = getReadingRewardStars(database);
-                  const dailyLimit = getReadingDailyClaimLimit(database.settings);
-                  const claimsCount = getReadingClaimsCountForDate(database.readingLogs || [], kid.id, todayStr);
-                  const isLimitReached = dailyLimit > 0 && claimsCount >= dailyLimit;
-                  return (
-                    <button
-                      id="btn-kid-reading-log"
-                      onClick={() => {
-                        sound.playTap();
-                        setIsReadingLogOpen(true);
-                      }}
-                      className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                        isLimitReached
-                          ? 'bg-amber-900/60 text-amber-200 border border-amber-700/60 hover:bg-amber-800/80'
-                          : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white'
-                      }`}
-                      title="Log your book and chapter to earn reading stars!"
-                    >
-                      <span>
-                        {dailyLimit === 0
-                          ? (claimsCount > 0 ? `📖 Reading Log (${claimsCount} Done • +${rStars}⭐)` : `📖 Reading Log (+${rStars}⭐)`)
-                          : isLimitReached
-                          ? `📖 Reading Log (Limit Done ${claimsCount}/${dailyLimit} ✓)`
-                          : claimsCount > 0
-                          ? `📖 Reading Log (${claimsCount}/${dailyLimit} Claimed • +${rStars}⭐)`
-                          : `📖 Reading Log (+${rStars}⭐)`}
-                      </span>
-                    </button>
-                  );
-                })()
-              )}
-
-              <button
-                onClick={() => {
-                  sound.playTap();
-                  setIsWheelOpen(true);
-                }}
-                className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-pink-500 hover:from-amber-500 hover:to-pink-600 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer shrink-0"
-                title="Spin the Chore Wheel for a surprise mission!"
-              >
-                <RotateCw className="w-4 h-4" />
-                <span>Chore Roulette 🎡</span>
-              </button>
+              <div className="text-[11px] font-bold text-indigo-200/80 mt-2.5 text-center">
+                ✨ Tap any badge to check criteria & unlock requirements!
+              </div>
             </div>
 
-            <div className="flex items-center gap-3 pl-3 sm:pl-4 border-l border-slate-200 dark:border-slate-700/60 text-right shrink-0">
-              <div>
-                <div className="text-2xl sm:text-3xl font-black text-indigo-950 dark:text-white leading-none">
-                  {completedTasksCount}/{totalTasksCount}
-                </div>
-                <div className="text-[10px] sm:text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider mt-1">
-                  Completed
-                </div>
+            {/* Local Host Privacy Banner */}
+            <div className="mt-4 bg-emerald-600/90 rounded-2xl p-3 sm:p-3.5 text-white flex items-center gap-3 border border-emerald-400/40 shadow-xs">
+              <div className="text-2xl shrink-0">🛡️</div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wider text-emerald-200 leading-tight">Privacy Mode Active</p>
+                <p className="font-extrabold text-xs sm:text-sm text-white truncate leading-tight">Local Raspberry Pi 5 Connection</p>
               </div>
             </div>
           </div>
+
+          <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
         </div>
+      </div>
 
         {/* Events Ticker (if kid has activities today) */}
         {kidTodayEvents.length > 0 && (
@@ -380,24 +601,73 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
         )}
 
-        {/* Kid-Coin Gamified Savings Mission & Cosmic Rocket Goal Track */}
-        {settings?.kidCoinEnabled !== false && database && (
-          <GoalTracker
-            kid={kid}
-            database={database}
-            onUpdateKid={(updatedKid) => {
-              if (onUpdateDatabase && database) {
-                const updatedKids = database.kids.map((k) => (k.id === updatedKid.id ? updatedKid : k));
-                onUpdateDatabase({ ...database, kids: updatedKids });
-              }
-            }}
-          />
-        )}
+        {/* Active Embedded Subscreen: Brain Teaser, Reading Log, or Quest Badges */}
+        {isBrainTeaserOpen && database && onUpdateDatabase ? (
+          <div className="w-full pt-1">
+            <BrainTeaserModal
+              isOpen={true}
+              embedded={true}
+              kid={kid}
+              database={database}
+              onUpdateDatabase={onUpdateDatabase}
+              onClose={() => setIsBrainTeaserOpen(false)}
+            />
+          </div>
+        ) : isReadingLogOpen && database && onUpdateDatabase ? (
+          <div className="w-full pt-1">
+            <ReadingLogModal
+              isOpen={true}
+              embedded={true}
+              kid={kid}
+              database={database}
+              onUpdateDatabase={onUpdateDatabase}
+              onClose={() => setIsReadingLogOpen(false)}
+            />
+          </div>
+        ) : isBadgeModalOpen ? (
+          <div className="w-full pt-1">
+            <BadgeModal
+              isOpen={true}
+              embedded={true}
+              kid={kid}
+              badges={kidBadges}
+              initialBadgeId={selectedBadgeModalId}
+              onClose={() => setIsBadgeModalOpen(false)}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Kid-Coin Gamified Savings Mission & Cosmic Rocket Goal Track */}
+            {settings?.kidCoinEnabled !== false && database && (
+              <GoalTracker
+                kid={kid}
+                database={database}
+                onUpdateKid={(updatedKid) => {
+                  if (onUpdateDatabase && database) {
+                    const updatedKids = database.kids.map((k) => (k.id === updatedKid.id ? updatedKid : k));
+                    onUpdateDatabase({ ...database, kids: updatedKids });
+                  }
+                }}
+              />
+            )}
 
         {/* Filters: Categories and Time of Day */}
         <div className="flex flex-col gap-3">
-          {/* Category Pills */}
+          {/* Category Pills & Chore Roulette */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              id="btn-chore-roulette-spin"
+              onClick={() => {
+                sound.playTap();
+                setIsWheelOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-400 to-pink-500 hover:from-amber-500 hover:to-pink-600 text-white font-black text-xs sm:text-sm shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+              title="Spin the Chore Wheel for a surprise mission!"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+              <span>Chore Roulette 🎡</span>
+            </button>
+
             <button
               key="filter-cat-all"
               id="filter-cat-all"
@@ -475,13 +745,13 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
         </div>
 
-        {/* Chores Cards Grid */}
-        <div className="grid grid-cols-1 gap-4">
+        {/* Chores Cards Grid (Responsive 2-column grid utilizing full width) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
           {visibleChores.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center border-b-8 border-r-4 border-slate-200 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-sm">
+            <div className="md:col-span-2 bg-white dark:bg-slate-800 rounded-3xl p-12 text-center border-b-8 border-r-4 border-slate-200 dark:border-slate-700 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-sm">
               <div className="text-5xl mb-3">🌴</div>
-              <h3 className="font-black text-slate-800 text-xl">No missions found here!</h3>
-              <p className="text-sm text-slate-500 font-medium mt-1 max-w-sm mx-auto">
+              <h3 className="font-black text-slate-800 dark:text-white text-xl">No missions found here!</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-sm mx-auto">
                 There are no tasks scheduled for this category right now. Check other categories or enjoy your break!
               </p>
             </div>
@@ -509,7 +779,11 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                   onUndo={onUndoChoreStatus}
                   onStartTimer={(c) => setActiveTimerChore(c)}
                   claimedByOtherKidName={otherKidClaimer?.name}
-                  onOpenReadingLog={() => setIsReadingLogOpen(true)}
+                  onOpenReadingLog={() => {
+                    setIsReadingLogOpen(true);
+                    setIsBrainTeaserOpen(false);
+                    setIsBadgeModalOpen(false);
+                  }}
                 />
               );
             })
@@ -553,7 +827,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {bountyChores.map((bounty) => {
                 const category = categories.find((c) => c.id === bounty.categoryId);
                 const log = logMap.get(bounty.id);
@@ -574,6 +848,8 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             </div>
           </div>
         )}
+          </>
+        )}
 
         {/* Prominent Kiosk Exit Button at Bottom of Tasks */}
         {onReturnToKiosk && (
@@ -591,160 +867,6 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             </button>
           </div>
         )}
-      </div>
-
-      {/* Right Column: Hero Aside Level Card & Pi Privacy Shield (col-span-4) */}
-      <aside className="lg:col-span-4 flex flex-col gap-4 sm:gap-6 self-start lg:sticky lg:top-4 sm:lg:top-6">
-        {/* Indigo Level & Rank Hero Card */}
-        <div className="bg-indigo-900 rounded-[2.5rem] p-6 sm:p-8 text-white relative overflow-hidden shadow-2xl flex flex-col">
-          <div className="relative z-10 flex flex-col">
-            {/* Top avatar & level */}
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-3xl sm:text-4xl font-black italic tracking-tight">
-                  Level {levelInfo.level}
-                </h2>
-                <p className="text-indigo-300 font-extrabold uppercase tracking-wider text-xs sm:text-sm mt-0.5">
-                  {levelInfo.title}
-                </p>
-              </div>
-              <div
-                className="w-14 h-14 rounded-2xl bg-indigo-800/80 border-2 border-indigo-400/40 flex items-center justify-center text-3xl shadow-lg overflow-hidden"
-              >
-                {kid.avatar && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
-                  <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="leading-none">{kid.avatar || '⭐'}</span>
-                )}
-              </div>
-            </div>
-
-            {/* Streak & Current Stars Overview */}
-            <div className="grid grid-cols-2 gap-2.5 mb-6">
-              <div className="bg-indigo-950/60 p-3 rounded-2xl border border-indigo-800 flex items-center gap-2.5">
-                <span className="text-2xl">⭐</span>
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-indigo-300">Star Bank</div>
-                  <div className="text-lg font-black text-yellow-400 leading-tight">{kid.stars}</div>
-                </div>
-              </div>
-              <div className="bg-indigo-950/60 p-3 rounded-2xl border border-indigo-800 flex items-center gap-2.5">
-                <Flame className="w-6 h-6 text-orange-400 fill-orange-400" />
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-indigo-300">Streak</div>
-                  <div className="text-lg font-black text-orange-400 leading-tight">{kid.streakDays} Days</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Next Reward Progress Bar */}
-            <div className="space-y-6">
-              <div>
-                <div className="flex justify-between text-xs sm:text-sm font-black mb-2">
-                  <span className="uppercase tracking-wider text-indigo-200">
-                    {levelInfo.isMaxLevel ? 'MAX LEVEL REACHED' : 'Next Rank Progress'}
-                  </span>
-                  <span className="text-yellow-400">{levelInfo.progressPercent}%</span>
-                </div>
-                <div className="w-full bg-indigo-950 h-5 rounded-full overflow-hidden border-2 border-indigo-700 p-1">
-                  <div
-                    className="bg-gradient-to-r from-yellow-400 to-orange-500 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${levelInfo.progressPercent}%` }}
-                  />
-                </div>
-                <p className="text-xs text-indigo-300 mt-2 text-center font-medium">
-                  {levelInfo.isMaxLevel ? 'Chore Legend Status Unlocked!' : `Only ${levelInfo.starsNeededForNextLevel} points to Level ${levelInfo.level + 1}!`}
-                </p>
-              </div>
-
-              {/* Dynamic Interactive Badges & Quest Trophy Box */}
-              <div className="bg-indigo-800/50 p-4 rounded-2xl border border-indigo-700">
-                <div className="flex items-center justify-between mb-2.5">
-                  <h4 className="font-black text-yellow-400 text-xs sm:text-sm uppercase tracking-wider flex items-center gap-1.5">
-                    <Award className="w-4 h-4 text-amber-300" />
-                    <span>Quest Badges ({kidBadges.filter((b) => b.isUnlocked).length}/{kidBadges.length})</span>
-                  </h4>
-                  <button
-                    onClick={() => {
-                      sound.playTap();
-                      setSelectedBadgeModalId(kidBadges[0]?.badge.id || null);
-                      setIsBadgeModalOpen(true);
-                    }}
-                    className="text-[11px] font-black text-amber-300 hover:text-amber-200 underline cursor-pointer"
-                  >
-                    View All
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {kidBadges.map(({ badge, isUnlocked, progressText, progressPercent }) => (
-                    <button
-                      key={badge.id}
-                      id={`btn-badge-${badge.id}`}
-                      onClick={() => {
-                        sound.playTap();
-                        setSelectedBadgeModalId(badge.id);
-                        setIsBadgeModalOpen(true);
-                      }}
-                      className={`relative rounded-xl p-2 flex flex-col items-center justify-center transition-all cursor-pointer group active:scale-95 border-2 ${
-                        isUnlocked
-                          ? `bg-gradient-to-br ${badge.bgGradient} border-amber-300 text-slate-950 shadow-md shadow-amber-500/20 hover:scale-105`
-                          : 'bg-indigo-900/60 border-indigo-700/80 text-indigo-300 opacity-60 hover:opacity-90 grayscale hover:grayscale-0'
-                      }`}
-                      title={`${badge.title} (${isUnlocked ? 'UNLOCKED' : 'LOCKED: ' + progressText}) - Tap to inspect`}
-                    >
-                      <span className="text-2xl filter drop-shadow-sm select-none">{badge.icon}</span>
-                      <span className="text-[10px] font-black leading-tight mt-1 truncate max-w-full text-center">
-                        {badge.title}
-                      </span>
-
-                      {!isUnlocked && (
-                        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-900 border border-slate-700 text-white flex items-center justify-center text-[9px]">
-                          🔒
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="text-[11px] font-bold text-indigo-200/80 mt-2.5 text-center">
-                  ✨ Tap any badge to check criteria & unlock requirements!
-                </div>
-              </div>
-            </div>
-
-            {/* Launch Reward Store Button */}
-            <button
-              id="btn-open-rewards-aside"
-              onClick={() => {
-                sound.playTap();
-                onOpenRewardStore();
-              }}
-              className={`mt-6 w-full py-3.5 px-4 rounded-2xl active:scale-95 text-slate-900 font-black text-sm sm:text-base shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                settings?.pauseRewardStore
-                  ? 'bg-gradient-to-r from-amber-300 to-amber-400 hover:from-amber-200 hover:to-amber-300 shadow-amber-500/25'
-                  : 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 shadow-orange-500/25'
-              }`}
-            >
-              <Gift className="w-5 h-5 text-slate-900" />
-              <span>{settings?.pauseRewardStore ? 'Reward Store (Paused ⏸️)' : 'Open Reward Store 🎁'}</span>
-            </button>
-          </div>
-
-          {/* Decorative glow in card corner */}
-          <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-        </div>
-
-        {/* Local Host Privacy Banner */}
-        <div className="bg-emerald-500 rounded-3xl p-5 sm:p-6 text-white flex items-center gap-4 shadow-lg border-b-8 border-emerald-700">
-          <div className="text-4xl shrink-0">🛡️</div>
-          <div>
-            <p className="text-xs font-black uppercase tracking-wider opacity-90">Privacy Mode Active</p>
-            <p className="font-extrabold text-sm sm:text-base leading-tight">Local Raspberry Pi 5 Connection</p>
-            <p className="text-[11px] opacity-80 mt-0.5">Safe, encrypted offline family network</p>
-          </div>
-        </div>
-      </aside>
 
       {/* Focus Timer Modal */}
       {activeTimerChore && (
@@ -788,15 +910,6 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
         onClose={() => setSkipModalChore(null)}
       />
 
-      {/* Dynamic Badge & Quest Detail Modal */}
-      <BadgeModal
-        isOpen={isBadgeModalOpen}
-        onClose={() => setIsBadgeModalOpen(false)}
-        kid={kid}
-        badges={kidBadges}
-        initialBadgeId={selectedBadgeModalId}
-      />
-
       {/* Western Bounty Board Pop-up Modal */}
       {isBountyBoardOpen && database && onUpdateDatabase && (
         <BountyBoardModal
@@ -809,28 +922,6 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             setIsBountyBoardOpen(false);
             setActiveTimerChore(chore);
           }}
-        />
-      )}
-
-      {/* Daily Brain Teaser Modal */}
-      {isBrainTeaserOpen && database && onUpdateDatabase && (
-        <BrainTeaserModal
-          isOpen={isBrainTeaserOpen}
-          kid={kid}
-          database={database}
-          onUpdateDatabase={onUpdateDatabase}
-          onClose={() => setIsBrainTeaserOpen(false)}
-        />
-      )}
-
-      {/* Daily Reading Adventure Log Modal */}
-      {isReadingLogOpen && database && onUpdateDatabase && (
-        <ReadingLogModal
-          isOpen={isReadingLogOpen}
-          kid={kid}
-          database={database}
-          onUpdateDatabase={onUpdateDatabase}
-          onClose={() => setIsReadingLogOpen(false)}
         />
       )}
     </div>

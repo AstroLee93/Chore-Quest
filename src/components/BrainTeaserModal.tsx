@@ -7,6 +7,7 @@ import {
   XCircle,
   Lightbulb,
   ArrowRight,
+  ArrowLeft,
   RotateCcw,
   X,
   Star,
@@ -42,6 +43,7 @@ interface BrainTeaserModalProps {
   database: FamilyDatabase;
   onUpdateDatabase: (newDb: FamilyDatabase) => void;
   isAdminPreview?: boolean;
+  embedded?: boolean;
 }
 
 export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
@@ -51,6 +53,7 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
   database,
   onUpdateDatabase,
   isAdminPreview = false,
+  embedded = false,
 }) => {
   const currentKid = kid || database.kids[0] || null;
   const currentGrade: GradeLevel = currentKid?.gradeLevel || '1st_grade';
@@ -201,17 +204,9 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col my-auto max-h-[92vh]"
-        >
-          {/* Top Decorative Header */}
+  const modalContent = (
+    <>
+      {/* Top Decorative Header */}
           <div className="relative bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-700 p-4 sm:p-6 text-white overflow-hidden shrink-0">
             {/* Ambient Background Circles */}
             <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none" />
@@ -688,6 +683,44 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
               </div>
             </div>
           )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div id="brain-teaser-view" className="w-full max-w-4xl mx-auto space-y-3 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <button
+            id="btn-back-teaser"
+            onClick={() => {
+              sound.playTap();
+              onClose();
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-black text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer shadow-xs"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>← Back to Missions</span>
+          </button>
+        </div>
+
+        <div className="relative w-full bg-white dark:bg-slate-900 rounded-3xl shadow-xl border-2 border-purple-200 dark:border-purple-900/50 overflow-hidden flex flex-col">
+          {modalContent}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 15 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col my-auto max-h-[92vh]"
+        >
+          {modalContent}
         </motion.div>
       </div>
     </AnimatePresence>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Award, Lock, Sparkles, CheckCircle2, ChevronLeft, ChevronRight, X, Flame, Zap, Shield, Target } from 'lucide-react';
+import { Award, Lock, Sparkles, CheckCircle2, ChevronLeft, ChevronRight, X, Flame, Zap, Shield, Target, ArrowLeft } from 'lucide-react';
 import { KidBadgeProgress, KidProfile } from '../types';
 import { sound } from '../utils/sound';
 
@@ -9,6 +9,7 @@ interface BadgeModalProps {
   kid: KidProfile;
   badges: KidBadgeProgress[];
   initialBadgeId?: string | null;
+  embedded?: boolean;
 }
 
 export const BadgeModal: React.FC<BadgeModalProps> = ({
@@ -17,6 +18,7 @@ export const BadgeModal: React.FC<BadgeModalProps> = ({
   kid,
   badges,
   initialBadgeId,
+  embedded = false,
 }) => {
   const [selectedBadgeId, setSelectedBadgeId] = useState<string>(
     initialBadgeId || badges[0]?.badge.id || 'badge-first-quest'
@@ -42,17 +44,9 @@ export const BadgeModal: React.FC<BadgeModalProps> = ({
 
   const unlockedCount = badges.filter((b) => b.isUnlocked).length;
 
-  return (
-    <div
-      id="badge-detail-modal"
-      className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        className="bg-slate-900 border-4 border-yellow-400/80 text-white rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full shadow-2xl relative overflow-hidden flex flex-col items-center text-center animate-scale-up"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Glow ambient background */}
+  const badgeContent = (
+    <>
+      {/* Glow ambient background */}
         <div
           className="absolute -top-24 -left-24 w-60 h-60 rounded-full blur-3xl opacity-30 pointer-events-none"
           style={{ backgroundColor: badge.color }}
@@ -197,6 +191,44 @@ export const BadgeModal: React.FC<BadgeModalProps> = ({
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div id="quest-badges-view" className="w-full max-w-4xl mx-auto space-y-3 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <button
+            id="btn-back-badges"
+            onClick={() => {
+              sound.playTap();
+              onClose();
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-black text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer shadow-xs"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>← Back to Missions</span>
+          </button>
+        </div>
+
+        <div className="bg-slate-900 border-2 sm:border-4 border-yellow-400/80 text-white rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 w-full shadow-2xl relative overflow-hidden flex flex-col items-center text-center">
+          {badgeContent}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      id="badge-detail-modal"
+      className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-900 border-4 border-yellow-400/80 text-white rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full shadow-2xl relative overflow-hidden flex flex-col items-center text-center animate-scale-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {badgeContent}
       </div>
     </div>
   );

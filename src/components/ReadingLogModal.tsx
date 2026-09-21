@@ -19,6 +19,7 @@ import {
   Heart,
   Smile,
   Zap,
+  ArrowLeft,
 } from 'lucide-react';
 import { KidProfile, FamilyDatabase, ReadingLogEntry, KidBookShelfItem } from '../types';
 import { fireConfetti } from '../utils/confetti';
@@ -44,6 +45,7 @@ interface ReadingLogModalProps {
   onUpdateDatabase: (updated: FamilyDatabase) => void;
   onClose: () => void;
   onPostComplete?: () => void;
+  embedded?: boolean;
 }
 
 const REACTION_OPTIONS = [
@@ -64,6 +66,7 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
   onUpdateDatabase,
   onClose,
   onPostComplete,
+  embedded = false,
 }) => {
   if (!isOpen || !kid) return null;
 
@@ -356,16 +359,9 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  return (
-    <div
-      id="reading-log-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fade-in"
-    >
-      <div
-        id="reading-log-modal-card"
-        className="relative w-full max-w-2xl rounded-3xl bg-gradient-to-b from-amber-50 via-white to-orange-50 border-4 border-amber-300 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
-      >
-        {/* Decorative Top Accent Bar */}
+  const cardContent = (
+    <>
+      {/* Decorative Top Accent Bar */}
         <div className="h-3 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400" />
 
         {/* Header */}
@@ -1019,6 +1015,46 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
             </form>
           )}
         </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div id="reading-log-view" className="w-full max-w-4xl mx-auto space-y-3 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <button
+            id="btn-back-reading-log"
+            onClick={() => {
+              sound.playTap();
+              onClose();
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-black text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer shadow-xs"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>← Back to Missions</span>
+          </button>
+        </div>
+
+        <div
+          id="reading-log-card"
+          className="relative w-full rounded-3xl bg-gradient-to-b from-amber-50 via-white to-orange-50 border-2 sm:border-4 border-amber-300 shadow-xl overflow-hidden flex flex-col"
+        >
+          {cardContent}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      id="reading-log-modal-overlay"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto animate-fade-in"
+    >
+      <div
+        id="reading-log-modal-card"
+        className="relative w-full max-w-2xl rounded-3xl bg-gradient-to-b from-amber-50 via-white to-orange-50 border-4 border-amber-300 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+      >
+        {cardContent}
       </div>
     </div>
   );

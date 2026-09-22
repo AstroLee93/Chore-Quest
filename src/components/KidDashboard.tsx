@@ -10,7 +10,7 @@ import { BadgeModal } from './BadgeModal';
 import { BountyBoardModal } from './BountyBoardModal';
 import { BrainTeaserModal } from './BrainTeaserModal';
 import { ReadingLogModal } from './ReadingLogModal';
-import { getDailyTeasersAnsweredToday } from '../utils/brainTeasers';
+import { getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
 import {
   isReadingCompletedToday,
   findReadingChore,
@@ -299,8 +299,13 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                     <Brain className="w-6 h-6 stroke-[2.2]" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="font-black text-sm sm:text-base text-[#382260] dark:text-purple-200 leading-tight">
-                      Brain Teaser
+                    <div className="font-black text-sm sm:text-base text-[#382260] dark:text-purple-200 leading-tight flex items-center justify-between gap-1">
+                      <span>Brain Teaser</span>
+                      {kid.brainTeaserSubject && kid.brainTeaserSubject !== 'any' && (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 shrink-0">
+                          {getSubjectInfo(kid.brainTeaserSubject).icon} {getSubjectInfo(kid.brainTeaserSubject).shortLabel}
+                        </span>
+                      )}
                     </div>
                     <div className="font-extrabold text-xs sm:text-sm text-[#6442a5] dark:text-purple-300 flex items-center gap-1 mt-0.5">
                       {isDone ? (

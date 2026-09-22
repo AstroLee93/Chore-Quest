@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Check, Clock, AlertTriangle, Undo2, Star, HelpCircle, Sun, Moon, Sparkles, ChevronRight, Play, CheckSquare, Square, Target, Timer, Lock } from 'lucide-react';
+import { Check, Clock, AlertTriangle, Undo2, Star, HelpCircle, Sun, Moon, Sparkles, ChevronRight, Play, CheckSquare, Square, Target, Timer, Lock, Hourglass } from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
 import { ChoreItem, ChoreLog, ChoreCategory } from '../types';
 import { sound } from '../utils/sound';
 import { ActionMenu } from './ActionMenu';
-import { checkCategoryTimeWindow } from '../utils/timeWindow';
+import { checkCategoryTimeWindow, checkChoreTimeWindow } from '../utils/timeWindow';
 
 interface ChoreCardProps {
   chore: ChoreItem;
@@ -41,8 +41,10 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [showTimeLockAlert, setShowTimeLockAlert] = useState<boolean>(false);
 
-  const timeWindowStatus = checkCategoryTimeWindow(category);
+  const timeWindowStatus = checkChoreTimeWindow(chore, category);
   const isTimeLocked = timeWindowStatus.hasRestriction && !timeWindowStatus.isAllowed;
+  const isExpiringSoon = !isCompleted && !isSkipped && !isTimeLocked && timeWindowStatus.hasRestriction && timeWindowStatus.isAllowed && timeWindowStatus.isNearingExpiration;
+  const isUrgent = isExpiringSoon && !!timeWindowStatus.isUrgentExpiration;
 
   const handleToggleSubtask = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -157,8 +159,14 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   return (
     <div
       id={`chore-card-${chore.id}`}
-      className={`group relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all duration-200 ${
-        isCompleted ? 'opacity-70 dark:opacity-60' : ''
+      className={`group relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-5 sm:p-6 rounded-3xl border transition-all duration-200 ${
+        isCompleted
+          ? 'opacity-70 dark:opacity-60 border-slate-200/80 dark:border-slate-800'
+          : isUrgent
+          ? 'border-rose-400 dark:border-rose-500 shadow-md shadow-rose-500/15 ring-2 ring-rose-400/50 dark:ring-rose-500/40'
+          : isExpiringSoon
+          ? 'border-amber-400 dark:border-amber-500 shadow-md shadow-amber-500/15 ring-2 ring-amber-400/40 dark:ring-amber-500/30'
+          : 'border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-lg'
       }`}
     >
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -219,6 +227,21 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                   <span>
                     {timeWindowStatus.formattedRange} {isTimeLocked ? '• Locked' : '• Open'}
                   </span>
+                </span>
+              )}
+
+              {/* Nearing Expiration Priority Badge */}
+              {isExpiringSoon && (
+                <span
+                  className={`inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                    isUrgent
+                      ? 'bg-rose-100 text-rose-900 border-rose-400 dark:bg-rose-950/80 dark:text-rose-200 dark:border-rose-600 animate-pulse'
+                      : 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-600'
+                  }`}
+                  title={`Closes at ${timeWindowStatus.endTimeFormatted} (${timeWindowStatus.minutesRemaining}m remaining)`}
+                >
+                  <Hourglass className="w-3 h-3" />
+                  <span>{isUrgent ? 'Closing Soon' : 'Expiring Soon'} • {timeWindowStatus.expirationBadgeText}</span>
                 </span>
               )}
 

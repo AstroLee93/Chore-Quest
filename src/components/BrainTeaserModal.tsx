@@ -17,8 +17,10 @@ import {
   Lock,
   Shield,
   Check,
+  RefreshCw,
+  Target,
 } from 'lucide-react';
-import { KidProfile, FamilyDatabase, GradeLevel } from '../types';
+import { KidProfile, FamilyDatabase, GradeLevel, BrainTeaserSubject } from '../types';
 import {
   BrainTeaser,
   GRADE_LEVELS,
@@ -32,6 +34,9 @@ import {
   DEFAULT_BRAIN_TEASER_DAILY_LIMIT,
   getDailyTeasersAnsweredToday,
   hasReachedDailyTeaserLimit,
+  fetchAiBrainTeaser,
+  BRAIN_TEASER_SUBJECTS,
+  getSubjectInfo,
 } from '../utils/brainTeasers';
 import { sound } from '../utils/sound';
 import { getTodayDateString } from '../utils/storage';
@@ -73,24 +78,23 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
   const [earnedStarsToast, setEarnedStarsToast] = useState<number | null>(null);
   const [showConfetti, setShowConfetti] = useState<boolean>(false);
 
+  // AI Dynamic Generator State
+  const [isGeneratingAi, setIsGeneratingAi] = useState<boolean>(false);
+  const [selectedSubject, setSelectedSubject] = useState<string>('any');
+  const [freePracticeMode, setFreePracticeMode] = useState<boolean>(false);
+
   const dailyLimit = database.settings.brainTeaserDailyLimit ?? DEFAULT_BRAIN_TEASER_DAILY_LIMIT;
   const rewardStars = database.settings.brainTeaserRewardStars ?? DEFAULT_BRAIN_TEASER_REWARD_STARS;
   const todayStr = getTodayDateString();
   const answeredToday = currentKid ? getDailyTeasersAnsweredToday(currentKid, todayStr) : 0;
-  const isLimitReachedInitially = !isAdminPreview && answeredToday >= dailyLimit;
+  const isLimitReachedInitially = !isAdminPreview && answeredToday >= dailyLimit && !freePracticeMode;
 
-  // Sync with kid's grade and question index whenever kid changes or modal opens
-  useEffect(() => {
-    if (isOpen && currentKid) {
-      // Kids are locked to their assigned grade level
-      const grade = currentKid.gradeLevel || '1st_grade';
-      setActiveGrade(grade);
-      const answered = getDailyTeasersAnsweredToday(currentKid, todayStr);
-      // Serve the next unanswered daily challenge index
-      setCurrentTeaser(getDailyTeaserForKid(currentKid, todayStr, answered));
-      resetQuestionState();
-    }
-  }, [isOpen, currentKid?.id]);
+  // Strict Per-Kid Subject Assignment:
+  // If in kid mode (!isAdminPreview), subject is strictly locked to the kid's assigned brainTeaserSubject (defaulting to 'any').
+  const assignedSubject: BrainTeaserSubject = (currentKid?.brainTeaserSubject as BrainTeaserSubject) || 'any';
+  const effectiveSubjectFilter: string = isAdminPreview ? selectedSubject : assignedSubject;
+  const assignedSubjectInfo = getSubjectInfo(assignedSubject);
+  const activeSubjectInfo = getSubjectInfo(effectiveSubjectFilter);
 
   const resetQuestionState = () => {
     setSelectedOptionIndex(null);
@@ -101,6 +105,63 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
     setShowConfetti(false);
   };
 
+  const loadFreshTeaser = async (
+    grade: GradeLevel,
+    subjectFilter?: string
+  ) => {
+    setIsGeneratingAi(true);
+    resetQuestionState();
+
+    // Kids strictly use their assigned subject focus; admins can test specific subjects
+    const targetSubject = isAdminPreview
+      ? (subjectFilter ?? selectedSubject)
+      : assignedSubject;
+
+    try {
+      const completedIds = currentKid?.brainTeaserHistory?.completedQuestionIds || [];
+      const teaser = await fetchAiBrainTeaser({
+        gradeLevel: grade,
+        kidName: currentKid?.name,
+        excludeQuestionIds: completedIds,
+        preferredSubject: targetSubject !== 'any' ? targetSubject : undefined,
+      });
+      setCurrentTeaser(teaser);
+    } catch (err) {
+      console.warn('[BrainTeaser] AI generation failed, using catalog question:', err);
+      const fallback = getDailyTeaserForKid(
+        {
+          ...(currentKid || (database.kids[0] as KidProfile)),
+          gradeLevel: grade,
+          brainTeaserSubject: targetSubject as BrainTeaserSubject,
+        },
+        todayStr,
+        answeredToday
+      );
+      setCurrentTeaser(fallback);
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
+  // Sync with kid's grade and assigned subject whenever kid changes or modal opens
+  useEffect(() => {
+    if (isOpen && currentKid) {
+      // Kids are locked to their assigned grade level and subject
+      const grade = currentKid.gradeLevel || '1st_grade';
+      const targetSub = currentKid.brainTeaserSubject || 'any';
+      setActiveGrade(grade);
+      setSelectedSubject(targetSub);
+      setFreePracticeMode(false);
+      const answered = getDailyTeasersAnsweredToday(currentKid, todayStr);
+      const limitReached = !isAdminPreview && answered >= dailyLimit;
+      if (!limitReached) {
+        loadFreshTeaser(grade, targetSub);
+      } else {
+        resetQuestionState();
+      }
+    }
+  }, [isOpen, currentKid?.id, currentKid?.brainTeaserSubject, currentKid?.gradeLevel]);
+
   const gradeInfo = getGradeLevelInfo(activeGrade);
 
   const handleSelectGrade = (newGrade: GradeLevel) => {
@@ -108,20 +169,44 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
     if (!isAdminPreview) return;
     sound.playTap();
     setActiveGrade(newGrade);
-    const available = getTeasersForGrade(newGrade);
-    setCurrentTeaser(available[0]);
-    resetQuestionState();
+    loadFreshTeaser(newGrade, selectedSubject);
+  };
+
+  const handleSelectSubject = (subjectId: string) => {
+    // Only admins can change/test different subjects; kids are locked to their assigned subject
+    if (!isAdminPreview) return;
+    sound.playTap();
+    setSelectedSubject(subjectId);
+    loadFreshTeaser(activeGrade, subjectId);
+  };
+
+  const handleUpdateKidAssignedSubject = (newSubject: BrainTeaserSubject) => {
+    if (!isAdminPreview || !currentKid) return;
+    sound.playTap();
+    const updatedKids = database.kids.map((k) =>
+      k.id === currentKid.id ? { ...k, brainTeaserSubject: newSubject } : k
+    );
+    onUpdateDatabase({ ...database, kids: updatedKids });
+    setSelectedSubject(newSubject);
+    loadFreshTeaser(activeGrade, newSubject);
+  };
+
+  const handleRefreshQuestion = () => {
+    sound.playTap();
+    loadFreshTeaser(activeGrade, effectiveSubjectFilter);
   };
 
   const handleSelectOption = (index: number) => {
-    if (isAnswerSubmitted && isCorrect) return;
+    // Single-attempt rule: strictly prevent changing selection once answer is submitted
+    if (isAnswerSubmitted) return;
     sound.playTap();
     setSelectedOptionIndex(index);
   };
 
   const handleSubmitAnswer = () => {
-    if (selectedOptionIndex === null) return;
+    if (selectedOptionIndex === null || isAnswerSubmitted) return;
 
+    // Single-attempt rule: answer is evaluated once and locked permanently
     const correct = selectedOptionIndex === currentTeaser.correctAnswerIndex;
     setIsAnswerSubmitted(true);
     setIsCorrect(correct);
@@ -129,77 +214,77 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
     if (correct) {
       sound.playRewardRedeemed();
       setShowConfetti(true);
-
-      // Award stars if this is a real kid and within daily limit
-      if (currentKid && !isAdminPreview) {
-        const isWithinDailyLimit = answeredToday < dailyLimit;
-        const starsToAward = isWithinDailyLimit ? rewardStars : 0;
-        const newAnsweredCount = answeredToday + 1;
-        setEarnedStarsToast(starsToAward);
-
-        const updatedKids = database.kids.map((k) => {
-          if (k.id === currentKid.id) {
-            const history = k.brainTeaserHistory || {
-              totalAnswered: 0,
-              totalCorrect: 0,
-              totalStarsEarned: 0,
-              completedQuestionIds: [],
-            };
-
-            const updatedHistory = {
-              ...history,
-              lastCompletedDate: todayStr,
-              todayAnsweredCount: newAnsweredCount,
-              totalAnswered: (history.totalAnswered || 0) + 1,
-              totalCorrect: (history.totalCorrect || 0) + 1,
-              totalStarsEarned: (history.totalStarsEarned || 0) + starsToAward,
-              completedQuestionIds: Array.from(new Set([...(history.completedQuestionIds || []), currentTeaser.id])),
-            };
-
-            return {
-              ...k,
-              stars: k.stars + starsToAward,
-              lifetimeStars: k.lifetimeStars + starsToAward,
-              brainTeaserHistory: updatedHistory,
-            };
-          }
-          return k;
-        });
-
-        // Add a log entry for transparency only if stars were awarded
-        const newLogs =
-          starsToAward > 0
-            ? [
-                {
-                  id: `log-teaser-${Date.now()}`,
-                  choreId: `brain-teaser-${currentTeaser.id}`,
-                  kidId: currentKid.id,
-                  date: todayStr,
-                  status: 'completed' as const,
-                  completedAt: new Date().toISOString(),
-                  starsAwarded: starsToAward,
-                  completedSubtasks: [`Brain Teaser (${gradeInfo.shortLabel}): ${currentTeaser.question.slice(0, 40)}...`],
-                },
-                ...(database.logs || []),
-              ]
-            : database.logs || [];
-
-        onUpdateDatabase({
-          ...database,
-          kids: updatedKids,
-          logs: newLogs,
-        });
-      }
     } else {
-      sound.playTap();
+      sound.playSkipNotice();
+    }
+
+    // Award stars ONLY if answered correctly on the very first attempt within daily limit
+    if (currentKid && !isAdminPreview) {
+      const isWithinDailyLimit = answeredToday < dailyLimit && !freePracticeMode;
+      const starsToAward = (correct && isWithinDailyLimit) ? rewardStars : 0;
+      const newAnsweredCount = isWithinDailyLimit ? answeredToday + 1 : answeredToday;
+      setEarnedStarsToast(starsToAward);
+
+      const updatedKids = database.kids.map((k) => {
+        if (k.id === currentKid.id) {
+          const history = k.brainTeaserHistory || {
+            totalAnswered: 0,
+            totalCorrect: 0,
+            totalStarsEarned: 0,
+            completedQuestionIds: [],
+          };
+
+          const updatedHistory = {
+            ...history,
+            lastCompletedDate: todayStr,
+            todayAnsweredCount: newAnsweredCount,
+            totalAnswered: (history.totalAnswered || 0) + 1,
+            totalCorrect: (history.totalCorrect || 0) + (correct ? 1 : 0),
+            totalStarsEarned: (history.totalStarsEarned || 0) + starsToAward,
+            completedQuestionIds: Array.from(new Set([...(history.completedQuestionIds || []), currentTeaser.id])),
+          };
+
+          return {
+            ...k,
+            stars: k.stars + starsToAward,
+            lifetimeStars: k.lifetimeStars + starsToAward,
+            brainTeaserHistory: updatedHistory,
+          };
+        }
+        return k;
+      });
+
+      // Add a log entry for transparency only if stars were awarded
+      const newLogs =
+        starsToAward > 0
+          ? [
+              {
+                id: `log-teaser-${Date.now()}`,
+                choreId: `brain-teaser-${currentTeaser.id}`,
+                kidId: currentKid.id,
+                date: todayStr,
+                status: 'completed' as const,
+                completedAt: new Date().toISOString(),
+                starsAwarded: starsToAward,
+                completedSubtasks: [
+                  `Brain Teaser (${currentTeaser.isAiGenerated ? '✨ AI' : '📚'} • ${gradeInfo.shortLabel}): ${currentTeaser.question.slice(0, 45)}...`,
+                ],
+              },
+              ...(database.logs || []),
+            ]
+          : database.logs || [];
+
+      onUpdateDatabase({
+        ...database,
+        kids: updatedKids,
+        logs: newLogs,
+      });
     }
   };
 
   const handleNextTeaser = () => {
     sound.playTap();
-    const next = getNextTeaser(activeGrade, currentTeaser.id);
-    setCurrentTeaser(next);
-    resetQuestionState();
+    loadFreshTeaser(activeGrade, effectiveSubjectFilter);
   };
 
   if (!isOpen) return null;
@@ -225,6 +310,9 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                     <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-xs inline-flex items-center gap-1 shadow-sm">
                       <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
                       +{rewardStars} Points
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white font-extrabold text-[11px] inline-flex items-center gap-1 border border-white/20">
+                      🎯 1 Try
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm text-purple-100 font-medium truncate mt-0.5">
@@ -324,6 +412,95 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
             </div>
           )}
 
+          {/* Subject / Topic Focus Selector: Only Admins can change; Kids are locked to their assigned subject */}
+          {isAdminPreview ? (
+            <div className="px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3 overflow-x-auto no-scrollbar shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-100/90 dark:bg-slate-900/60 flex-wrap">
+              <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto no-scrollbar">
+                <span className="text-[11px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1 mr-1">
+                  <Target className="w-3.5 h-3.5" />
+                  Admin Subject Tester:
+                </span>
+                {BRAIN_TEASER_SUBJECTS.map((topic) => {
+                  const isActive = selectedSubject === topic.id;
+                  const isAssigned =
+                    currentKid?.brainTeaserSubject === topic.id ||
+                    (!currentKid?.brainTeaserSubject && topic.id === 'any');
+                  return (
+                    <button
+                      key={topic.id}
+                      id={`btn-subject-${topic.id}`}
+                      onClick={() => handleSelectSubject(topic.id)}
+                      disabled={isGeneratingAi}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-bold shrink-0 flex items-center gap-1.5 transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-purple-600 text-white shadow-xs font-black'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 border border-slate-200/80 dark:border-slate-700/80'
+                      }`}
+                      title={`${topic.label} - ${topic.description}`}
+                    >
+                      <span className="text-xs">{topic.icon}</span>
+                      <span>{topic.shortLabel}</span>
+                      {isAssigned && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Assigned Target Focus for this child" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {currentKid && (
+                <div className="flex items-center gap-2 shrink-0 ml-auto bg-white dark:bg-slate-800 px-3 py-1 rounded-xl border border-purple-200 dark:border-purple-800 shadow-2xs">
+                  <label htmlFor="select-modal-kid-subject" className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                    <span>🎯</span>
+                    <span>Assigned to {currentKid.name}:</span>
+                  </label>
+                  <select
+                    id="select-modal-kid-subject"
+                    value={currentKid.brainTeaserSubject || 'any'}
+                    onChange={(e) => handleUpdateKidAssignedSubject(e.target.value as BrainTeaserSubject)}
+                    className="text-xs font-black text-purple-700 dark:text-purple-300 bg-transparent border-0 focus:ring-0 cursor-pointer py-0.5"
+                    title={`Admin per-kid subject assignment for ${currentKid.name}`}
+                  >
+                    {BRAIN_TEASER_SUBJECTS.map((s) => (
+                      <option key={s.id} value={s.id} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">
+                        {s.icon} {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Kid View: Strictly Locked to Admin-Assigned Subject (Prevents avoiding weak subjects) */
+            <div className="bg-purple-50/70 dark:bg-purple-950/30 px-4 py-2 border-b border-purple-200/60 dark:border-purple-800/50 flex items-center justify-between text-xs shrink-0 flex-wrap gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="p-1 rounded-md bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 shrink-0">
+                  <Target className="w-3.5 h-3.5" />
+                </span>
+                <span className="font-bold text-slate-600 dark:text-slate-300 shrink-0">
+                  Target Subject Focus:
+                </span>
+                <span className="font-black text-purple-900 dark:text-purple-100 bg-white dark:bg-slate-800 px-2.5 py-0.5 rounded-lg border border-purple-200 dark:border-purple-700 shadow-2xs truncate flex items-center gap-1.5">
+                  <span>{assignedSubjectInfo.icon}</span>
+                  <span>{assignedSubjectInfo.label}</span>
+                </span>
+                {currentKid?.brainTeaserSubject && currentKid.brainTeaserSubject !== 'any' ? (
+                  <span className="text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/70 px-2 py-0.5 rounded-md border border-amber-300 dark:border-amber-800 hidden sm:inline-flex items-center gap-1">
+                    <span>🎯 Admin Assigned Target</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 hidden sm:inline">
+                    (Mixed Daily Curriculum)
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 flex items-center gap-1 shrink-0 ml-auto">
+                <Lock className="w-3 h-3 text-purple-500" />
+                Subject Locked by Parent
+              </span>
+            </div>
+          )}
+
           {/* Main Content Body */}
           {isLimitReachedInitially ? (
             /* Daily Limit Reached Screen: Refocuses on chores */
@@ -360,41 +537,113 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                 </p>
               </div>
 
-              <button
-                id="btn-return-chores-limit-reached"
-                onClick={() => {
-                  sound.playTap();
-                  onClose();
-                }}
-                className="w-full max-w-md py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all"
-              >
-                <span>Back to Chore Missions</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2.5 w-full max-w-md">
+                <button
+                  id="btn-return-chores-limit-reached"
+                  onClick={() => {
+                    sound.playTap();
+                    onClose();
+                  }}
+                  className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all"
+                >
+                  <span>Back to Chores 🧹</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  id="btn-start-free-practice"
+                  onClick={() => {
+                    sound.playTap();
+                    setFreePracticeMode(true);
+                    loadFreshTeaser(activeGrade, selectedSubject);
+                  }}
+                  className="flex-1 py-3.5 rounded-2xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/60 dark:hover:bg-purple-900/80 text-purple-950 dark:text-purple-200 border border-purple-300 dark:border-purple-700 font-black text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all"
+                >
+                  <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span>Keep Learning 🧠</span>
+                </button>
+              </div>
             </div>
           ) : (
             /* Active Question Body */
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 sm:space-y-5">
-              {/* Subject Badge & Teaser Counter */}
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-extrabold text-xs border border-purple-200 dark:border-purple-800/60">
-                  <span>{currentTeaser.subjectIcon}</span>
-                  <span>{currentTeaser.subjectLabel}</span>
-                </span>
-
-                <div className="flex items-center gap-2">
-                  {!isAdminPreview ? (
-                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1">
-                      <Star className="w-3 h-3 text-amber-500 fill-amber-400" />
-                      Daily Question {Math.min(answeredToday + 1, dailyLimit)} of {dailyLimit}
-                    </span>
-                  ) : (
-                    <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                      Level: {gradeInfo.shortLabel}
-                    </span>
-                  )}
+              {isGeneratingAi ? (
+                <div className="py-12 sm:py-16 flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-2xl bg-purple-100 dark:bg-purple-950/60 border-2 border-purple-300 dark:border-purple-700 flex items-center justify-center text-3xl shadow-md animate-pulse">
+                      🧠
+                    </div>
+                    <Sparkles className="w-6 h-6 text-amber-400 fill-amber-400 absolute -top-2 -right-2 animate-bounce" />
+                  </div>
+                  <div className="space-y-1.5 max-w-sm">
+                    <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                      Generating Fresh {gradeInfo.label} Challenge...
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      Gemini AI is crafting an original, curriculum-grounded question with fun facts so kids are learning, not memorizing!
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Subject Badge, AI Indicator & Teaser Counter */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-extrabold text-xs border border-purple-200 dark:border-purple-800/60">
+                        <span>{currentTeaser.subjectIcon}</span>
+                        <span>{currentTeaser.subjectLabel}</span>
+                      </span>
+
+                      {currentTeaser.isAiGenerated ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black text-[11px] shadow-xs">
+                          <Sparkles className="w-3 h-3 text-amber-300 fill-amber-300" />
+                          Gemini AI Challenge
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] border border-slate-200 dark:border-slate-700">
+                          📚 Curriculum Bank
+                        </span>
+                      )}
+
+                      {currentTeaser.conceptTag && (
+                        <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 font-bold text-[10px] border border-amber-200 dark:border-amber-800/60">
+                          {currentTeaser.conceptTag}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {!isAnswerSubmitted && (
+                        <button
+                          id="btn-refresh-question"
+                          onClick={handleRefreshQuestion}
+                          disabled={isGeneratingAi}
+                          title="Generate a brand new AI question"
+                          className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/60 text-slate-700 dark:text-slate-300 hover:text-purple-700 dark:hover:text-purple-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-95"
+                        >
+                          <RefreshCw className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                          <span>New Question</span>
+                        </button>
+                      )}
+
+                      {!isAdminPreview ? (
+                        freePracticeMode ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-black text-xs border border-purple-300 dark:border-purple-700">
+                            Practice Mode 🧠
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1">
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-400" />
+                            Daily Question {Math.min(answeredToday + 1, dailyLimit)} of {dailyLimit}
+                            <span className="text-purple-600 dark:text-purple-400 font-extrabold ml-1">• 1 Try</span>
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                          Level: {gradeInfo.shortLabel}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
               {/* Question Card */}
               <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 shadow-xs">
@@ -426,8 +675,12 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                       optionLetterBg = 'bg-emerald-500 text-white';
                     } else if (isSelected && !isCorrect) {
                       buttonStyles =
-                        'bg-rose-500/15 dark:bg-rose-950/40 text-rose-950 dark:text-rose-200 border-rose-400 dark:border-rose-500';
+                        'bg-rose-500/15 dark:bg-rose-950/40 text-rose-950 dark:text-rose-200 border-rose-400 dark:border-rose-500 ring-2 ring-rose-500/20';
                       optionLetterBg = 'bg-rose-500 text-white';
+                    } else {
+                      buttonStyles =
+                        'bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-800 opacity-60';
+                      optionLetterBg = 'bg-slate-200 dark:bg-slate-700 text-slate-400';
                     }
                   } else if (isSelected) {
                     buttonStyles =
@@ -442,8 +695,10 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                       key={idx}
                       id={`btn-teaser-opt-${idx}`}
                       onClick={() => handleSelectOption(idx)}
-                      disabled={isAnswerSubmitted && isCorrect}
-                      className={`p-3 sm:p-3.5 rounded-2xl border text-left flex items-center gap-3 transition-all duration-150 cursor-pointer shadow-xs active:scale-[0.99] ${buttonStyles}`}
+                      disabled={isAnswerSubmitted}
+                      className={`p-3 sm:p-3.5 rounded-2xl border text-left flex items-center gap-3 transition-all duration-150 ${
+                        isAnswerSubmitted ? 'cursor-default' : 'cursor-pointer active:scale-[0.99]'
+                      } shadow-xs ${buttonStyles}`}
                     >
                       <span
                         className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${optionLetterBg}`}
@@ -454,10 +709,22 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                         {optionText}
                       </span>
                       {isAnswerSubmitted && isThisCorrect && (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {!isCorrect && (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 text-[10px] font-black uppercase tracking-wider border border-emerald-300 dark:border-emerald-700">
+                              Correct Answer
+                            </span>
+                          )}
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                        </div>
                       )}
                       {isAnswerSubmitted && isSelected && !isCorrect && (
-                        <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/70 text-rose-800 dark:text-rose-200 text-[10px] font-black uppercase tracking-wider border border-rose-300 dark:border-rose-700">
+                            Your Choice
+                          </span>
+                          <XCircle className="w-5 h-5 text-rose-500" />
+                        </div>
                       )}
                     </button>
                   );
@@ -476,7 +743,7 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer py-1"
                   >
                     <Lightbulb className="w-3.5 h-3.5" />
-                    <span>Need a thinking prompt? Tap for a clue! 💡</span>
+                    <span>Need a thinking prompt? Tap for a clue before submitting! 💡</span>
                   </button>
                 ) : (
                   <motion.div
@@ -517,23 +784,33 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                 >
                   <div className="flex items-start gap-3">
                     <div className="text-2xl shrink-0">
-                      {isCorrect ? '🎉' : '🤔'}
+                      {isCorrect ? '🎉' : '❌'}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="text-base font-black">
-                          {isCorrect ? 'Outstanding Job! Correct!' : 'Not quite, but nice try!'}
+                          {isCorrect ? 'Outstanding Job! Correct on First Attempt!' : 'Incorrect on First Attempt'}
                         </h4>
-                        {isCorrect && earnedStarsToast && earnedStarsToast > 0 && (
+                        {isCorrect && earnedStarsToast && earnedStarsToast > 0 ? (
                           <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-xs inline-flex items-center gap-1 shadow-xs">
                             <Sparkles className="w-3 h-3 fill-slate-950 text-slate-950" />
                             +{earnedStarsToast} Stars Earned!
                           </span>
-                        )}
+                        ) : !isCorrect ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 font-black text-xs inline-flex items-center gap-1 border border-rose-300 dark:border-rose-700">
+                            0 Stars • 1 Attempt Used
+                          </span>
+                        ) : null}
                       </div>
 
+                      {!isCorrect && (
+                        <p className="text-xs text-rose-800 dark:text-rose-200 mt-1.5 font-semibold leading-relaxed">
+                          Brain teaser points are only awarded if answered correctly on the very first attempt. The correct answer is revealed above so you can learn from it!
+                        </p>
+                      )}
+
                       {/* Educational Explanation / Fun Fact */}
-                      <div className="mt-2 text-xs sm:text-sm font-medium leading-relaxed opacity-95">
+                      <div className="mt-2.5 text-xs sm:text-sm font-medium leading-relaxed opacity-95">
                         <p className="font-bold mb-1 text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                           <span>💡</span>
                           <span>Learning Breakdown & Fun Fact:</span>
@@ -543,24 +820,20 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                         </p>
                       </div>
 
-                      {!isCorrect && (
-                        <p className="text-xs text-rose-700 dark:text-rose-300 mt-2 font-semibold">
-                          Give it another thought or tap "Try Again" to select a different answer!
-                        </p>
-                      )}
-
                       {/* Daily Limit Reached Note */}
-                      {isCorrect && !isAdminPreview && answeredToday + 1 >= dailyLimit && (
+                      {!isAdminPreview && !freePracticeMode && answeredToday + 1 >= dailyLimit && (
                         <div className="mt-3 p-2.5 rounded-xl bg-purple-100/80 dark:bg-purple-900/40 border border-purple-300/80 dark:border-purple-700 text-purple-950 dark:text-purple-200 text-xs font-bold flex items-center gap-2">
                           <span className="text-base">🌟</span>
                           <span>
-                            Daily brain teaser goal reached ({dailyLimit}/{dailyLimit})! Now head over to your chores to earn even more stars!
+                            Daily brain teaser attempt finished ({dailyLimit}/{dailyLimit})! Head to your daily chores to earn more stars, or tap Practice More to keep exploring!
                           </span>
                         </div>
                       )}
                     </div>
                   </div>
                 </motion.div>
+              )}
+                </>
               )}
             </div>
           )}
@@ -573,35 +846,39 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                 <span>
                   Admin Setting: {dailyLimit} {dailyLimit === 1 ? 'Q' : 'Qs'}/day • +{rewardStars} Stars each
                 </span>
+                <span className="text-purple-600 dark:text-purple-400 font-black ml-1.5 hidden sm:inline">
+                  • 1 attempt per question
+                </span>
               </div>
 
-              <div className="flex items-center gap-2 ml-auto">
+              <div className="flex items-center gap-2 ml-auto flex-wrap">
                 {!isAnswerSubmitted ? (
-                  <button
-                    id="btn-submit-teaser-answer"
-                    onClick={handleSubmitAnswer}
-                    disabled={selectedOptionIndex === null}
-                    className={`px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm ${
-                      selectedOptionIndex !== null
-                        ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer active:scale-95 shadow-purple-600/30'
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
-                    }`}
-                  >
-                    <span>Submit Answer</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                ) : isCorrect ? (
                   <div className="flex items-center gap-2">
+                    <button
+                      id="btn-submit-teaser-answer"
+                      onClick={handleSubmitAnswer}
+                      disabled={selectedOptionIndex === null || isGeneratingAi}
+                      className={`px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm ${
+                        selectedOptionIndex !== null && !isGeneratingAi
+                          ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer active:scale-95 shadow-purple-600/30'
+                          : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <span>Submit Final Answer</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  /* Progression after the single attempt has been submitted (No retry) */
+                  <div className="flex items-center gap-2 flex-wrap">
                     {!isAdminPreview ? (
-                      answeredToday + 1 < dailyLimit ? (
+                      !freePracticeMode && answeredToday + 1 < dailyLimit ? (
                         <>
                           <button
                             id="btn-next-daily-teaser"
                             onClick={() => {
                               sound.playTap();
-                              const nextTeaser = getDailyTeaserForKid(currentKid!, todayStr, answeredToday + 1);
-                              setCurrentTeaser(nextTeaser);
-                              resetQuestionState();
+                              loadFreshTeaser(activeGrade, effectiveSubjectFilter);
                             }}
                             className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
                           >
@@ -619,18 +896,58 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                             Done
                           </button>
                         </>
+                      ) : !freePracticeMode && answeredToday + 1 >= dailyLimit ? (
+                        <>
+                          <button
+                            id="btn-continue-practice"
+                            onClick={() => {
+                              sound.playTap();
+                              setFreePracticeMode(true);
+                              loadFreshTeaser(activeGrade, effectiveSubjectFilter);
+                            }}
+                            className="px-4 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/50 dark:hover:bg-purple-900/80 text-purple-950 dark:text-purple-200 font-black text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                            <span>Practice More (0 Stars) 🧠</span>
+                          </button>
+                          <button
+                            id="btn-finish-and-go-to-chores"
+                            onClick={() => {
+                              sound.playTap();
+                              onClose();
+                            }}
+                            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer shadow-md active:scale-95"
+                          >
+                            <span>{isCorrect ? 'Goal Done! Go to Chores 🧹' : 'Done • Go to Chores 🧹'}</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        </>
                       ) : (
-                        <button
-                          id="btn-finish-and-go-to-chores"
-                          onClick={() => {
-                            sound.playTap();
-                            onClose();
-                          }}
-                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer shadow-md active:scale-95"
-                        >
-                          <span>Goal Done! Go to Chores 🧹</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
+                        /* In Free Practice Mode */
+                        <>
+                          <button
+                            id="btn-next-practice-challenge"
+                            onClick={() => {
+                              sound.playTap();
+                              loadFreshTeaser(activeGrade, effectiveSubjectFilter);
+                            }}
+                            className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
+                          >
+                            <Sparkles className="w-4 h-4 text-amber-300" />
+                            <span>Next Practice Challenge</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                          <button
+                            id="btn-done-practice"
+                            onClick={() => {
+                              sound.playTap();
+                              onClose();
+                            }}
+                            className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 hover:bg-slate-300 dark:hover:bg-slate-600 font-black text-xs sm:text-sm transition-all cursor-pointer"
+                          >
+                            Done
+                          </button>
+                        </>
                       )
                     ) : (
                       <>
@@ -639,7 +956,8 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                           onClick={handleNextTeaser}
                           className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
                         >
-                          <span>Practice Next Question</span>
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Generate Next Question</span>
                           <ArrowRight className="w-4 h-4" />
                         </button>
                         <button
@@ -653,30 +971,6 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                           Done
                         </button>
                       </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <button
-                      id="btn-retry-teaser"
-                      onClick={() => {
-                        sound.playTap();
-                        setIsAnswerSubmitted(false);
-                        setSelectedOptionIndex(null);
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>Try Again</span>
-                    </button>
-                    {isAdminPreview && (
-                      <button
-                        id="btn-skip-teaser"
-                        onClick={handleNextTeaser}
-                        className="px-3.5 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-300 dark:hover:bg-slate-600 transition-all cursor-pointer"
-                      >
-                        Skip Question
-                      </button>
                     )}
                   </div>
                 )}

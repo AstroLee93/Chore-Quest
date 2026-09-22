@@ -136,6 +136,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       streakDays: 4,
       lastActiveDate: getTodayDateString(),
       gradeLevel: '1st_grade',
+      brainTeaserSubject: 'math',
       kidCoinBalance: 12.50,
       totalSaved: 100.50,
       weeklyAllowance: 5.00,
@@ -153,6 +154,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       streakDays: 6,
       lastActiveDate: getTodayDateString(),
       gradeLevel: '3rd_grade',
+      brainTeaserSubject: 'science',
       kidCoinBalance: 18.00,
       totalSaved: 147.50,
       weeklyAllowance: 7.00,
@@ -170,6 +172,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       streakDays: 2,
       lastActiveDate: getTodayDateString(),
       gradeLevel: '5th_grade',
+      brainTeaserSubject: 'any',
       kidCoinBalance: 8.00,
       totalSaved: 47.50,
       weeklyAllowance: 4.00,
@@ -723,11 +726,13 @@ export const loadDatabase = (): FamilyDatabase => {
       const defaultGrades: ('1st_grade' | '3rd_grade' | '5th_grade')[] = ['1st_grade', '3rd_grade', '5th_grade'];
       parsed.kids = parsed.kids.map((k, idx) => {
         const gradeLevel = k.gradeLevel || defaultGrades[idx % defaultGrades.length];
+        const brainTeaserSubject = k.brainTeaserSubject || 'any';
         if (!k.goals || k.goals.length === 0) {
           const defaultGoals = createDefaultGoalsForKid(k.id, k.name);
           return {
             ...k,
             gradeLevel,
+            brainTeaserSubject,
             kidCoinBalance: k.kidCoinBalance ?? 10.00,
             totalSaved: defaultGoals.reduce((acc, g) => acc + g.currentSaved, 0),
             weeklyAllowance: k.weeklyAllowance ?? 5.00,
@@ -739,6 +744,7 @@ export const loadDatabase = (): FamilyDatabase => {
         return {
           ...k,
           gradeLevel,
+          brainTeaserSubject,
         };
       });
     }

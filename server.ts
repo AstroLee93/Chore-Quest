@@ -4,9 +4,10 @@ import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
-import { FamilyDatabase } from './src/types';
+import { FamilyDatabase, GradeLevel } from './src/types';
 import { DEFAULT_SEED_DATA } from './src/utils/storage';
 import { POPULAR_RETAIL_DATABASE, lookupRetailProductLocal, synthesizeOfflineProduct, classifyProductDetails } from './src/lib/retailCatalog';
+import { BrainTeaser, BRAIN_TEASERS_CATALOG } from './src/utils/brainTeasersData';
 
 dotenv.config();
 
@@ -67,12 +68,16 @@ function getFallbackEstimate(name: string, quantity?: string): number {
 async function callGeminiWithFallback<T>(
   ai: GoogleGenAI,
   callFn: (modelName: string) => Promise<T>,
-  preferredModels = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-pro-preview']
+  preferredModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest']
 ): Promise<T> {
   let lastError: any = null;
 
-  for (const model of preferredModels) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let mIdx = 0; mIdx < preferredModels.length; mIdx++) {
+    const model = preferredModels[mIdx];
+    const isLastModel = mIdx === preferredModels.length - 1;
+    const maxAttempts = isLastModel ? 2 : 1;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await callFn(model);
       } catch (err: any) {
@@ -86,14 +91,18 @@ async function callGeminiWithFallback<T>(
           errStr.includes('RESOURCE_EXHAUSTED') ||
           errStr.includes('overloaded');
 
-        console.warn(`[Server] Model ${model} (attempt ${attempt}) encountered: ${errStr.slice(0, 150)}`);
+        // If another model is available in the cascade, seamlessly transition without retrying the congested model
+        if (isTemporary && !isLastModel) {
+          console.info(`[Server] Model ${model} unavailable (high demand/quota); transitioning to ${preferredModels[mIdx + 1]}...`);
+          break;
+        }
 
         if (isTemporary && attempt === 1) {
-          // Wait 1000ms before retrying same model
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 800));
           continue;
         }
-        // Move on to next candidate model in the cascade
+
+        console.info(`[Server] Model ${model} query completed with fallback`);
         break;
       }
     }
@@ -889,7 +898,7 @@ Provide financial advice tailored for a child in strict JSON format:
               responseMimeType: 'application/json',
             },
           });
-        });
+        }, ['gemini-3.1-flash-lite', 'gemini-flash-latest']);
 
         const text = response.text?.trim();
         if (text) {
@@ -901,7 +910,7 @@ Provide financial advice tailored for a child in strict JSON format:
           return;
         }
       } catch (geminiErr) {
-        console.warn('[Server] Gemini tips fallback triggered:', geminiErr);
+        console.info('[Server] Gemini tips fallback activated.');
       }
     }
 
@@ -940,6 +949,193 @@ Provide financial advice tailored for a child in strict JSON format:
   } catch (err: any) {
     console.error('[Server] Tips endpoint error:', err);
     res.status(500).json({ error: 'Failed to generate savings coach tips.' });
+  }
+});
+
+// 12b. Dynamic AI Brain Teaser Generator via Gemini (Curriculum & Learning Focused)
+const GRADE_CURRICULUM_GUIDELINES: Record<string, string> = {
+  kindergarten: `Grade Level: Kindergarten & Pre-K (Ages 4-6)
+- Core Learning Topics: Counting 1-10 objects, basic addition (+1, +2) with fun items (apples, stars, puppies), shapes (circle, square, triangle, rectangle), primary & secondary colors, rhyming words (cat/hat, fox/box), baby animal names (cow/calf, dog/puppy, cat/kitten), simple nature facts, opposites (hot/cold, big/little).
+- Language: Very simple vocabulary, cheerful, short and sweet sentences.
+- Options: 4 very short choices (1-3 words each).`,
+  '1st_grade': `Grade Level: 1st Grade (Ages 6-7)
+- Core Learning Topics: Addition & subtraction to 20, telling time to the hour & half-hour, counting by 2s/5s/10s, animal habitats and survival needs, plant parts (roots, stem, leaves), seasons and weather, phonics and compound words, simple logic sequences.
+- Language: Early elementary vocabulary, encouraging tone.
+- Options: 4 straightforward choices (1-4 words each).`,
+  '2nd_grade': `Grade Level: 2nd Grade (Ages 7-8)
+- Core Learning Topics: Two-digit addition/subtraction, US money and counting coins (quarters, dimes, nickels, pennies), place value (hundreds/tens/ones), states of matter (solid, liquid, gas), life cycles (frog, butterfly, plant), map symbols and cardinal directions (N/S/E/W), spelling patterns, time intervals.
+- Language: Friendly, accessible elementary reading level.`,
+  '3rd_grade': `Grade Level: 3rd Grade (Ages 8-9)
+- Core Learning Topics: Introduction to multiplication and division, basic unit fractions (1/2, 1/3, 1/4), planets of our solar system, food chains and ecosystems, weather vs. climate, mystery vocabulary, idioms, cause & effect relationships, measurement (inches, feet, pounds).
+- Language: Inquisitive, discovery-oriented, building critical thinking skills.`,
+  '4th_grade': `Grade Level: 4th Grade (Ages 9-10)
+- Core Learning Topics: Multi-digit multiplication, division with remainders, geometric angles (acute, right, obtuse) and line types, US regions and geography, forms of energy (sound, light, electrical, thermal), rock cycle and fossils, sensory animal adaptations, analogies, idioms, multi-step math logic.
+- Language: Adventurous, smart, engaging.`,
+  '5th_grade': `Grade Level: 5th Grade (Ages 10-11)
+- Core Learning Topics: Decimals and percentages, multiplying fractions, volume (length x width x height) and perimeter, human organ systems (circulatory, respiratory, nervous), Earth's spheres (atmosphere, geosphere, hydrosphere, biosphere), planetary orbits, vocabulary analogies, clever deduction logic.
+- Language: Sharp, curious, rewarding deeper reasoning.`,
+  middle_school: `Grade Level: Middle School / 6th–8th Grade (Ages 11-14)
+- Core Learning Topics: Pre-algebra, ratios & proportions, negative numbers, cells, genes & DNA, periodic table elements and basic chemical reactions, Newton's laws of motion, world history & civilizations, literary devices, cipher codes, deductive logic puzzles.
+- Language: Mature, intriguing, real-world relevant without dry jargon.`,
+  high_school: `Grade Level: High School / 9th–12th Grade (Ages 14-18)
+- Core Learning Topics: Algebra, geometry, physics (kinematics, gravity, energy conservation), chemistry (atomic structure, solutions), biology (cellular respiration, ecology), world literature & historical trivia, cognitive biases & logical fallacies, advanced math/lateral brain teasers.
+- Language: High-school intellectual curiosity, witty, thought-provoking.`,
+};
+
+function getFallbackCatalogTeaser(gradeLevel: string, excludeIds: string[] = [], preferredSubject?: string): BrainTeaser {
+  let gradeTeasers = BRAIN_TEASERS_CATALOG.filter((t) => t.gradeLevel === gradeLevel);
+  if (preferredSubject && preferredSubject !== 'any') {
+    const subjectMatches = gradeTeasers.filter((t) => t.subject === preferredSubject);
+    if (subjectMatches.length > 0) {
+      gradeTeasers = subjectMatches;
+    } else {
+      const allSubjectMatches = BRAIN_TEASERS_CATALOG.filter((t) => t.subject === preferredSubject);
+      if (allSubjectMatches.length > 0) {
+        gradeTeasers = allSubjectMatches;
+      }
+    }
+  }
+  const candidates = gradeTeasers.filter((t) => !excludeIds.includes(t.id));
+  if (candidates.length > 0) {
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    return { ...pick, isAiGenerated: false };
+  }
+  const allCandidates = BRAIN_TEASERS_CATALOG.filter((t) => !excludeIds.includes(t.id));
+  if (allCandidates.length > 0) {
+    const pick = allCandidates[Math.floor(Math.random() * allCandidates.length)];
+    return { ...pick, isAiGenerated: false };
+  }
+  const pool = gradeTeasers.length > 0 ? gradeTeasers : BRAIN_TEASERS_CATALOG;
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  return { ...pick, isAiGenerated: false };
+}
+
+app.post('/api/brain-teasers/generate', async (req, res) => {
+  try {
+    const {
+      gradeLevel = '1st_grade',
+      kidName = 'Explorer',
+      excludeQuestionIds = [],
+      recentQuestions = [],
+      preferredSubject,
+    } = req.body;
+
+    const validGrade = (gradeLevel in GRADE_CURRICULUM_GUIDELINES) ? gradeLevel : '1st_grade';
+    const curriculumGuide = GRADE_CURRICULUM_GUIDELINES[validGrade] || GRADE_CURRICULUM_GUIDELINES['1st_grade'];
+
+    const ai = getGenAI();
+
+    if (ai) {
+      try {
+        const subjectInstruction = preferredSubject && preferredSubject !== 'any'
+          ? `Focus primarily on the subject: "${preferredSubject}".`
+          : `Select an engaging subject among: math, science, nature, wordplay, logic, or riddle (rotate to ensure variety).`;
+
+        const recentFilter = recentQuestions.length > 0
+          ? `Do NOT repeat or closely mirror these recently answered questions:\n- ${recentQuestions.slice(0, 5).join('\n- ')}`
+          : `Ensure the question is creative, novel, and educational.`;
+
+        const prompt = `You are a master STEM & humanities educator crafting an interactive, daily brain teaser for a student named "${kidName}".
+The primary purpose is to help the child LEARN something genuinely new or VERIFY their school curriculum understanding, eliminating rote memorization.
+
+${curriculumGuide}
+
+${subjectInstruction}
+${recentFilter}
+
+Requirements:
+1. Provide exactly FOUR multiple-choice options in the "options" array.
+2. The question must have ONE unambiguously correct answer and three plausible, age-appropriate distractors.
+3. Vary the index of the correct answer (correctAnswerIndex must be 0, 1, 2, or 3).
+4. Provide a friendly "hint" that guides their thinking without spoiling the answer.
+5. Provide a "thinkingAngle" (a mental model, problem-solving strategy, or way to think outside the box).
+6. Provide a "funFactExplanation": 2-3 sentences explaining WHY the answer is correct, followed by a fascinating "Did you know?" bonus fact that creates an inspiring learning moment.
+
+Respond in strict JSON with no surrounding text or markdown ticks:
+{
+  "subject": "math" | "science" | "nature" | "wordplay" | "logic" | "riddle",
+  "subjectLabel": "Short Topic Label (e.g. Solar System, Fractions, Rainforest Wildlife, Phonics)",
+  "subjectIcon": "single emoji matching the topic",
+  "question": "The question text here",
+  "options": [
+    "Option A",
+    "Option B",
+    "Option C",
+    "Option D"
+  ],
+  "correctAnswerIndex": 0,
+  "hint": "Helpful thinking clue",
+  "thinkingAngle": "Smart thinking strategy or connection",
+  "funFactExplanation": "Why it's correct + fascinating Did you know fact!"
+}`;
+
+        const response = await callGeminiWithFallback(
+          ai,
+          async (modelName) => {
+            return await ai.models.generateContent({
+              model: modelName,
+              contents: prompt,
+              config: {
+                responseMimeType: 'application/json',
+              },
+            });
+          },
+          ['gemini-3.1-flash-lite', 'gemini-flash-latest']
+        );
+
+        const text = response.text?.trim();
+        if (text) {
+          const parsed = JSON.parse(text);
+          if (
+            parsed.question &&
+            Array.isArray(parsed.options) &&
+            parsed.options.length === 4 &&
+            typeof parsed.correctAnswerIndex === 'number' &&
+            parsed.correctAnswerIndex >= 0 &&
+            parsed.correctAnswerIndex < 4
+          ) {
+            const validSubjects = ['math', 'science', 'nature', 'wordplay', 'logic', 'riddle'];
+            const subject = validSubjects.includes(parsed.subject) ? parsed.subject : 'science';
+
+            const teaser: BrainTeaser = {
+              id: `ai-teaser-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              gradeLevel: validGrade as GradeLevel,
+              subject: subject as any,
+              subjectLabel: parsed.subjectLabel || 'Curriculum Challenge',
+              subjectIcon: parsed.subjectIcon || '💡',
+              question: parsed.question,
+              options: parsed.options,
+              correctAnswerIndex: parsed.correctAnswerIndex,
+              hint: parsed.hint || 'Take a moment to reason through each option!',
+              thinkingAngle: parsed.thinkingAngle || 'Look for key clues hidden inside the question details.',
+              funFactExplanation: parsed.funFactExplanation || "Great job! That's the correct answer.",
+              isAiGenerated: true,
+              conceptTag: parsed.subjectLabel,
+            };
+
+            res.json({
+              success: true,
+              source: 'gemini',
+              teaser,
+            });
+            return;
+          }
+        }
+      } catch (geminiErr) {
+        console.info('[Server] Gemini Brain Teaser generation unavailable, serving catalog question seamlessly.');
+      }
+    }
+
+    // Fallback to static catalog question with subject focus support
+    const fallback = getFallbackCatalogTeaser(validGrade, excludeQuestionIds, preferredSubject);
+    res.json({
+      success: true,
+      source: 'catalog',
+      teaser: fallback,
+    });
+  } catch (err: any) {
+    console.error('[Server] Brain teaser endpoint error:', err);
+    res.status(500).json({ error: 'Failed to generate brain teaser.' });
   }
 });
 
@@ -1379,7 +1575,7 @@ Return STRICTLY JSON.`;
               },
             });
           },
-          ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash']
+          ['gemini-3.1-flash-lite', 'gemini-flash-latest']
         );
 
         const text = response.text?.trim() || '';

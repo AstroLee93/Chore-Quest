@@ -1,7 +1,7 @@
-import { GradeLevel, KidProfile } from '../types';
+import { GradeLevel, KidProfile, BrainTeaserSubject } from '../types';
 import { BrainTeaser, BRAIN_TEASERS_CATALOG } from './brainTeasersData';
 
-export type { BrainTeaser };
+export type { BrainTeaser, BrainTeaserSubject };
 export { BRAIN_TEASERS_CATALOG };
 export interface GradeLevelInfo {
   id: GradeLevel;
@@ -101,6 +101,71 @@ export const GRADE_LEVEL_LIST: GradeLevelInfo[] = [
 
 export const DEFAULT_BRAIN_TEASER_REWARD_STARS = 5;
 
+export interface BrainTeaserSubjectInfo {
+  id: BrainTeaserSubject;
+  label: string;
+  shortLabel: string;
+  icon: string;
+  description: string;
+}
+
+export const BRAIN_TEASER_SUBJECTS: BrainTeaserSubjectInfo[] = [
+  {
+    id: 'any',
+    label: 'All Topics (Mixed)',
+    shortLabel: 'All Topics',
+    icon: '🌟',
+    description: 'Rotates daily across math, science, nature, wordplay, logic, and riddles.',
+  },
+  {
+    id: 'math',
+    label: 'Math & Numbers',
+    shortLabel: 'Math',
+    icon: '🧮',
+    description: 'Arithmetic, geometry, counting, word problems, and numerical patterns.',
+  },
+  {
+    id: 'science',
+    label: 'Science & Discovery',
+    shortLabel: 'Science',
+    icon: '🔬',
+    description: 'Physics, chemistry, astronomy, earth science, and scientific inquiry.',
+  },
+  {
+    id: 'nature',
+    label: 'Nature & Animals',
+    shortLabel: 'Nature',
+    icon: '🌿',
+    description: 'Animal kingdom, habitats, plants, biology, and ecosystems.',
+  },
+  {
+    id: 'wordplay',
+    label: 'Wordplay & Language',
+    shortLabel: 'Wordplay',
+    icon: '🔤',
+    description: 'Phonics, vocabulary, spelling, rhyming, analogies, and idioms.',
+  },
+  {
+    id: 'logic',
+    label: 'Logic & Reasoning',
+    shortLabel: 'Logic',
+    icon: '🧩',
+    description: 'Deduction, patterns, spatial puzzles, codes, and critical thinking.',
+  },
+  {
+    id: 'riddle',
+    label: 'Riddles & Lateral Thinking',
+    shortLabel: 'Riddles',
+    icon: '💡',
+    description: 'Lateral thinking traps, clever clues, and creative problem solving.',
+  },
+];
+
+export function getSubjectInfo(subject?: BrainTeaserSubject | string): BrainTeaserSubjectInfo {
+  const found = BRAIN_TEASER_SUBJECTS.find((s) => s.id === subject);
+  return found || BRAIN_TEASER_SUBJECTS[0];
+}
+
 export function getGradeLevelInfo(gradeLevel?: GradeLevel): GradeLevelInfo {
   if (!gradeLevel || !GRADE_LEVELS[gradeLevel]) {
     return GRADE_LEVELS['1st_grade'];
@@ -108,10 +173,21 @@ export function getGradeLevelInfo(gradeLevel?: GradeLevel): GradeLevelInfo {
   return GRADE_LEVELS[gradeLevel];
 }
 
-export function getTeasersForGrade(gradeLevel: GradeLevel): BrainTeaser[] {
-  const teasers = BRAIN_TEASERS_CATALOG.filter((t) => t.gradeLevel === gradeLevel);
+export function getTeasersForGrade(gradeLevel: GradeLevel, subject?: string): BrainTeaser[] {
+  let teasers = BRAIN_TEASERS_CATALOG.filter((t) => t.gradeLevel === gradeLevel);
   if (teasers.length === 0) {
-    return BRAIN_TEASERS_CATALOG.filter((t) => t.gradeLevel === '1st_grade');
+    teasers = BRAIN_TEASERS_CATALOG.filter((t) => t.gradeLevel === '1st_grade');
+  }
+  if (subject && subject !== 'any') {
+    const filtered = teasers.filter((t) => t.subject === subject);
+    if (filtered.length >= 3) {
+      return filtered;
+    }
+    // If fewer than 3 questions in this grade for the subject, supplement from all grades for variety
+    const otherSubjectTeasers = BRAIN_TEASERS_CATALOG.filter(
+      (t) => t.subject === subject && t.gradeLevel !== gradeLevel
+    );
+    return [...filtered, ...otherSubjectTeasers];
   }
   return teasers;
 }
@@ -119,29 +195,42 @@ export function getTeasersForGrade(gradeLevel: GradeLevel): BrainTeaser[] {
 export const DEFAULT_BRAIN_TEASER_DAILY_LIMIT = 1;
 
 /**
- * Deterministically retrieves the Daily Brain Teaser for a kid based on date, assigned grade level, and question index.
+ * Deterministically retrieves the Daily Brain Teaser for a kid based on date, assigned grade level, assigned subject, and question index,
+ * prioritizing questions the child has not completed yet to prevent repetition.
  */
 export function getDailyTeaserForKid(kid: KidProfile, dateStr?: string, questionIndex: number = 0): BrainTeaser {
   const grade = kid.gradeLevel || '1st_grade';
-  const teasers = getTeasersForGrade(grade);
+  const targetSubject = kid.brainTeaserSubject || 'any';
+  const allTeasers = getTeasersForGrade(grade, targetSubject);
   const targetDate = dateStr || new Date().toISOString().split('T')[0];
 
-  // Hash the date string to select a daily starting index
+  // Prioritize teasers that the child has not completed yet
+  const completedIds = new Set(kid.brainTeaserHistory?.completedQuestionIds || []);
+  const uncompleted = allTeasers.filter((t) => !completedIds.has(t.id));
+  const teasers = uncompleted.length > 0 ? uncompleted : allTeasers;
+
+  // Salt the hash with the kid ID and question index so siblings and repeat visits get fresh variety
   let hash = 0;
-  for (let i = 0; i < targetDate.length; i++) {
-    hash = (hash << 5) - hash + targetDate.charCodeAt(i);
+  const seed = `${targetDate}-${kid.id || 'default'}-${questionIndex}`;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
     hash |= 0;
   }
-  const baseIndex = Math.abs(hash) % teasers.length;
-  const index = (baseIndex + Math.max(0, questionIndex)) % teasers.length;
+  const index = Math.abs(hash) % teasers.length;
   return teasers[index];
 }
 
 /**
- * Cycles to the next available teaser in the grade level for practice mode.
+ * Cycles to the next available teaser in the grade level for practice mode, avoiding recently answered questions.
  */
-export function getNextTeaser(gradeLevel: GradeLevel, currentTeaserId: string): BrainTeaser {
-  const teasers = getTeasersForGrade(gradeLevel);
+export function getNextTeaser(gradeLevel: GradeLevel, currentTeaserId: string, subject?: string, excludeIds?: string[]): BrainTeaser {
+  const teasers = getTeasersForGrade(gradeLevel, subject);
+  const excludeSet = new Set(excludeIds || []);
+  excludeSet.add(currentTeaserId);
+  const candidates = teasers.filter((t) => !excludeSet.has(t.id));
+  if (candidates.length > 0) {
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
   const currentIndex = teasers.findIndex((t) => t.id === currentTeaserId);
   const nextIndex = (currentIndex + 1) % teasers.length;
   return teasers[nextIndex];
@@ -176,4 +265,46 @@ export function hasReachedDailyTeaserLimit(
 ): boolean {
   const answeredToday = getDailyTeasersAnsweredToday(kid, dateStr);
   return answeredToday >= dailyLimit;
+}
+
+/**
+ * Dynamically fetches a fresh AI-generated brain teaser from the backend Gemini API
+ * tuned specifically to the child's grade curriculum, with transparent offline fallback.
+ */
+export async function fetchAiBrainTeaser(params: {
+  gradeLevel: GradeLevel;
+  kidName?: string;
+  excludeQuestionIds?: string[];
+  recentQuestions?: string[];
+  preferredSubject?: string;
+}): Promise<BrainTeaser> {
+  try {
+    const res = await fetch('/api/brain-teasers/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.teaser && data.teaser.question && Array.isArray(data.teaser.options)) {
+        return data.teaser;
+      }
+    }
+  } catch (err) {
+    console.warn('[BrainTeasers] AI generation network call failed, using offline bank:', err);
+  }
+
+  // Resilient fallback to static catalog
+  const gradeTeasers = getTeasersForGrade(params.gradeLevel, params.preferredSubject);
+  const exclude = new Set(params.excludeQuestionIds || []);
+  const available = gradeTeasers.filter((t) => !exclude.has(t.id));
+  if (available.length > 0) {
+    return available[Math.floor(Math.random() * available.length)];
+  }
+  // If all questions in this grade were completed, draw from all uncompleted questions in catalog
+  const catalogAvailable = BRAIN_TEASERS_CATALOG.filter((t) => !exclude.has(t.id));
+  if (catalogAvailable.length > 0) {
+    return catalogAvailable[Math.floor(Math.random() * catalogAvailable.length)];
+  }
+  return gradeTeasers[Math.floor(Math.random() * gradeTeasers.length)];
 }

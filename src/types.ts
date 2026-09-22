@@ -79,6 +79,15 @@ export type GradeLevel =
   | 'middle_school'
   | 'high_school';
 
+export type BrainTeaserSubject =
+  | 'any'
+  | 'math'
+  | 'science'
+  | 'nature'
+  | 'wordplay'
+  | 'logic'
+  | 'riddle';
+
 export interface BrainTeaserHistory {
   lastCompletedDate?: string; // YYYY-MM-DD
   todayAnsweredCount?: number; // Number of brain teaser questions completed today
@@ -132,6 +141,7 @@ export interface KidProfile {
   lastActiveDate?: string; // YYYY-MM-DD
   pin?: string; // optional kid pin
   gradeLevel?: GradeLevel; // Assigned grade school level
+  brainTeaserSubject?: BrainTeaserSubject; // Assigned target subject focus (Admin-only, to target weak subjects)
   brainTeaserHistory?: BrainTeaserHistory;
   kidCoinBalance?: number; // available cash in USD / Kid Coins
   totalSaved?: number; // total in active goals in USD

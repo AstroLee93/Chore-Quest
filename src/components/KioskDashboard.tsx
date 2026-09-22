@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock } from 'lucide-react';
+import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock, Hourglass, AlertTriangle } from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
 import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent, RewardItem, RewardRedemption } from '../types';
 import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getMvpKid } from '../utils/storage';
 import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar';
 import { getCurrentDayOfWeekKey, DEFAULT_WEEKLY_MENU } from '../utils/menu';
 import { sound } from '../utils/sound';
-import { checkCategoryTimeWindow } from '../utils/timeWindow';
+import { checkCategoryTimeWindow, checkChoreTimeWindow } from '../utils/timeWindow';
 import { AppThemeId, APP_THEMES } from '../utils/theme';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { ChoreTimerModal } from './ChoreTimerModal';
@@ -21,7 +21,7 @@ import { KidAvatarModal } from './KidAvatarModal';
 import { BountyBoardModal } from './BountyBoardModal';
 import { BrainTeaserModal } from './BrainTeaserModal';
 import { ReadingLogModal } from './ReadingLogModal';
-import { getGradeLevelInfo, getDailyTeasersAnsweredToday } from '../utils/brainTeasers';
+import { getGradeLevelInfo, getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
 import {
   isReadingCompletedToday,
   findReadingChore,
@@ -266,6 +266,28 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
     return { totalFamilyChoresToday: scheduled, totalFamilyCompletedToday: completed };
   }, [kidStats]);
 
+  // Overall household count of chores nearing time window expiration
+  const householdExpiringChoresCount = useMemo(() => {
+    let count = 0;
+    database.kids.forEach((kid) => {
+      const kidChores = (database.chores || []).filter(
+        (c) => c.isActive && isChoreScheduledForDate(c, todayStr) && isChoreAssignedToKid(c, kid.id)
+      );
+      kidChores.forEach((chore) => {
+        const log = (database.logs || []).find(
+          (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
+        );
+        if (log?.status === 'completed') return;
+        const category = (database.categories || []).find((c) => c.id === chore.categoryId);
+        const timeStatus = checkChoreTimeWindow(chore, category, currentTime);
+        if (timeStatus.isAllowed && timeStatus.isNearingExpiration) {
+          count++;
+        }
+      });
+    });
+    return count;
+  }, [database.kids, database.chores, database.logs, database.categories, todayStr, currentTime]);
+
   const handleCheerMvp = useCallback(() => {
     sound.playStarEarned();
     fireConfetti({
@@ -299,7 +321,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         </div>
 
         {/* Center: Themed Clock & Live Weather */}
-        <div className={`flex items-center gap-4 sm:gap-6 px-5 py-2.5 rounded-2xl ${theme.kioskClockBg} self-stretch sm:self-auto justify-center`}>
+        <div className={`flex items-center gap-4 sm:gap-6 px-5 py-2.5 rounded-2xl ${theme.kioskClockBg} self-stretch sm:self-auto justify-center flex-wrap`}>
           <div className="text-left">
             <div className={`text-2xl sm:text-3xl font-black tracking-tight font-mono ${theme.kioskClockText}`}>
               {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -323,6 +345,21 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Expiring Chores Live Household Indicator */}
+          {householdExpiringChoresCount > 0 && (
+            <>
+              <div className="h-8 w-px bg-white/20 hidden sm:block" />
+              <div
+                id="kiosk-header-expiring-alert"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/25 border border-amber-400/50 text-amber-200 text-xs font-black shadow-sm animate-pulse"
+                title={`${householdExpiringChoresCount} mission${householdExpiringChoresCount > 1 ? 's are' : ' is'} nearing time window expiration!`}
+              >
+                <Hourglass className="w-3.5 h-3.5 text-amber-300" />
+                <span>{householdExpiringChoresCount} Ending Soon!</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right: Dinner Menu, Calendar, Fullscreen & Exit */}
@@ -478,7 +515,23 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                 : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full'
           }`}
         >
-          {kidStats.map(({ kid, kidChores, completedCount, totalChores, percent, isAllDone, isMvp, level }) => (
+          {kidStats.map(({ kid, kidChores, completedCount, totalChores, percent, isAllDone, isMvp, level }) => {
+            const expiringChores = kidChores.filter((chore) => {
+              const log = (database.logs || []).find(
+                (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
+              );
+              if (log?.status === 'completed') return false;
+              const category = (database.categories || []).find((c) => c.id === chore.categoryId);
+              const timeStatus = checkChoreTimeWindow(chore, category, currentTime);
+              return timeStatus.isAllowed && timeStatus.isNearingExpiration;
+            });
+            const kidExpiringCount = expiringChores.length;
+            const hasUrgentChore = expiringChores.some((chore) => {
+              const category = (database.categories || []).find((c) => c.id === chore.categoryId);
+              return checkChoreTimeWindow(chore, category, currentTime).isUrgentExpiration;
+            });
+
+            return (
             <div
               key={kid.id}
               id={`kiosk-kid-card-${kid.id}`}
@@ -527,6 +580,19 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         {isAllDone && (
                           <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500 text-white font-extrabold animate-bounce shrink-0">
                             Done! 🎉
+                          </span>
+                        )}
+                        {!isAllDone && kidExpiringCount > 0 && (
+                          <span
+                            className={`text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md shrink-0 animate-pulse ${
+                              hasUrgentChore
+                                ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-white ring-2 ring-rose-400/50'
+                                : 'bg-amber-400 text-slate-950 ring-1 ring-amber-300'
+                            }`}
+                            title={`${kidExpiringCount} task${kidExpiringCount > 1 ? 's' : ''} ending soon!`}
+                          >
+                            <Hourglass className="w-3 h-3 text-current" />
+                            <span>{kidExpiringCount} Due Soon</span>
                           </span>
                         )}
                       </h2>
@@ -597,10 +663,12 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                             const answered = getDailyTeasersAnsweredToday(kid, todayStr);
                             const limit = database.settings.brainTeaserDailyLimit ?? 1;
                             const pts = database.settings.brainTeaserRewardStars ?? 5;
+                            const subjectInfo = getSubjectInfo(kid.brainTeaserSubject);
+                            const subjectTag = kid.brainTeaserSubject && kid.brainTeaserSubject !== 'any' ? ` [${subjectInfo.shortLabel}]` : '';
                             if (answered >= limit) {
-                              return `🧠 Brain Teasers (Done Today ${answered}/${limit} ✓)`;
+                              return `🧠 Brain Teasers${subjectTag} (Done ${answered}/${limit} ✓)`;
                             }
-                            return `🧠 Daily Brain Teaser (${answered}/${limit} • +${pts} Pts)`;
+                            return `🧠 Daily Brain Teaser${subjectTag} (${answered}/${limit} • +${pts} Pts)`;
                           })(),
                           variant: 'primary',
                           onClick: () => {
@@ -682,126 +750,247 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
                 {/* Chores List */}
                 <div className="space-y-2 mt-3 max-h-72 overflow-y-auto pr-1">
-                  {kidChores.length === 0 ? (
-                    <div className="text-center py-8 text-white/60 text-xs font-bold">
-                      No missions scheduled for today! 🏖️
-                    </div>
-                  ) : (
-                    kidChores.map((chore) => {
+                  {(() => {
+                    const expiringChoresCount = kidChores.filter((chore) => {
                       const log = (database.logs || []).find(
                         (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
                       );
-                      const isDone = log?.status === 'completed';
-                      const otherKidClaimLog = chore.isBounty
-                        ? (database.logs || []).find(
-                            (l) => l.choreId === chore.id && l.date === todayStr && l.status === 'completed' && l.kidId !== kid.id
-                          )
-                        : null;
-                      const otherKidClaimer = otherKidClaimLog
-                        ? database.kids.find((k) => k.id === otherKidClaimLog.kidId)
-                        : null;
-                      const isClaimedByOther = !!otherKidClaimer;
-
+                      if (log?.status === 'completed') return false;
                       const category = (database.categories || []).find((c) => c.id === chore.categoryId);
-                      const timeStatus = checkCategoryTimeWindow(category);
-                      const isTimeLocked = !isDone && !isClaimedByOther && !timeStatus.isAllowed;
+                      const timeStatus = checkChoreTimeWindow(chore, category, currentTime);
+                      return timeStatus.isAllowed && timeStatus.isNearingExpiration;
+                    }).length;
 
+                    const sortedKidChores = [...kidChores].sort((a, b) => {
+                      const logA = (database.logs || []).find(
+                        (l) => l.choreId === a.id && l.kidId === kid.id && l.date === todayStr
+                      );
+                      const logB = (database.logs || []).find(
+                        (l) => l.choreId === b.id && l.kidId === kid.id && l.date === todayStr
+                      );
+                      const isDoneA = logA?.status === 'completed';
+                      const isDoneB = logB?.status === 'completed';
+                      if (isDoneA !== isDoneB) return isDoneA ? 1 : -1;
+
+                      const catA = (database.categories || []).find((c) => c.id === a.categoryId);
+                      const catB = (database.categories || []).find((c) => c.id === b.categoryId);
+                      const timeA = checkChoreTimeWindow(a, catA, currentTime);
+                      const timeB = checkChoreTimeWindow(b, catB, currentTime);
+
+                      const isExpiringA = !isDoneA && timeA.isAllowed && timeA.isNearingExpiration;
+                      const isExpiringB = !isDoneB && timeB.isAllowed && timeB.isNearingExpiration;
+                      if (isExpiringA !== isExpiringB) return isExpiringA ? -1 : 1;
+
+                      if (isExpiringA && isExpiringB) {
+                        return (timeA.minutesRemaining ?? 999) - (timeB.minutesRemaining ?? 999);
+                      }
+
+                      const isLockedA = !isDoneA && !timeA.isAllowed;
+                      const isLockedB = !isDoneB && !timeB.isAllowed;
+                      if (isLockedA !== isLockedB) return isLockedA ? 1 : -1;
+
+                      return a.order - b.order;
+                    });
+
+                    if (sortedKidChores.length === 0) {
                       return (
-                        <div
-                          key={chore.id}
-                          className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                            isDone
-                              ? theme.kioskCardItemDone
-                              : isTimeLocked
-                              ? 'bg-black/30 border-amber-500/30 opacity-80'
-                              : theme.kioskCardItemBg
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                            <span className="text-2xl shrink-0">{chore.icon || '⭐'}</span>
-                            <div className="min-w-0">
-                              <div className={`text-xs sm:text-sm font-black truncate ${isDone ? 'line-through opacity-70 text-white' : 'text-white'}`}>
-                                {chore.title}
-                              </div>
-                              <div className="flex items-center gap-2 text-[10px] font-bold text-white/70 flex-wrap">
-                                <span className="text-amber-300 font-extrabold">
-                                  +{chore.stars + (chore.bountyBonusStars || 0)} pts
+                        <div className="text-center py-8 text-white/60 text-xs font-bold">
+                          No missions scheduled for today! 🏖️
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <>
+                        {/* Priority Alert Banner for kid when tasks are expiring soon */}
+                        {expiringChoresCount > 0 && (
+                          <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/25 via-rose-500/20 to-amber-500/25 border border-amber-400/40 text-amber-200 text-xs font-black shadow-xs mb-2 animate-pulse">
+                            <div className="flex items-center gap-1.5">
+                              <Hourglass className="w-3.5 h-3.5 text-amber-300" />
+                              <span>{expiringChoresCount} {expiringChoresCount === 1 ? 'Task' : 'Tasks'} Ending Soon!</span>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black uppercase tracking-wider shadow-xs">
+                              Priority
+                            </span>
+                          </div>
+                        )}
+
+                        {sortedKidChores.map((chore) => {
+                          const log = (database.logs || []).find(
+                            (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
+                          );
+                          const isDone = log?.status === 'completed';
+                          const otherKidClaimLog = chore.isBounty
+                            ? (database.logs || []).find(
+                                (l) => l.choreId === chore.id && l.date === todayStr && l.status === 'completed' && l.kidId !== kid.id
+                              )
+                            : null;
+                          const otherKidClaimer = otherKidClaimLog
+                            ? database.kids.find((k) => k.id === otherKidClaimLog.kidId)
+                            : null;
+                          const isClaimedByOther = !!otherKidClaimer;
+
+                          const category = (database.categories || []).find((c) => c.id === chore.categoryId);
+                          const timeStatus = checkChoreTimeWindow(chore, category, currentTime);
+                          const isTimeLocked = !isDone && !isClaimedByOther && !timeStatus.isAllowed;
+                          const isExpiringSoon = !isDone && !isClaimedByOther && !isTimeLocked && timeStatus.isAllowed && timeStatus.isNearingExpiration;
+                          const isUrgent = isExpiringSoon && !!timeStatus.isUrgentExpiration;
+
+                          return (
+                            <div
+                              key={chore.id}
+                              className={`p-3 sm:p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 relative overflow-hidden ${
+                                isDone
+                                  ? theme.kioskCardItemDone
+                                  : isTimeLocked
+                                  ? 'bg-black/30 border-amber-500/30 opacity-80'
+                                  : isUrgent
+                                  ? 'bg-gradient-to-r from-rose-950/90 via-amber-950/80 to-rose-950/90 border-rose-400 shadow-xl shadow-rose-500/30 ring-2 ring-rose-400/80 animate-pulse'
+                                  : isExpiringSoon
+                                  ? 'bg-gradient-to-r from-amber-950/90 via-orange-950/70 to-amber-950/90 border-amber-400 shadow-lg shadow-amber-500/25 ring-2 ring-amber-400/70'
+                                  : theme.kioskCardItemBg
+                              }`}
+                            >
+                              {/* Urgency Progress Bar on bottom of expiring chore card */}
+                              {isExpiringSoon && timeStatus.minutesRemaining !== undefined && (
+                                <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-black/60 overflow-hidden">
+                                  <div
+                                    className={`h-full transition-all duration-1000 ${
+                                      isUrgent
+                                        ? 'bg-gradient-to-r from-rose-500 via-amber-400 to-rose-500 animate-pulse'
+                                        : 'bg-gradient-to-r from-amber-400 to-yellow-300'
+                                    }`}
+                                    style={{
+                                      width: `${Math.max(6, Math.min(100, (timeStatus.minutesRemaining / 60) * 100))}%`,
+                                    }}
+                                    title={`${timeStatus.minutesRemaining} minutes remaining until check-off closes`}
+                                  />
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                <span className={`text-2xl sm:text-3xl shrink-0 ${isExpiringSoon ? 'animate-bounce' : ''}`}>
+                                  {chore.icon || '⭐'}
                                 </span>
-                                {chore.timerMinutes && (
-                                  <span className="text-sky-300 flex items-center gap-0.5">
-                                    <Timer className="w-3 h-3" />
-                                    <span>{chore.timerMinutes}m timer</span>
-                                  </span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <div className={`text-xs sm:text-sm font-black truncate ${isDone ? 'line-through opacity-70 text-white' : 'text-white'}`}>
+                                      {chore.title}
+                                    </div>
+                                    {isExpiringSoon && (
+                                      <span
+                                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-md shrink-0 ${
+                                          isUrgent
+                                            ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white animate-bounce'
+                                            : 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950'
+                                        }`}
+                                        title={`Window closes at ${timeStatus.endTimeFormatted} (${timeStatus.minutesRemaining}m remaining)`}
+                                      >
+                                        <Hourglass className="w-3 h-3 text-current" />
+                                        <span>{isUrgent ? '⚡ URGENT' : '⚡ PRIORITY'}: {timeStatus.expirationBadgeText}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[10px] font-bold text-white/70 flex-wrap mt-0.5">
+                                    <span className="text-amber-300 font-extrabold">
+                                      +{chore.stars + (chore.bountyBonusStars || 0)} pts
+                                    </span>
+                                    {chore.timerMinutes && (
+                                      <span className="text-sky-300 flex items-center gap-0.5">
+                                        <Timer className="w-3 h-3" />
+                                        <span>{chore.timerMinutes}m timer</span>
+                                      </span>
+                                    )}
+                                    {isClaimedByOther && (
+                                      <span className="text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded-md border border-amber-400/30 flex items-center gap-1 font-black">
+                                        <Lock className="w-2.5 h-2.5 text-amber-300" />
+                                        <span>Claimed by {otherKidClaimer?.name}</span>
+                                      </span>
+                                    )}
+                                    {isTimeLocked && (
+                                      <span className="text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded-md border border-amber-400/30 flex items-center gap-1 font-black">
+                                        <Lock className="w-2.5 h-2.5 text-amber-300" />
+                                        <span>{timeStatus.formattedRange} ({timeStatus.message})</span>
+                                      </span>
+                                    )}
+                                    {isExpiringSoon && (
+                                      <span className="text-amber-200 bg-amber-500/30 px-2 py-0.5 rounded-md border border-amber-400/50 flex items-center gap-1 font-black">
+                                        <Clock className="w-3 h-3 text-amber-300" />
+                                        <span>Closes {timeStatus.endTimeFormatted} ({timeStatus.minutesRemaining}m left)</span>
+                                      </span>
+                                    )}
+                                    {!isDone && !isClaimedByOther && timeStatus.hasRestriction && timeStatus.isAllowed && !isExpiringSoon && (
+                                      <span className="text-emerald-300/90 bg-emerald-500/15 px-1.5 py-0.5 rounded-md border border-emerald-400/30 flex items-center gap-1 font-bold">
+                                        <Clock className="w-2.5 h-2.5 text-emerald-300" />
+                                        <span>Open until {timeStatus.endTimeFormatted}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {!isDone && !isTimeLocked && (
+                                  <button
+                                    onClick={() => {
+                                      sound.playTap();
+                                      setActiveTimerChore(chore);
+                                    }}
+                                    className={`p-2 rounded-xl ${theme.kioskClockBg} text-white hover:opacity-90 transition-all cursor-pointer`}
+                                    title="Start Focus Timer"
+                                  >
+                                    <Timer className="w-4 h-4" />
+                                  </button>
                                 )}
-                                {isClaimedByOther && (
-                                  <span className="text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded-md border border-amber-400/30 flex items-center gap-1 font-black">
-                                    <Lock className="w-2.5 h-2.5 text-amber-300" />
-                                    <span>Claimed by {otherKidClaimer?.name}</span>
-                                  </span>
-                                )}
-                                {isTimeLocked && (
-                                  <span className="text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded-md border border-amber-400/30 flex items-center gap-1 font-black">
-                                    <Lock className="w-2.5 h-2.5 text-amber-300" />
-                                    <span>{timeStatus.formattedRange} ({timeStatus.message})</span>
-                                  </span>
+
+                                {isDone ? (
+                                  <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                                    <Check className="w-4 h-4 stroke-[3]" />
+                                  </div>
+                                ) : isClaimedByOther ? (
+                                  <button
+                                    onClick={() => sound.playWarning()}
+                                    className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center gap-1 text-[11px] font-black cursor-pointer hover:bg-amber-500/30 active:scale-95 transition-all"
+                                    title={`This bounty was claimed by Deputy ${otherKidClaimer?.name} on the Bounty Board!`}
+                                  >
+                                    <Lock className="w-3.5 h-3.5 text-amber-300" />
+                                    <span>{otherKidClaimer?.name}</span>
+                                  </button>
+                                ) : isTimeLocked ? (
+                                  <button
+                                    onClick={() => sound.playWarning()}
+                                    className="w-9 h-9 rounded-xl bg-slate-800/80 border border-amber-500/40 text-amber-400 flex items-center justify-center shadow-sm cursor-not-allowed hover:bg-slate-800 active:scale-95 transition-all"
+                                    title={`Locked: ${timeStatus.message} (${timeStatus.formattedRange})`}
+                                  >
+                                    <Lock className="w-4 h-4 stroke-[2.5]" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleQuickCompleteChore(chore, kid)}
+                                    className={`w-9 h-9 rounded-xl text-white flex items-center justify-center shadow-md transition-all cursor-pointer active:scale-95 ${
+                                      isUrgent
+                                        ? 'bg-rose-600 hover:bg-rose-500 ring-2 ring-rose-400 ring-offset-1 ring-offset-slate-900 animate-pulse'
+                                        : isExpiringSoon
+                                        ? 'bg-emerald-600 hover:bg-emerald-500 ring-2 ring-amber-400 ring-offset-1 ring-offset-slate-900'
+                                        : 'bg-emerald-600 hover:bg-emerald-500'
+                                    }`}
+                                    title={isExpiringSoon ? `Complete now before window closes at ${timeStatus.endTimeFormatted}!` : "Mark Completed"}
+                                  >
+                                    <Check className="w-4 h-4 stroke-[3]" />
+                                  </button>
                                 )}
                               </div>
                             </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {!isDone && !isTimeLocked && (
-                              <button
-                                onClick={() => {
-                                  sound.playTap();
-                                  setActiveTimerChore(chore);
-                                }}
-                                className={`p-2 rounded-xl ${theme.kioskClockBg} text-white hover:opacity-90 transition-all cursor-pointer`}
-                                title="Start Focus Timer"
-                              >
-                                <Timer className="w-4 h-4" />
-                              </button>
-                            )}
-
-                            {isDone ? (
-                              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-                                <Check className="w-4 h-4 stroke-[3]" />
-                              </div>
-                            ) : isClaimedByOther ? (
-                              <button
-                                onClick={() => sound.playWarning()}
-                                className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center gap-1 text-[11px] font-black cursor-pointer hover:bg-amber-500/30 active:scale-95 transition-all"
-                                title={`This bounty was claimed by Deputy ${otherKidClaimer?.name} on the Bounty Board!`}
-                              >
-                                <Lock className="w-3.5 h-3.5 text-amber-300" />
-                                <span>{otherKidClaimer?.name}</span>
-                              </button>
-                            ) : isTimeLocked ? (
-                              <button
-                                onClick={() => sound.playWarning()}
-                                className="w-9 h-9 rounded-xl bg-slate-800/80 border border-amber-500/40 text-amber-400 flex items-center justify-center shadow-sm cursor-not-allowed hover:bg-slate-800 active:scale-95 transition-all"
-                                title={`Locked: ${timeStatus.message} (${timeStatus.formattedRange})`}
-                              >
-                                <Lock className="w-4 h-4 stroke-[2.5]" />
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleQuickCompleteChore(chore, kid)}
-                                className="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white flex items-center justify-center shadow-md transition-all cursor-pointer"
-                                title="Mark Completed"
-                              >
-                                <Check className="w-4 h-4 stroke-[3]" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
 
           {/* Household Summary Card if 1 or 2 kids */}
           {database.kids.length <= 2 && (

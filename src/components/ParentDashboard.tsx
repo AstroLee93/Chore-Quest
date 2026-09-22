@@ -57,6 +57,7 @@ import {
   GroceryItem,
   GroceryImportance,
   GradeLevel,
+  BrainTeaserSubject,
   ReadingLogEntry,
   KidBookShelfItem,
 } from '../types';
@@ -87,7 +88,7 @@ import { FamilyGoalModal } from './FamilyGoalModal';
 import { WeeklyMenuModal } from './WeeklyMenuModal';
 import { ParentSavingsManagement } from './Savings/ParentSavingsManagement';
 import { BrainTeaserModal } from './BrainTeaserModal';
-import { GRADE_LEVEL_LIST, getGradeLevelInfo } from '../utils/brainTeasers';
+import { GRADE_LEVEL_LIST, getGradeLevelInfo, BRAIN_TEASER_SUBJECTS, getSubjectInfo } from '../utils/brainTeasers';
 import { RewardsManagementSection } from './RewardsManagementSection';
 import { StarValueInput } from './StarValueInput';
 
@@ -709,6 +710,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
     const sanitizedPin = kid.pin ? kid.pin.replace(/\D/g, '').slice(0, 4) : '1234';
     const targetGrade = (kid.gradeLevel as GradeLevel) || '1st_grade';
+    const targetSubject = (kid.brainTeaserSubject as BrainTeaserSubject) || 'any';
 
     let updatedKids: KidProfile[];
     if (kid.id) {
@@ -718,6 +720,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               ...k,
               ...kid,
               gradeLevel: targetGrade,
+              brainTeaserSubject: targetSubject,
               pin: sanitizedPin || k.pin || '1234',
             } as KidProfile)
           : k
@@ -730,6 +733,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
         color: kid.color || '#3b82f6',
         pin: sanitizedPin || '1234',
         gradeLevel: targetGrade,
+        brainTeaserSubject: targetSubject,
         stars: Number(kid.stars) || 0,
         lifetimeStars: Number(kid.stars) || 0,
         streakDays: 0,
@@ -745,6 +749,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
     sound.playTap();
     const updatedKids = database.kids.map((k) =>
       k.id === kidId ? { ...k, gradeLevel } : k
+    );
+    onUpdateDatabase({ ...database, kids: updatedKids });
+  };
+
+  const handleQuickUpdateBrainTeaserSubject = (kidId: string, brainTeaserSubject: BrainTeaserSubject) => {
+    sound.playTap();
+    const updatedKids = database.kids.map((k) =>
+      k.id === kidId ? { ...k, brainTeaserSubject } : k
     );
     onUpdateDatabase({ ...database, kids: updatedKids });
   };
@@ -2639,6 +2651,39 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       </div>
                     </div>
 
+                    {/* Brain Teaser Subject Focus: Admin-Only Per-Kid Assignment to target weak areas */}
+                    <div className="p-2 sm:p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Target className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                        <div>
+                          <div className="text-[9px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                            <span>Subject Focus</span>
+                            <span className="text-[8px] px-1 py-0.2 rounded bg-indigo-200/80 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-extrabold">ADMIN ONLY</span>
+                          </div>
+                          <div className="text-xs font-black text-slate-800 dark:text-white flex items-center gap-1 truncate">
+                            <span>{getSubjectInfo(kid.brainTeaserSubject).icon}</span>
+                            <span>{getSubjectInfo(kid.brainTeaserSubject).label}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          id={`select-kid-subject-${kid.id}`}
+                          value={kid.brainTeaserSubject || 'any'}
+                          onChange={(e) => handleQuickUpdateBrainTeaserSubject(kid.id, e.target.value as BrainTeaserSubject)}
+                          className="px-2 py-1 text-[11px] font-bold rounded-lg border border-indigo-300 bg-white dark:bg-slate-800 text-slate-800 dark:text-white cursor-pointer"
+                          title={`Set brain teaser focus subject for ${kid.name} (targets weak subjects)`}
+                        >
+                          {BRAIN_TEASER_SUBJECTS.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.icon} {s.shortLabel} {s.id === 'any' ? '(Mixed)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
                     {/* PIN Protection & Clear Reset Input Field Row */}
                     <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                       <div className="flex items-center justify-between">
@@ -3848,42 +3893,60 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   </p>
                 </div>
 
-                {/* 3. Assigned Grade Levels Summary (Locked from Kids) */}
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-700 space-y-2">
+                {/* 3. Assigned Grade Levels & Target Subject Focus (Admin Assigned per Kid) */}
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-700 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                      <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                      Assigned Levels (Locked):
+                      <Target className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      Kid Educational Targets (Admin Only):
                     </span>
                     <button
                       type="button"
                       onClick={() => setActiveTab('kids')}
                       className="text-[10px] font-black text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
                     >
-                      Edit in Kids Tab →
+                      Manage Kids →
                     </button>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {database.kids.map((k) => (
                       <div
                         key={k.id}
-                        className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700 text-xs"
+                        className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700 text-xs flex-wrap"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm shrink-0">{k.avatar}</span>
+                          <span className="text-base shrink-0">{k.avatar}</span>
                           <span className="font-black text-slate-800 dark:text-white truncate">{k.name}</span>
                         </div>
-                        <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-black text-[11px] shrink-0">
-                          {getGradeLevelInfo(k.gradeLevel).icon} {getGradeLevelInfo(k.gradeLevel).shortLabel}
-                        </span>
+                        <div className="flex items-center gap-2 ml-auto flex-wrap">
+                          <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-black text-[11px] shrink-0" title="Assigned School Grade">
+                            {getGradeLevelInfo(k.gradeLevel).icon} {getGradeLevelInfo(k.gradeLevel).shortLabel}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-slate-400 font-bold">Focus:</span>
+                            <select
+                              id={`select-settings-kid-subject-${k.id}`}
+                              value={k.brainTeaserSubject || 'any'}
+                              onChange={(e) => handleQuickUpdateBrainTeaserSubject(k.id, e.target.value as BrainTeaserSubject)}
+                              className="px-2 py-0.5 text-[11px] font-black rounded-md border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-800 text-indigo-900 dark:text-indigo-200 cursor-pointer"
+                              title={`Admin target subject focus for ${k.name}`}
+                            >
+                              {BRAIN_TEASER_SUBJECTS.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.icon} {s.shortLabel} {s.id === 'any' ? '(Mixed)' : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
 
                   <p className="text-[10px] text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1">
                     <span>🔒</span>
-                    <span>Kids cannot change grade level. Admin only.</span>
+                    <span>Kids cannot change subject or grade. Target weak areas (e.g., Math, Science) per child.</span>
                   </p>
                 </div>
               </div>
@@ -5140,6 +5203,31 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 </select>
                 <p className="text-[10px] text-slate-400 dark:text-slate-400 font-bold mt-0.5">
                   Tailors daily educational Brain Teaser challenges to their current school level.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] sm:text-xs font-black text-slate-700 dark:text-slate-200 uppercase mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <span>🎯</span>
+                    <span>Brain Teaser Subject Focus:</span>
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-extrabold">ADMIN ONLY</span>
+                </label>
+                <select
+                  id="select-kid-subject-focus"
+                  value={editingKid.brainTeaserSubject || 'any'}
+                  onChange={(e) => setEditingKid({ ...editingKid, brainTeaserSubject: e.target.value as BrainTeaserSubject })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-xs sm:text-sm text-slate-800 dark:text-white focus:outline-indigo-500 cursor-pointer"
+                >
+                  {BRAIN_TEASER_SUBJECTS.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.icon} {s.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 dark:text-slate-400 font-bold mt-0.5">
+                  Kids cannot change this. Target a potential weak subject (e.g. Math, Wordplay, Science) specifically for this child, or choose All Topics (Mixed).
                 </p>
               </div>
 

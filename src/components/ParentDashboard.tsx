@@ -39,6 +39,7 @@ import {
   GraduationCap,
   BookOpen,
   Target,
+  BarChart3,
 } from 'lucide-react';
 import {
   FamilyDatabase,
@@ -88,6 +89,8 @@ import { FamilyGoalModal } from './FamilyGoalModal';
 import { WeeklyMenuModal } from './WeeklyMenuModal';
 import { ParentSavingsManagement } from './Savings/ParentSavingsManagement';
 import { BrainTeaserModal } from './BrainTeaserModal';
+import { BrainTeaserProgressModal } from './BrainTeaserProgressModal';
+import { getHouseholdBrainTeaserAnalytics } from '../utils/brainTeaserStats';
 import { GRADE_LEVEL_LIST, getGradeLevelInfo, BRAIN_TEASER_SUBJECTS, getSubjectInfo } from '../utils/brainTeasers';
 import { RewardsManagementSection } from './RewardsManagementSection';
 import { StarValueInput } from './StarValueInput';
@@ -194,6 +197,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const [bonusStarReason, setBonusStarReason] = useState<string>('Great attitude and helpfulness!');
   const [isBrainTeaserPreviewOpen, setIsBrainTeaserPreviewOpen] = useState<boolean>(false);
   const [previewTeaserKid, setPreviewTeaserKid] = useState<KidProfile | null>(null);
+  const [showBrainTeaserProgressModal, setShowBrainTeaserProgressModal] = useState<boolean>(false);
+  const [analyticsSelectedKidId, setAnalyticsSelectedKidId] = useState<string | undefined>(undefined);
+
+  // Household brain teaser analytics for admin settings overview
+  const householdTeaserAnalytics = useMemo(
+    () => getHouseholdBrainTeaserAnalytics(database.kids),
+    [database.kids]
+  );
 
   // Settings form state
   const [settingsForm, setSettingsForm] = useState<AppSettings>(database.settings);
@@ -2529,6 +2540,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                                   },
                                 },
                                 {
+                                  id: 'teaser-progress',
+                                  label: '📊 Subject Progress Graphs',
+                                  icon: <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />,
+                                  onClick: () => {
+                                    setAnalyticsSelectedKidId(kid.id);
+                                    setShowBrainTeaserProgressModal(true);
+                                  },
+                                },
+                                {
                                   id: 'reset-pin',
                                   label: 'Reset Security PIN',
                                   icon: <Lock className="w-3.5 h-3.5 text-indigo-600" />,
@@ -3948,6 +3968,89 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     <span>🔒</span>
                     <span>Kids cannot change subject or grade. Target weak areas (e.g., Math, Science) per child.</span>
                   </p>
+                </div>
+              </div>
+
+              {/* 4. Full-Width Subject Progress & Bar Graphs (Admin Analytics) */}
+              <div className="w-full p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-800/95 border-2 border-purple-300 dark:border-purple-700/80 shadow-xs space-y-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                      <BarChart3 className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h5 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                          Kid Subject Progress & Bar Graphs
+                        </h5>
+                        <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 text-[10px] font-black uppercase tracking-wider border border-purple-200 dark:border-purple-800">
+                          Admin Analytics
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                        Track Right vs. Wrong questions by topic, view percentage scores, compare kids side-by-side, and identify target growth subjects.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    id="btn-open-brain-progress-admin"
+                    onClick={() => {
+                      sound.playTap();
+                      setAnalyticsSelectedKidId(undefined);
+                      setShowBrainTeaserProgressModal(true);
+                    }}
+                    className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer shrink-0"
+                  >
+                    <BarChart3 className="w-4 h-4 shrink-0" />
+                    <span>Open Subject Graphs 📊</span>
+                  </button>
+                </div>
+
+                {/* Quick Info & Quick Links bar */}
+                <div className="pt-2.5 border-t border-purple-100 dark:border-purple-900/60 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-900 dark:text-purple-200 font-bold border border-purple-200/70 dark:border-purple-800 text-[11px] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                      <span>Total Answered:</span>
+                      <span className="font-black text-purple-700 dark:text-purple-300">{householdTeaserAnalytics.totalHouseholdAnswered}</span>
+                    </span>
+
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-200 font-bold border border-emerald-200/70 dark:border-emerald-800 text-[11px] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <span>Household Accuracy:</span>
+                      <span className="font-black text-emerald-700 dark:text-emerald-300">{householdTeaserAnalytics.householdPercentage}%</span>
+                    </span>
+
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-900 dark:text-amber-200 font-bold border border-amber-200/70 dark:border-amber-800 text-[11px] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                      <span>Stars Awarded:</span>
+                      <span className="font-black text-amber-700 dark:text-amber-300">⭐ {householdTeaserAnalytics.totalStarsAwarded}</span>
+                    </span>
+                  </div>
+
+                  {database.kids.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Quick View:</span>
+                      {database.kids.map((k) => (
+                        <button
+                          key={k.id}
+                          type="button"
+                          onClick={() => {
+                            sound.playTap();
+                            setAnalyticsSelectedKidId(k.id);
+                            setShowBrainTeaserProgressModal(true);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-purple-100 dark:bg-slate-700 dark:hover:bg-purple-900/60 text-slate-800 dark:text-slate-200 text-[11px] font-black border border-slate-200 dark:border-slate-600 flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                          title={`View ${k.name}'s subject progress bar graph`}
+                        >
+                          <span>{k.avatar}</span>
+                          <span>{k.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -5526,6 +5629,23 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           onClose={() => {
             setIsBrainTeaserPreviewOpen(false);
             setPreviewTeaserKid(null);
+          }}
+        />
+      )}
+
+      {/* Brain Teaser Subject Progress & Analytics (Admin Thorough View) */}
+      {showBrainTeaserProgressModal && (
+        <BrainTeaserProgressModal
+          database={database}
+          currentKidId={analyticsSelectedKidId || previewTeaserKid?.id || database.kids[0]?.id}
+          isOpen={showBrainTeaserProgressModal}
+          onClose={() => {
+            setShowBrainTeaserProgressModal(false);
+            setAnalyticsSelectedKidId(undefined);
+          }}
+          isAdmin={true}
+          onUpdateKidFocusSubject={(kidId, subject) => {
+            handleQuickUpdateBrainTeaserSubject(kidId, subject);
           }}
         />
       )}

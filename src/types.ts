@@ -88,6 +88,16 @@ export type BrainTeaserSubject =
   | 'logic'
   | 'riddle';
 
+export interface BrainTeaserSubjectStat {
+  subject: BrainTeaserSubject;
+  correct: number;
+  wrong: number;
+  total: number;
+  percentage: number; // 0-100
+  starsEarned?: number;
+  lastAttemptedDate?: string;
+}
+
 export interface BrainTeaserHistory {
   lastCompletedDate?: string; // YYYY-MM-DD
   todayAnsweredCount?: number; // Number of brain teaser questions completed today
@@ -95,6 +105,7 @@ export interface BrainTeaserHistory {
   totalCorrect?: number;
   totalStarsEarned?: number;
   completedQuestionIds?: string[];
+  subjectStats?: Partial<Record<BrainTeaserSubject, BrainTeaserSubjectStat>>;
 }
 
 export interface ReadingLogEntry {

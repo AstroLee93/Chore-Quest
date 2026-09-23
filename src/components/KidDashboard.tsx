@@ -10,6 +10,7 @@ import { BadgeModal } from './BadgeModal';
 import { BountyBoardModal } from './BountyBoardModal';
 import { BrainTeaserModal } from './BrainTeaserModal';
 import { ReadingLogModal } from './ReadingLogModal';
+import { TopBrainsLeaderboard } from './TopBrainsLeaderboard';
 import { getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
 import {
   isReadingCompletedToday,
@@ -157,6 +158,23 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
 
   const levelInfo = getKidLevelInfo(kid.lifetimeStars);
 
+  // Kid's ranking in Top Brains Leaderboard
+  const brainLeaderboardRank = useMemo(() => {
+    if (!database?.kids || database.kids.length === 0) return null;
+    const sorted = [...database.kids].sort((a, b) => {
+      const aC = a.brainTeaserHistory?.totalCorrect || 0;
+      const bC = b.brainTeaserHistory?.totalCorrect || 0;
+      if (bC !== aC) return bC - aC;
+      return (b.brainTeaserHistory?.totalStarsEarned || 0) - (a.brainTeaserHistory?.totalStarsEarned || 0);
+    });
+    const idx = sorted.findIndex((k) => k.id === kid.id);
+    return {
+      rank: idx >= 0 ? idx + 1 : 1,
+      totalCorrect: kid.brainTeaserHistory?.totalCorrect || 0,
+      isLeader: idx === 0 && (kid.brainTeaserHistory?.totalCorrect || 0) > 0,
+    };
+  }, [database?.kids, kid.id, kid.brainTeaserHistory]);
+
   return (
     <div className="max-w-7xl mx-auto px-1 sm:px-8 py-1.5 sm:py-8 flex flex-col gap-4 sm:gap-6 animate-fade-in w-full">
       {/* Family Goal Banner if database is provided */}
@@ -301,11 +319,15 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                   <div className="min-w-0 flex-1">
                     <div className="font-black text-sm sm:text-base text-[#382260] dark:text-purple-200 leading-tight flex items-center justify-between gap-1">
                       <span>Brain Teaser</span>
-                      {kid.brainTeaserSubject && kid.brainTeaserSubject !== 'any' && (
+                      {brainLeaderboardRank && brainLeaderboardRank.totalCorrect > 0 ? (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 shrink-0 flex items-center gap-0.5">
+                          {brainLeaderboardRank.isLeader ? '👑 #1 Brain' : `#${brainLeaderboardRank.rank} Brain`}
+                        </span>
+                      ) : kid.brainTeaserSubject && kid.brainTeaserSubject !== 'any' ? (
                         <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 shrink-0">
                           {getSubjectInfo(kid.brainTeaserSubject).icon} {getSubjectInfo(kid.brainTeaserSubject).shortLabel}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <div className="font-extrabold text-xs sm:text-sm text-[#6442a5] dark:text-purple-300 flex items-center gap-1 mt-0.5">
                       {isDone ? (
@@ -652,6 +674,21 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                     const updatedKids = database.kids.map((k) => (k.id === updatedKid.id ? updatedKid : k));
                     onUpdateDatabase({ ...database, kids: updatedKids });
                   }
+                }}
+              />
+            )}
+
+            {/* Top Brains Leaderboard Section (Ranked by lifetime correct brain teaser answers) */}
+            {database && settings?.brainTeaserEnabled !== false && database.kids && database.kids.length > 0 && (
+              <TopBrainsLeaderboard
+                currentKid={kid}
+                kids={database.kids}
+                settings={settings}
+                onOpenBrainTeaser={() => {
+                  sound.playTap();
+                  setIsBrainTeaserOpen(true);
+                  setIsReadingLogOpen(false);
+                  setIsBadgeModalOpen(false);
                 }}
               />
             )}

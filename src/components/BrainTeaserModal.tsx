@@ -19,8 +19,12 @@ import {
   Check,
   RefreshCw,
   Target,
+  Trophy,
+  BarChart3,
 } from 'lucide-react';
-import { KidProfile, FamilyDatabase, GradeLevel, BrainTeaserSubject } from '../types';
+import { KidProfile, FamilyDatabase, GradeLevel, BrainTeaserSubject, BrainTeaserSubjectStat } from '../types';
+import { TopBrainsLeaderboard } from './TopBrainsLeaderboard';
+import { BrainTeaserProgressModal } from './BrainTeaserProgressModal';
 import {
   BrainTeaser,
   GRADE_LEVELS,
@@ -82,6 +86,8 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
   const [isGeneratingAi, setIsGeneratingAi] = useState<boolean>(false);
   const [selectedSubject, setSelectedSubject] = useState<string>('any');
   const [freePracticeMode, setFreePracticeMode] = useState<boolean>(false);
+  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
+  const [showProgressModal, setShowProgressModal] = useState<boolean>(false);
 
   const dailyLimit = database.settings.brainTeaserDailyLimit ?? DEFAULT_BRAIN_TEASER_DAILY_LIMIT;
   const rewardStars = database.settings.brainTeaserRewardStars ?? DEFAULT_BRAIN_TEASER_REWARD_STARS;
@@ -234,6 +240,36 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
             completedQuestionIds: [],
           };
 
+          // Track subject-level metrics (right, wrong, total, percentage, stars)
+          const teaserSubject = (currentTeaser.subject || 'logic') as Exclude<BrainTeaserSubject, 'any'>;
+          const prevSubjectStats = history.subjectStats || {};
+          const prevStat = prevSubjectStats[teaserSubject] || {
+            subject: teaserSubject,
+            correct: 0,
+            wrong: 0,
+            total: 0,
+            percentage: 0,
+            starsEarned: 0,
+          };
+          const newSubjectCorrect = (prevStat.correct || 0) + (correct ? 1 : 0);
+          const newSubjectWrong = (prevStat.wrong || 0) + (correct ? 0 : 1);
+          const newSubjectTotal = (prevStat.total || 0) + 1;
+          const newSubjectPercentage = Math.round((newSubjectCorrect / newSubjectTotal) * 100);
+          const newSubjectStars = (prevStat.starsEarned || 0) + starsToAward;
+
+          const updatedSubjectStats: Partial<Record<BrainTeaserSubject, BrainTeaserSubjectStat>> = {
+            ...prevSubjectStats,
+            [teaserSubject]: {
+              subject: teaserSubject,
+              correct: newSubjectCorrect,
+              wrong: newSubjectWrong,
+              total: newSubjectTotal,
+              percentage: newSubjectPercentage,
+              starsEarned: newSubjectStars,
+              lastAttemptedDate: todayStr,
+            },
+          };
+
           const updatedHistory = {
             ...history,
             lastCompletedDate: todayStr,
@@ -242,6 +278,7 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
             totalCorrect: (history.totalCorrect || 0) + (correct ? 1 : 0),
             totalStarsEarned: (history.totalStarsEarned || 0) + starsToAward,
             completedQuestionIds: Array.from(new Set([...(history.completedQuestionIds || []), currentTeaser.id])),
+            subjectStats: updatedSubjectStats,
           };
 
           return {
@@ -289,7 +326,14 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
 
   if (!isOpen) return null;
 
-  const modalContent = (
+  const modalContent = showLeaderboard ? (
+    <TopBrainsLeaderboard
+      database={database}
+      currentKidId={currentKid?.id}
+      onClose={() => setShowLeaderboard(false)}
+      rewardStars={rewardStars}
+    />
+  ) : (
     <>
       {/* Top Decorative Header */}
           <div className="relative bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-700 p-4 sm:p-6 text-white overflow-hidden shrink-0">
@@ -314,6 +358,19 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                     <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white font-extrabold text-[11px] inline-flex items-center gap-1 border border-white/20">
                       🎯 1 Try
                     </span>
+                    <button
+                      id="btn-top-brains-leaderboard"
+                      onClick={() => {
+                        sound.playFanfare();
+                        setShowLeaderboard(true);
+                      }}
+                      className="px-2.5 py-0.5 rounded-full bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-[11px] inline-flex items-center gap-1 shadow-sm border border-amber-300/80 cursor-pointer transition-all hover:shadow-amber-400/30"
+                      title="View Top Brains Leaderboard"
+                    >
+                      <Trophy className="w-3.5 h-3.5 text-amber-950 fill-amber-700 shrink-0" />
+                      <span>Top Brains</span>
+                      <span className="text-[10px] bg-slate-950/20 px-1 py-0.2 rounded-full font-bold">🏆</span>
+                    </button>
                   </div>
                   <p className="text-xs sm:text-sm text-purple-100 font-medium truncate mt-0.5">
                     Exercise your brain & earn reward stars!
@@ -351,6 +408,20 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                     <GraduationCap className="w-3 h-3" />
                     {gradeInfo.label} ({gradeInfo.ages})
                   </span>
+
+                  {/* Stand Alone Progress Bar Graph Icon Button next to grade level */}
+                  <button
+                    id="btn-kid-progress-icon-next-to-grade"
+                    onClick={() => {
+                      sound.playTap();
+                      setShowProgressModal(true);
+                    }}
+                    className="p-1 px-2 rounded-md bg-white/25 hover:bg-white/35 active:scale-95 text-white font-extrabold text-[11px] inline-flex items-center gap-1.5 border border-white/30 cursor-pointer transition-all shadow-2xs"
+                    title="View My Brain Teaser Subject Progress & Bar Graphs"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                    <span>My Progress 📊</span>
+                  </button>
                 </div>
 
                 <div className="text-[11px] font-bold text-amber-200 flex items-center gap-1 shrink-0">
@@ -562,6 +633,32 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                   <span>Keep Learning 🧠</span>
                 </button>
               </div>
+
+              <div className="flex items-center gap-2 w-full max-w-md">
+                <button
+                  id="btn-view-leaderboard-limit"
+                  onClick={() => {
+                    sound.playFanfare();
+                    setShowLeaderboard(true);
+                  }}
+                  className="flex-1 py-3 rounded-2xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all shadow-2xs"
+                >
+                  <Trophy className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span>Top Brains 🏆</span>
+                </button>
+
+                <button
+                  id="btn-view-progress-limit"
+                  onClick={() => {
+                    sound.playTap();
+                    setShowProgressModal(true);
+                  }}
+                  className="flex-1 py-3 rounded-2xl bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-950 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-700 font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 transition-all shadow-2xs"
+                >
+                  <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span>Subject Progress 📊</span>
+                </button>
+              </div>
             </div>
           ) : (
             /* Active Question Body */
@@ -642,6 +739,32 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                           Level: {gradeInfo.shortLabel}
                         </span>
                       )}
+
+                      <button
+                        id="btn-top-brains-leaderboard-center"
+                        onClick={() => {
+                          sound.playFanfare();
+                          setShowLeaderboard(true);
+                        }}
+                        className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 dark:hover:bg-amber-900/70 text-amber-900 dark:text-amber-200 font-extrabold text-xs border border-amber-300/80 dark:border-amber-700/80 flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95"
+                        title="View Top Brains Leaderboard"
+                      >
+                        <Trophy className="w-3.5 h-3.5 text-amber-600 fill-amber-500 shrink-0" />
+                        <span>Top Brains 🏆</span>
+                      </button>
+
+                      <button
+                        id="btn-brain-progress-center"
+                        onClick={() => {
+                          sound.playTap();
+                          setShowProgressModal(true);
+                        }}
+                        className="px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 text-indigo-900 dark:text-indigo-200 font-extrabold text-xs border border-indigo-300/80 dark:border-indigo-700/80 flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95"
+                        title="View Subject Progress Bar Graph"
+                      >
+                        <BarChart3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                        <span>Progress 📊</span>
+                      </button>
                     </div>
                   </div>
 
@@ -982,41 +1105,79 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
 
   if (embedded) {
     return (
-      <div id="brain-teaser-view" className="w-full max-w-4xl mx-auto space-y-3 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <button
-            id="btn-back-teaser"
-            onClick={() => {
-              sound.playTap();
-              onClose();
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-black text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer shadow-xs"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>← Back to Missions</span>
-          </button>
+      <>
+        <div id="brain-teaser-view" className="w-full max-w-4xl mx-auto space-y-3 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <button
+              id="btn-back-teaser"
+              onClick={() => {
+                sound.playTap();
+                onClose();
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-black text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all cursor-pointer shadow-xs"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>← Back to Missions</span>
+            </button>
+          </div>
+
+          <div className="relative w-full bg-white dark:bg-slate-900 rounded-3xl shadow-xl border-2 border-purple-200 dark:border-purple-900/50 overflow-hidden flex flex-col">
+            {modalContent}
+          </div>
         </div>
 
-        <div className="relative w-full bg-white dark:bg-slate-900 rounded-3xl shadow-xl border-2 border-purple-200 dark:border-purple-900/50 overflow-hidden flex flex-col">
-          {modalContent}
-        </div>
-      </div>
+        <BrainTeaserProgressModal
+          database={database}
+          currentKidId={currentKid?.id}
+          isOpen={showProgressModal}
+          onClose={() => setShowProgressModal(false)}
+          isAdmin={isAdminPreview}
+          onUpdateKidFocusSubject={(kidId, subject) => {
+            const updatedKids = database.kids.map((k) =>
+              k.id === kidId ? { ...k, brainTeaserSubject: subject } : k
+            );
+            onUpdateDatabase({
+              ...database,
+              kids: updatedKids,
+            });
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col my-auto max-h-[92vh]"
-        >
-          {modalContent}
-        </motion.div>
-      </div>
-    </AnimatePresence>
+    <>
+      <AnimatePresence>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col my-auto max-h-[92vh]"
+          >
+            {modalContent}
+          </motion.div>
+        </div>
+      </AnimatePresence>
+
+      <BrainTeaserProgressModal
+        database={database}
+        currentKidId={currentKid?.id}
+        isOpen={showProgressModal}
+        onClose={() => setShowProgressModal(false)}
+        isAdmin={isAdminPreview}
+        onUpdateKidFocusSubject={(kidId, subject) => {
+          const updatedKids = database.kids.map((k) =>
+            k.id === kidId ? { ...k, brainTeaserSubject: subject } : k
+          );
+          onUpdateDatabase({
+            ...database,
+            kids: updatedKids,
+          });
+        }}
+      />
+    </>
   );
 };

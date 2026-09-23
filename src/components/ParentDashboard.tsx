@@ -532,10 +532,27 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
     sound.playTap();
     if (!chore.title?.trim() || !chore.categoryId) return;
 
+    const sanitizedStars = Math.max(1, Math.min(100, Math.round(Number(chore.stars) || 3)));
+    const sanitizedBountyStars = chore.isBounty
+      ? Math.max(1, Math.min(50, Math.round(Number(chore.bountyBonusStars) || 5)))
+      : 0;
+
     let updatedChores: ChoreItem[];
     if (chore.id) {
-      // Edit existing
-      updatedChores = database.chores.map((c) => (c.id === chore.id ? (chore as ChoreItem) : c));
+      // Edit existing chore - preserve all fields and ensure sanitized stars
+      updatedChores = database.chores.map((c) => {
+        if (c.id === chore.id) {
+          return {
+            ...c,
+            ...chore,
+            title: chore.title!.trim(),
+            description: chore.description?.trim() || '',
+            stars: sanitizedStars,
+            bountyBonusStars: sanitizedBountyStars,
+          } as ChoreItem;
+        }
+        return c;
+      });
     } else {
       // New chore
       const newChore: ChoreItem = {
@@ -544,13 +561,17 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
         title: chore.title.trim(),
         description: chore.description?.trim() || '',
         icon: chore.icon || '⭐',
-        stars: chore.stars || 3,
+        stars: sanitizedStars,
         assignedKidIds: chore.assignedKidIds && chore.assignedKidIds.length > 0 ? chore.assignedKidIds : ['all'],
         frequency: chore.frequency || 'daily',
         specificDays: chore.specificDays || [1, 2, 3, 4, 5],
         timeOfDay: chore.timeOfDay || 'anytime',
         isActive: chore.isActive ?? true,
         order: database.chores.length + 1,
+        isBounty: chore.isBounty,
+        bountyBonusStars: sanitizedBountyStars,
+        timerMinutes: chore.timerMinutes,
+        subtasks: chore.subtasks,
       };
       updatedChores = [...database.chores, newChore];
     }
@@ -4743,17 +4764,80 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
               <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
                 <div>
-                  <label className="block text-[10px] sm:text-xs font-black text-slate-700 uppercase mb-0.5">
-                    Star Reward:
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={editingChore.stars || 3}
-                    onChange={(e) => setEditingChore({ ...editingChore, stars: Number(e.target.value) })}
-                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-slate-200 bg-white font-black text-xs sm:text-sm text-slate-900"
-                  />
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="block text-[10px] sm:text-xs font-black text-slate-700 uppercase">
+                      Star Reward:
+                    </label>
+                    <span className="text-[9px] font-bold text-amber-700">
+                      ⭐ Points
+                    </span>
+                  </div>
+
+                  {/* "+1 -1" Clickable System */}
+                  <div className="flex items-center justify-between bg-white border-2 border-amber-300 rounded-xl sm:rounded-2xl p-0.5 sm:p-1 shadow-2xs">
+                    <button
+                      type="button"
+                      id="btn-chore-dec-star"
+                      onClick={() => {
+                        sound.playTap();
+                        const current = Number(editingChore.stars) || 3;
+                        setEditingChore({
+                          ...editingChore,
+                          stars: Math.max(1, current - 1),
+                        });
+                      }}
+                      disabled={(Number(editingChore.stars) || 3) <= 1}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-100 hover:bg-amber-200 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-amber-950 font-black text-xs sm:text-sm flex items-center justify-center transition-all cursor-pointer select-none"
+                      title="Decrease star reward (-1)"
+                    >
+                      -1
+                    </button>
+
+                    <div className="flex items-center justify-center gap-1 font-black text-xs sm:text-sm text-slate-900 px-1 select-none">
+                      <span className="text-amber-500">⭐</span>
+                      <span>{Number(editingChore.stars) || 3}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      id="btn-chore-inc-star"
+                      onClick={() => {
+                        sound.playTap();
+                        const current = Number(editingChore.stars) || 3;
+                        setEditingChore({
+                          ...editingChore,
+                          stars: Math.min(100, current + 1),
+                        });
+                      }}
+                      disabled={(Number(editingChore.stars) || 3) >= 100}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-400 hover:bg-amber-500 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center transition-all cursor-pointer select-none shadow-2xs"
+                      title="Increase star reward (+1)"
+                    >
+                      +1
+                    </button>
+                  </div>
+
+                  {/* Quick Preset clickers */}
+                  <div className="flex items-center justify-center gap-1 mt-1">
+                    {[1, 2, 3, 5, 10].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => {
+                          sound.playTap();
+                          setEditingChore({ ...editingChore, stars: preset });
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-black transition-all cursor-pointer ${
+                          (Number(editingChore.stars) || 3) === preset
+                            ? 'bg-amber-400 text-slate-950 shadow-2xs'
+                            : 'bg-white hover:bg-amber-50 text-slate-600 border border-slate-200'
+                        }`}
+                        title={`Set to ${preset} stars`}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
@@ -4916,23 +5000,55 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     </span>
                   </label>
                   {editingChore.isBounty && (
-                    <div className="mt-1">
-                      <label className="text-[9px] font-black uppercase text-amber-800 block mb-0.5">
-                        Bounty Bonus Stars (+⭐):
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={50}
-                        value={editingChore.bountyBonusStars || 5}
-                        onChange={(e) =>
-                          setEditingChore({
-                            ...editingChore,
-                            bountyBonusStars: Number(e.target.value),
-                          })
-                        }
-                        className="w-full px-2 py-1 rounded-lg border border-amber-300 text-xs font-black text-slate-900 bg-amber-50"
-                      />
+                    <div className="mt-1.5 p-1.5 rounded-xl bg-amber-100/70 border border-amber-300">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[9px] font-black uppercase text-amber-900 block">
+                          Bounty Bonus Stars (+⭐):
+                        </label>
+                        <span className="text-[10px] font-black text-amber-800">
+                          +{Number(editingChore.bountyBonusStars) || 5} Bonus
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between bg-white rounded-lg border border-amber-300 p-0.5 shadow-2xs">
+                        <button
+                          type="button"
+                          id="btn-bounty-dec-star"
+                          onClick={() => {
+                            sound.playTap();
+                            const current = Number(editingChore.bountyBonusStars) || 5;
+                            setEditingChore({
+                              ...editingChore,
+                              bountyBonusStars: Math.max(1, current - 1),
+                            });
+                          }}
+                          disabled={(Number(editingChore.bountyBonusStars) || 5) <= 1}
+                          className="w-6 h-6 rounded bg-amber-100 hover:bg-amber-200 active:scale-90 disabled:opacity-30 text-amber-950 font-black text-xs flex items-center justify-center cursor-pointer select-none"
+                          title="Decrease bonus by 1 (-1)"
+                        >
+                          -1
+                        </button>
+                        <div className="font-black text-xs text-amber-950 flex items-center gap-1 select-none">
+                          <span className="text-amber-500">⭐</span>
+                          <span>+{Number(editingChore.bountyBonusStars) || 5}</span>
+                        </div>
+                        <button
+                          type="button"
+                          id="btn-bounty-inc-star"
+                          onClick={() => {
+                            sound.playTap();
+                            const current = Number(editingChore.bountyBonusStars) || 5;
+                            setEditingChore({
+                              ...editingChore,
+                              bountyBonusStars: Math.min(50, current + 1),
+                            });
+                          }}
+                          disabled={(Number(editingChore.bountyBonusStars) || 5) >= 50}
+                          className="w-6 h-6 rounded bg-amber-400 hover:bg-amber-500 active:scale-90 disabled:opacity-30 text-slate-950 font-black text-xs flex items-center justify-center cursor-pointer select-none shadow-2xs"
+                          title="Increase bonus by 1 (+1)"
+                        >
+                          +1
+                        </button>
+                      </div>
                     </div>
                   )}
                   <span className="text-[9px] sm:text-[10px] text-amber-700/80 font-bold block mt-0.5">

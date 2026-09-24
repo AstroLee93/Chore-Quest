@@ -10,7 +10,6 @@ import { BadgeModal } from './BadgeModal';
 import { BountyBoardModal } from './BountyBoardModal';
 import { BrainTeaserModal } from './BrainTeaserModal';
 import { ReadingLogModal } from './ReadingLogModal';
-import { TopBrainsLeaderboard } from './TopBrainsLeaderboard';
 import { getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
 import {
   isReadingCompletedToday,
@@ -50,10 +49,10 @@ interface KidDashboardProps {
 
 export const KidDashboard: React.FC<KidDashboardProps> = ({
   kid,
-  categories,
-  chores,
-  logs,
-  rewards,
+  categories = [],
+  chores = [],
+  logs = [],
+  rewards = [],
   settings,
   events = [],
   database,
@@ -69,6 +68,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   onOpenGoalManager,
   onOpenSnackRequest,
 }) => {
+  const safeSettings = settings || database?.settings || ({} as AppSettings);
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
@@ -85,37 +85,42 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
 
   // Dynamic badges progress calculation
   const kidBadges = useMemo(() => {
-    return calculateKidBadges(kid, logs, chores, todayStr);
+    if (!kid) return [];
+    return calculateKidBadges(kid, logs || [], chores || [], todayStr);
   }, [kid, logs, chores, todayStr]);
 
   // Filter events relevant to this kid for today
   const kidTodayEvents = useMemo(() => {
-    return events.filter((e) => {
+    if (!kid) return [];
+    return (events || []).filter((e) => {
       if (e.date !== todayStr) return false;
       return e.assignedKidIds?.includes('all') || e.assignedKidIds?.includes(kid.id);
     });
-  }, [events, todayStr, kid.id]);
+  }, [events, todayStr, kid?.id]);
 
   // Filter chores relevant to this kid for today
   const todaysChores = useMemo(() => {
-    return chores
-      .filter((c) => c.isActive && !c.isBounty)
+    if (!kid) return [];
+    return (chores || [])
+      .filter((c) => c && c.isActive && !c.isBounty)
       .filter((c) => isChoreAssignedToKid(c, kid.id))
       .filter((c) => isChoreScheduledForDate(c, todayStr))
-      .sort((a, b) => a.order - b.order);
-  }, [chores, kid.id, todayStr]);
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [chores, kid?.id, todayStr]);
 
   // Bonus bounty chores available
   const bountyChores = useMemo(() => {
-    return chores
-      .filter((c) => c.isActive && c.isBounty)
-      .filter((c) => isChoreAssignedToKid(c, kid.id) || !c.assignedKidId);
-  }, [chores, kid.id]);
+    if (!kid) return [];
+    return (chores || [])
+      .filter((c) => c && c.isActive && c.isBounty)
+      .filter((c) => isChoreAssignedToKid(c, kid.id) || !c.assignedKidIds || c.assignedKidIds.length === 0);
+  }, [chores, kid?.id]);
 
   // Find chore logs for today
   const todaysLogs = useMemo(() => {
-    return logs.filter((l) => l.kidId === kid.id && l.date === todayStr);
-  }, [logs, kid.id, todayStr]);
+    if (!kid) return [];
+    return (logs || []).filter((l) => l && l.kidId === kid.id && l.date === todayStr);
+  }, [logs, kid?.id, todayStr]);
 
   // Map choreId -> log
   const logMap = useMemo(() => {
@@ -133,19 +138,20 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
 
   // Total stars earned today from completed chores and reading logs
   const starsEarnedToday = useMemo(() => {
+    if (!kid) return 0;
     const choreStars = todaysLogs
       .filter((l) => l.status === 'completed')
       .reduce((sum, l) => {
-        const chore = chores.find((c) => c.id === l.choreId);
+        const chore = (chores || []).find((c) => c && c.id === l.choreId);
         return sum + (l.starsAwarded !== undefined ? l.starsAwarded : (chore?.stars || 0));
       }, 0);
 
     const readingStars = (database?.readingLogs || [])
-      .filter((rl) => rl.kidId === kid.id && rl.date === todayStr)
+      .filter((rl) => rl && rl.kidId === kid.id && rl.date === todayStr)
       .reduce((sum, rl) => sum + (rl.starsAwarded || 0), 0);
 
     return choreStars + readingStars;
-  }, [todaysLogs, chores, database?.readingLogs, kid.id, todayStr]);
+  }, [todaysLogs, chores, database?.readingLogs, kid?.id, todayStr]);
 
   // Filtered view
   const visibleChores = useMemo(() => {
@@ -156,24 +162,24 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
     });
   }, [todaysChores, selectedCategory, selectedTimeOfDay]);
 
-  const levelInfo = getKidLevelInfo(kid.lifetimeStars);
+  const levelInfo = getKidLevelInfo(kid?.lifetimeStars ?? kid?.stars ?? 0);
 
-  // Kid's ranking in Top Brains Leaderboard
-  const brainLeaderboardRank = useMemo(() => {
-    if (!database?.kids || database.kids.length === 0) return null;
-    const sorted = [...database.kids].sort((a, b) => {
-      const aC = a.brainTeaserHistory?.totalCorrect || 0;
-      const bC = b.brainTeaserHistory?.totalCorrect || 0;
-      if (bC !== aC) return bC - aC;
-      return (b.brainTeaserHistory?.totalStarsEarned || 0) - (a.brainTeaserHistory?.totalStarsEarned || 0);
-    });
-    const idx = sorted.findIndex((k) => k.id === kid.id);
-    return {
-      rank: idx >= 0 ? idx + 1 : 1,
-      totalCorrect: kid.brainTeaserHistory?.totalCorrect || 0,
-      isLeader: idx === 0 && (kid.brainTeaserHistory?.totalCorrect || 0) > 0,
-    };
-  }, [database?.kids, kid.id, kid.brainTeaserHistory]);
+  if (!kid) {
+    return (
+      <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 my-8 max-w-lg mx-auto shadow-md">
+        <h3 className="text-lg font-black text-slate-900 dark:text-white">Profile not found</h3>
+        <p className="text-xs text-slate-500 mt-1">Please return to select a family member.</p>
+        {onReturnToKiosk && (
+          <button
+            onClick={onReturnToKiosk}
+            className="mt-4 px-5 py-2.5 rounded-2xl bg-amber-400 text-slate-950 font-black text-xs cursor-pointer shadow-sm hover:bg-amber-300"
+          >
+            Return to Kiosk 🏠
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-1 sm:px-8 py-1.5 sm:py-8 flex flex-col gap-4 sm:gap-6 animate-fade-in w-full">
@@ -205,7 +211,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="text-sm sm:text-base">☀️</span>
               <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white">
-                {todayWeather.tempHigh}°{settings.tempUnit || 'F'}
+                {todayWeather?.tempHigh ?? 72}°{safeSettings.tempUnit || 'F'}
               </span>
             </div>
 
@@ -224,10 +230,10 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             <div
               className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#fce7f3] dark:bg-pink-950/40 border-2 border-[#fbcfe8] dark:border-pink-900/50 flex items-center justify-center text-4xl sm:text-5xl shrink-0 shadow-inner overflow-hidden"
             >
-              {kid.avatar && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
+              {typeof kid.avatar === 'string' && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
                 <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
               ) : (
-                <span className="leading-none select-none">{kid.avatar || '⭐'}</span>
+                <span className="leading-none select-none">{typeof kid.avatar === 'string' ? kid.avatar : '⭐'}</span>
               )}
             </div>
 
@@ -245,7 +251,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 <span className="text-slate-300 dark:text-slate-600 font-bold">•</span>
                 <span className="font-extrabold flex items-center gap-1.5">
                   <span className="text-amber-500 font-black">
-                    {starsEarnedToday > 0 ? starsEarnedToday : kid.stars}
+                    {starsEarnedToday > 0 ? starsEarnedToday : (kid.stars ?? 0)}
                   </span>
                   <span>⭐</span>
                   <span className="text-slate-800 dark:text-slate-200 font-extrabold">
@@ -319,15 +325,11 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                   <div className="min-w-0 flex-1">
                     <div className="font-black text-sm sm:text-base text-[#382260] dark:text-purple-200 leading-tight flex items-center justify-between gap-1">
                       <span>Brain Teaser</span>
-                      {brainLeaderboardRank && brainLeaderboardRank.totalCorrect > 0 ? (
-                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 shrink-0 flex items-center gap-0.5">
-                          {brainLeaderboardRank.isLeader ? '👑 #1 Brain' : `#${brainLeaderboardRank.rank} Brain`}
-                        </span>
-                      ) : kid.brainTeaserSubject && kid.brainTeaserSubject !== 'any' ? (
+                      {kid.brainTeaserSubject && kid.brainTeaserSubject !== 'any' && (
                         <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 shrink-0">
                           {getSubjectInfo(kid.brainTeaserSubject).icon} {getSubjectInfo(kid.brainTeaserSubject).shortLabel}
                         </span>
-                      ) : null}
+                      )}
                     </div>
                     <div className="font-extrabold text-xs sm:text-sm text-[#6442a5] dark:text-purple-300 flex items-center gap-1 mt-0.5">
                       {isDone ? (
@@ -414,10 +416,10 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 </p>
               </div>
               <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-800/80 border-2 border-indigo-400/40 flex items-center justify-center text-2xl sm:text-3xl shadow-lg overflow-hidden shrink-0">
-                {kid.avatar && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
+                {typeof kid.avatar === 'string' && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
                   <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="leading-none">{kid.avatar || '⭐'}</span>
+                  <span className="leading-none">{typeof kid.avatar === 'string' ? kid.avatar : '⭐'}</span>
                 )}
               </div>
             </div>
@@ -428,14 +430,14 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 <span className="text-2xl">⭐</span>
                 <div>
                   <div className="text-[10px] uppercase font-bold text-indigo-300">Star Bank</div>
-                  <div className="text-lg font-black text-yellow-400 leading-tight">{kid.stars}</div>
+                  <div className="text-lg font-black text-yellow-400 leading-tight">{kid.stars ?? 0}</div>
                 </div>
               </div>
               <div className="bg-indigo-950/60 p-3 rounded-2xl border border-indigo-800 flex items-center gap-2.5">
                 <Flame className="w-6 h-6 text-orange-400 fill-orange-400" />
                 <div>
                   <div className="text-[10px] uppercase font-bold text-indigo-300">Streak</div>
-                  <div className="text-lg font-black text-orange-400 leading-tight">{kid.streakDays} Days</div>
+                  <div className="text-lg font-black text-orange-400 leading-tight">{kid.streakDays ?? 0} Days</div>
                 </div>
               </div>
             </div>
@@ -674,21 +676,6 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                     const updatedKids = database.kids.map((k) => (k.id === updatedKid.id ? updatedKid : k));
                     onUpdateDatabase({ ...database, kids: updatedKids });
                   }
-                }}
-              />
-            )}
-
-            {/* Top Brains Leaderboard Section (Ranked by lifetime correct brain teaser answers) */}
-            {database && settings?.brainTeaserEnabled !== false && database.kids && database.kids.length > 0 && (
-              <TopBrainsLeaderboard
-                currentKid={kid}
-                kids={database.kids}
-                settings={settings}
-                onOpenBrainTeaser={() => {
-                  sound.playTap();
-                  setIsBrainTeaserOpen(true);
-                  setIsReadingLogOpen(false);
-                  setIsBadgeModalOpen(false);
                 }}
               />
             )}

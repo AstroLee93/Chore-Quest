@@ -3,8 +3,9 @@ import { ReadingLogEntry, KidBookShelfItem, ChoreItem, FamilyDatabase, KidProfil
 /**
  * Normalizes a book title for consistent comparison
  */
-export function normalizeBookTitle(title: string): string {
-  return title
+export function normalizeBookTitle(title?: string): string {
+  if (!title) return '';
+  return String(title)
     .trim()
     .toLowerCase()
     .replace(/^(the|a|an)\s+/i, '')
@@ -16,8 +17,9 @@ export function normalizeBookTitle(title: string): string {
  * Normalizes a chapter string for intelligent duplicate comparison
  * Matches "Chapter 4", "Ch. 4", "ch 4", "Chapter 04", "4"
  */
-export function normalizeChapter(chapter: string): string {
-  const cleaned = chapter
+export function normalizeChapter(chapter?: string): string {
+  if (!chapter) return '';
+  const cleaned = String(chapter)
     .trim()
     .toLowerCase()
     .replace(/[^\w\s-]/gi, '')
@@ -136,11 +138,12 @@ export function isReadingClaimLimitReached(
 /**
  * Locates the reading chore in the database
  */
-export function findReadingChore(chores: ChoreItem[]): ChoreItem | undefined {
+export function findReadingChore(chores: ChoreItem[] = []): ChoreItem | undefined {
+  if (!Array.isArray(chores)) return undefined;
   return (
-    chores.find((c) => c.id === 'chore-6') ||
-    chores.find((c) => c.title.toLowerCase().includes('reading')) ||
-    chores.find((c) => c.icon === '📖')
+    chores.find((c) => c?.id === 'chore-6') ||
+    chores.find((c) => (c?.title || '').toLowerCase().includes('reading')) ||
+    chores.find((c) => c?.icon === '📖')
   );
 }
 

@@ -9,8 +9,9 @@ interface KidAvatarModalProps {
   isOpen: boolean;
   onClose: () => void;
   kid: KidProfile;
-  database: FamilyDatabase;
-  onUpdateDatabase: (updatedDb: FamilyDatabase) => void;
+  database?: FamilyDatabase;
+  onUpdateDatabase?: (updatedDb: FamilyDatabase) => void;
+  onSave?: (updatedKid: KidProfile) => void;
 }
 
 const COLOR_OPTIONS = [
@@ -31,6 +32,7 @@ export const KidAvatarModal: React.FC<KidAvatarModalProps> = ({
   kid,
   database,
   onUpdateDatabase,
+  onSave,
 }) => {
   const [selectedAvatar, setSelectedAvatar] = useState<string>(kid.avatar || '🦁');
   const [selectedColor, setSelectedColor] = useState<string>(kid.color || '#3b82f6');
@@ -45,22 +47,22 @@ export const KidAvatarModal: React.FC<KidAvatarModalProps> = ({
       mode: 'snappy',
     });
 
-    const updatedKids = database.kids.map((k) => {
-      if (k.id === kid.id) {
-        return {
-          ...k,
-          name: kidName.trim() || k.name,
-          avatar: selectedAvatar,
-          color: selectedColor,
-        };
-      }
-      return k;
-    });
+    const updatedKid: KidProfile = {
+      ...kid,
+      name: kidName.trim() || kid.name,
+      avatar: selectedAvatar,
+      color: selectedColor,
+    };
 
-    onUpdateDatabase({
-      ...database,
-      kids: updatedKids,
-    });
+    if (onSave) {
+      onSave(updatedKid);
+    } else if (database && onUpdateDatabase) {
+      const updatedKids = database.kids.map((k) => (k.id === kid.id ? updatedKid : k));
+      onUpdateDatabase({
+        ...database,
+        kids: updatedKids,
+      });
+    }
 
     onClose();
   };

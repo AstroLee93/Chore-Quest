@@ -118,13 +118,13 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
           </p>
         </div>
 
-        {kid.totalSaved && kid.totalSaved > 0 ? (
+        {kid.totalSaved && Number(kid.totalSaved) > 0 ? (
           <div className="my-2 p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 max-w-sm mx-auto text-left">
             <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-              💰 You have <strong>${kid.totalSaved.toFixed(2)}</strong> saved in your vault!
+              💰 You have <strong>${(Number(kid.totalSaved) || 0).toFixed(2)}</strong> saved in your vault!
             </div>
             <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
-              Pick a new goal now and your ${kid.totalSaved.toFixed(2)} will automatically transfer over to fuel your rocket!
+              Pick a new goal now and your ${(Number(kid.totalSaved) || 0).toFixed(2)} will automatically transfer over to fuel your rocket!
             </p>
           </div>
         ) : null}
@@ -137,7 +137,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
           className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black rounded-xl shadow-md shadow-orange-500/20 transition-transform active:scale-95 cursor-pointer inline-flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
-          <span>Launch Dream Goal {kid.totalSaved && kid.totalSaved > 0 ? `(Reallocate $${kid.totalSaved.toFixed(2)})` : ''}</span>
+          <span>Launch Dream Goal {kid.totalSaved && Number(kid.totalSaved) > 0 ? `(Reallocate $${(Number(kid.totalSaved) || 0).toFixed(2)})` : ''}</span>
         </button>
 
         <NewGoalModal
@@ -150,8 +150,10 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
     );
   }
 
-  const percent = Math.min(100, Math.round((primaryGoal.currentSaved / Math.max(1, primaryGoal.targetCost)) * 100));
-  const remaining = Math.max(0, primaryGoal.targetCost - primaryGoal.currentSaved);
+  const safeSaved = Number(primaryGoal.currentSaved) || 0;
+  const safeTarget = Math.max(1, Number(primaryGoal.targetCost) || 1);
+  const percent = Math.min(100, Math.round((safeSaved / safeTarget) * 100));
+  const remaining = Math.max(0, safeTarget - safeSaved);
 
   return (
     <div className="w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm space-y-4">
@@ -179,7 +181,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
               )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Saved: <strong className="text-emerald-600 dark:text-emerald-400">${primaryGoal.currentSaved.toFixed(2)}</strong> of ${primaryGoal.targetCost.toFixed(2)} (${remaining.toFixed(2)} to liftoff)
+              Saved: <strong className="text-emerald-600 dark:text-emerald-400">${safeSaved.toFixed(2)}</strong> of ${safeTarget.toFixed(2)} (${remaining.toFixed(2)} to liftoff)
             </p>
           </div>
         </div>
@@ -229,7 +231,9 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
           <span className="text-[10px] font-black uppercase text-slate-400 shrink-0">Active Missions:</span>
           {goals.map((g) => {
             const isCurrent = g.id === primaryGoal.id;
-            const pct = Math.min(100, Math.round((g.currentSaved / Math.max(1, g.targetCost)) * 100));
+            const gSaved = Number(g.currentSaved) || 0;
+            const gTarget = Math.max(1, Number(g.targetCost) || 1);
+            const pct = Math.min(100, Math.round((gSaved / gTarget) * 100));
             return (
               <button
                 key={g.id}
@@ -301,7 +305,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
                 <span>🛡️ Don't Worry! Your Money Is Safe!</span>
               </div>
               <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
-                Your <strong className="font-black text-emerald-900 dark:text-emerald-200">${primaryGoal.currentSaved.toFixed(2)}</strong> in savings will NOT be lost! It stays safely banked in your vault, and will be automatically reallocated when you choose your next goal!
+                Your <strong className="font-black text-emerald-900 dark:text-emerald-200">${safeSaved.toFixed(2)}</strong> in savings will NOT be lost! It stays safely banked in your vault, and will be automatically reallocated when you choose your next goal!
               </p>
             </div>
 

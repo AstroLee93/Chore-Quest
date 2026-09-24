@@ -4488,7 +4488,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   🎁 {database.familyGoal?.reward || 'Family Movie & Pizza Night'}
                 </span>
                 <span className="text-slate-500">
-                  🎯 {database.familyGoal?.targetChores || 30} chores
+                  🎯 {database.familyGoal?.targetChoreCount || 30} chores
                 </span>
               </div>
             </div>

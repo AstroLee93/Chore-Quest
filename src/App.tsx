@@ -20,6 +20,7 @@ import { WeeklyMenuModal } from './components/WeeklyMenuModal';
 import { WeeklyGroceryModal } from './components/WeeklyGroceryModal';
 import { KidSnackRequestModal } from './components/KidSnackRequestModal';
 import { KidCoinVaultModal } from './components/KidCoin/KidCoinVaultModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Home } from 'lucide-react';
 
 export default function App() {
@@ -74,6 +75,7 @@ export default function App() {
   useEffect(() => {
     if (activeKidId && !database.kids.some((k) => k.id === activeKidId)) {
       setActiveKidId(null);
+      setIsKioskKidSession(false);
     }
   }, [database.kids, activeKidId]);
 
@@ -459,19 +461,26 @@ export default function App() {
                   backgroundColor: `${activeKid.color || '#3b82f6'}30`,
                   borderColor: activeKid.color || '#3b82f6',
                 }}
-                className="w-12 h-12 rounded-2xl border-2 flex items-center justify-center text-2xl shadow-inner shrink-0"
+                className="w-12 h-12 rounded-2xl border-2 flex items-center justify-center text-2xl shadow-inner shrink-0 overflow-hidden"
               >
-                {activeKid.avatar}
+                {typeof activeKid.avatar === 'string' &&
+                (activeKid.avatar.startsWith('http') ||
+                  activeKid.avatar.startsWith('data:image') ||
+                  activeKid.avatar.startsWith('/')) ? (
+                  <img src={activeKid.avatar} alt={activeKid.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="leading-none select-none">{typeof activeKid.avatar === 'string' ? activeKid.avatar : '⭐'}</span>
+                )}
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-lg sm:text-xl font-black tracking-tight">{activeKid.name}'s Missions</h1>
                   <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-xs">
-                    ⭐ {activeKid.stars} Stars
+                    ⭐ {activeKid.stars ?? 0} Stars
                   </span>
                 </div>
                 <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                  🔥 {activeKid.streakDays} Day Streak • Kiosk Mode Active
+                  🔥 {activeKid.streakDays ?? 0} Day Streak • Kiosk Mode Active
                 </p>
               </div>
             </div>
@@ -489,36 +498,43 @@ export default function App() {
           </header>
 
           <main className="flex-1 p-3 sm:p-6 flex flex-col max-w-7xl mx-auto w-full">
-            <KidDashboard
-              kid={activeKid}
-              categories={database.categories}
-              chores={database.chores}
-              logs={database.logs}
-              rewards={database.rewards}
-              settings={database.settings}
-              events={database.events || []}
-              database={database}
-              currentTheme={currentTheme}
-              isKioskKidSession={true}
-              onUpdateDatabase={handleUpdateDatabase}
-              onReturnToKiosk={handleReturnToKiosk}
-              onToggleCompleteChore={(chore) => {
-                handleToggleCompleteChore(chore);
-                setTimeout(handleReturnToKiosk, 1200);
-              }}
-              onSkipChoreWithReason={(choreId, cat, note) => {
-                handleSkipChoreWithReason(choreId, cat, note);
-                setTimeout(handleReturnToKiosk, 1200);
-              }}
-              onUndoChoreStatus={handleUndoChoreStatus}
-              onOpenRewardStore={() => setIsRewardStoreOpen(true)}
-              onOpenCalendar={() => setIsCalendarOpen(true)}
-              onOpenGoalManager={() => setIsGoalModalOpen(true)}
-              onOpenSnackRequest={(k) => {
-                setSnackRequestKid(k);
-                setIsSnackRequestOpen(true);
-              }}
-            />
+            <ErrorBoundary
+              fallbackTitle={`Could not load ${activeKid.name}'s Missions`}
+              fallbackMessage="A temporary error occurred while loading this kid profile. Tap below to reload or return to the main kiosk."
+              onReturnHome={handleReturnToKiosk}
+              resetLabel="Reload Missions 🔄"
+            >
+              <KidDashboard
+                kid={activeKid}
+                categories={database.categories || []}
+                chores={database.chores || []}
+                logs={database.logs || []}
+                rewards={database.rewards || []}
+                settings={database.settings || ({} as any)}
+                events={database.events || []}
+                database={database}
+                currentTheme={currentTheme}
+                isKioskKidSession={true}
+                onUpdateDatabase={handleUpdateDatabase}
+                onReturnToKiosk={handleReturnToKiosk}
+                onToggleCompleteChore={(chore) => {
+                  handleToggleCompleteChore(chore);
+                  setTimeout(handleReturnToKiosk, 1200);
+                }}
+                onSkipChoreWithReason={(choreId, cat, note) => {
+                  handleSkipChoreWithReason(choreId, cat, note);
+                  setTimeout(handleReturnToKiosk, 1200);
+                }}
+                onUndoChoreStatus={handleUndoChoreStatus}
+                onOpenRewardStore={() => setIsRewardStoreOpen(true)}
+                onOpenCalendar={() => setIsCalendarOpen(true)}
+                onOpenGoalManager={() => setIsGoalModalOpen(true)}
+                onOpenSnackRequest={(k) => {
+                  setSnackRequestKid(k);
+                  setIsSnackRequestOpen(true);
+                }}
+              />
+            </ErrorBoundary>
           </main>
 
           {isSnackRequestOpen && (
@@ -674,28 +690,35 @@ export default function App() {
             }}
           />
         ) : activeKid ? (
-          <KidDashboard
-            kid={activeKid}
-            categories={database.categories}
-            chores={database.chores}
-            logs={database.logs}
-            rewards={database.rewards}
-            settings={database.settings}
-            events={database.events || []}
-            database={database}
-            onUpdateDatabase={handleUpdateDatabase}
-            currentTheme={currentTheme}
-            onToggleCompleteChore={handleToggleCompleteChore}
-            onSkipChoreWithReason={handleSkipChoreWithReason}
-            onUndoChoreStatus={handleUndoChoreStatus}
-            onOpenRewardStore={() => setIsRewardStoreOpen(true)}
-            onOpenCalendar={() => setIsCalendarOpen(true)}
-            onOpenGoalManager={() => setIsGoalModalOpen(true)}
-            onOpenSnackRequest={(k) => {
-              setSnackRequestKid(k);
-              setIsSnackRequestOpen(true);
-            }}
-          />
+          <ErrorBoundary
+            fallbackTitle={`Could not load ${activeKid.name}'s Missions`}
+            fallbackMessage="A temporary error occurred while loading this kid profile. Tap below to reload or return to kid selection."
+            onReturnHome={() => setActiveKidId(null)}
+            resetLabel="Reload Missions 🔄"
+          >
+            <KidDashboard
+              kid={activeKid}
+              categories={database.categories || []}
+              chores={database.chores || []}
+              logs={database.logs || []}
+              rewards={database.rewards || []}
+              settings={database.settings || ({} as any)}
+              events={database.events || []}
+              database={database}
+              onUpdateDatabase={handleUpdateDatabase}
+              currentTheme={currentTheme}
+              onToggleCompleteChore={handleToggleCompleteChore}
+              onSkipChoreWithReason={handleSkipChoreWithReason}
+              onUndoChoreStatus={handleUndoChoreStatus}
+              onOpenRewardStore={() => setIsRewardStoreOpen(true)}
+              onOpenCalendar={() => setIsCalendarOpen(true)}
+              onOpenGoalManager={() => setIsGoalModalOpen(true)}
+              onOpenSnackRequest={(k) => {
+                setSnackRequestKid(k);
+                setIsSnackRequestOpen(true);
+              }}
+            />
+          </ErrorBoundary>
         ) : (
           <KidSelector
             kids={database.kids}

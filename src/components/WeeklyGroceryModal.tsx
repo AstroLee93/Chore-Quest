@@ -2655,7 +2655,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                                 <span className={`px-2 py-0.2 rounded-md text-[10px] font-extrabold border ${meta.badgeBg}`}>
                                   {meta.shortLabel}
                                 </span>
-                                <span className={`px-2 py-0.2 rounded-md text-[10px] font-extrabold border ${impMeta.bg} ${impMeta.color} ${impMeta.border}`}>
+                                <span className={`px-2 py-0.2 rounded-md text-[10px] font-extrabold border ${impMeta.badgeBg} ${impMeta.badgeText} ${impMeta.badgeBorder}`}>
                                   {impMeta.icon} {impMeta.label}
                                 </span>
                                 {item.quantity && (
@@ -3116,7 +3116,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
                               </div>
                             </div>
 
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${impMeta.bg} ${impMeta.color} ${impMeta.border}`}>
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${impMeta.badgeBg} ${impMeta.badgeText} ${impMeta.badgeBorder}`}>
                               {impMeta.icon} {impMeta.label}
                             </span>
                           </div>

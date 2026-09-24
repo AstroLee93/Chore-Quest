@@ -20,9 +20,9 @@ export const RocketGoalTrack: React.FC<RocketGoalTrackProps> = ({
   compact = false,
 }) => {
   const [showRetailDrawer, setShowRetailDrawer] = useState(false);
-  const targetCost = Math.max(1, goal.targetCost);
-  const currentSaved = Math.max(0, goal.currentSaved);
-  const percentage = Math.min(100, Math.max(0, (currentSaved / targetCost) * 100));
+  const targetCost = Math.max(1, Number(goal?.targetCost) || 1);
+  const currentSaved = Math.max(0, Number(goal?.currentSaved) || 0);
+  const percentage = Math.min(100, Math.max(0, Math.round((currentSaved / targetCost) * 100)));
   const isComplete = percentage >= 100;
 
   const hasRetailInfo = Boolean(

@@ -89,12 +89,15 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
  */
 export const calculateKidBadges = (
   kid: KidProfile,
-  logs: ChoreLog[],
-  chores: ChoreItem[],
-  todayStr: string
+  logs: ChoreLog[] = [],
+  chores: ChoreItem[] = [],
+  todayStr: string = ''
 ): KidBadgeProgress[] => {
-  const kidLogs = logs.filter((l) => l.kidId === kid.id);
-  const completedLogs = kidLogs.filter((l) => l.status === 'completed');
+  if (!kid) return [];
+  const safeLogs = Array.isArray(logs) ? logs : [];
+  const safeChores = Array.isArray(chores) ? chores : [];
+  const kidLogs = safeLogs.filter((l) => l && l.kidId === kid.id);
+  const completedLogs = kidLogs.filter((l) => l && l.status === 'completed');
   const completedCount = completedLogs.length;
 
   // 1. First Quest: Completed at least 1 chore

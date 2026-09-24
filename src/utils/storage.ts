@@ -137,14 +137,6 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       lastActiveDate: getTodayDateString(),
       gradeLevel: '1st_grade',
       brainTeaserSubject: 'math',
-      brainTeaserHistory: {
-        totalCorrect: 5,
-        totalAnswered: 6,
-        totalStarsEarned: 25,
-        completedQuestionIds: ['bt-101', 'bt-102', 'bt-103', 'bt-104', 'bt-105'],
-        lastCompletedDate: getTodayDateString(),
-        todayAnsweredCount: 0,
-      },
       kidCoinBalance: 12.50,
       totalSaved: 100.50,
       weeklyAllowance: 5.00,
@@ -163,14 +155,6 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       lastActiveDate: getTodayDateString(),
       gradeLevel: '3rd_grade',
       brainTeaserSubject: 'science',
-      brainTeaserHistory: {
-        totalCorrect: 7,
-        totalAnswered: 8,
-        totalStarsEarned: 35,
-        completedQuestionIds: ['bt-301', 'bt-302', 'bt-303', 'bt-304', 'bt-305', 'bt-306', 'bt-307'],
-        lastCompletedDate: getTodayDateString(),
-        todayAnsweredCount: 1,
-      },
       kidCoinBalance: 18.00,
       totalSaved: 147.50,
       weeklyAllowance: 7.00,
@@ -189,14 +173,6 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       lastActiveDate: getTodayDateString(),
       gradeLevel: '5th_grade',
       brainTeaserSubject: 'any',
-      brainTeaserHistory: {
-        totalCorrect: 3,
-        totalAnswered: 4,
-        totalStarsEarned: 15,
-        completedQuestionIds: ['bt-501', 'bt-502', 'bt-503'],
-        lastCompletedDate: getTodayDateString(),
-        todayAnsweredCount: 0,
-      },
       kidCoinBalance: 8.00,
       totalSaved: 47.50,
       weeklyAllowance: 4.00,
@@ -943,7 +919,8 @@ export const isChoreAssignedToKid = (chore: ChoreItem, kidId: string): boolean =
 };
 
 // Calculate kid rank and next level threshold
-export const getKidLevelInfo = (lifetimeStars: number) => {
+export const getKidLevelInfo = (lifetimeStars: number = 0) => {
+  const safeStars = Math.max(0, Number(lifetimeStars) || 0);
   const levels = [
     { level: 1, title: 'Chore Cadet', minStars: 0, maxStars: 50, icon: '🌱' },
     { level: 2, title: 'Star Helper', minStars: 50, maxStars: 150, icon: '⭐' },
@@ -954,18 +931,18 @@ export const getKidLevelInfo = (lifetimeStars: number) => {
 
   for (let i = 0; i < levels.length; i++) {
     const l = levels[i];
-    if (lifetimeStars < l.maxStars || i === levels.length - 1) {
+    if (safeStars < l.maxStars || i === levels.length - 1) {
       const range = l.maxStars - l.minStars;
-      const progressInLevel = Math.max(0, lifetimeStars - l.minStars);
+      const progressInLevel = Math.max(0, safeStars - l.minStars);
       const progressPercent = Math.min(100, Math.round((progressInLevel / range) * 100));
       return {
         level: l.level,
         title: l.title,
         icon: l.icon,
         currentStarsInLevel: progressInLevel,
-        starsNeededForNextLevel: l.maxStars - lifetimeStars,
+        starsNeededForNextLevel: Math.max(0, l.maxStars - safeStars),
         progressPercent,
-        isMaxLevel: i === levels.length - 1 && lifetimeStars >= l.maxStars,
+        isMaxLevel: i === levels.length - 1 && safeStars >= l.maxStars,
       };
     }
   }

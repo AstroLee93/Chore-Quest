@@ -33,9 +33,9 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   const isSkipped = log?.status === 'skipped';
 
   const isReadingChore =
-    chore.id === 'chore-6' ||
-    chore.title.toLowerCase().includes('reading') ||
-    chore.icon === '📖';
+    chore?.id === 'chore-6' ||
+    (chore?.title || '').toLowerCase().includes('reading') ||
+    chore?.icon === '📖';
 
   // Subtasks local state (synced or tracked per session)
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -248,7 +248,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
               {/* Star reward badge */}
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                 <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                +{chore.stars + (chore.bountyBonusStars || 0)} Points
+                +{(Number(chore?.stars) || 0) + (Number(chore?.bountyBonusStars) || 0)} Points
               </span>
 
               {/* Focus timer badge shortcut */}

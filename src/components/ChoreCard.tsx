@@ -18,7 +18,7 @@ interface ChoreCardProps {
   onOpenReadingLog?: () => void;
 }
 
-export const ChoreCard: React.FC<ChoreCardProps> = ({
+export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
   chore,
   category,
   log,
@@ -545,5 +545,5 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
       </div>
     </div>
   );
-};
+});
 

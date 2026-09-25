@@ -413,19 +413,26 @@ export function subscribeToDatabaseSync(
     }
   }, 5000);
 
-  // Watchdog 2: Fast Background Version Check
-  // Runs every 3.5 seconds when active, 12 seconds when tab is backgrounded
+  // Watchdog 2: Smart Adaptive Version Check
+  // Backs off to 25s when SSE is actively streaming, or polls every 4s if SSE is disconnected
   const versionPollInterval = setInterval(() => {
     if (!isSubscribed) return;
     if (document.hidden) {
       // Slower polling in background to conserve mobile battery
-      if (Math.random() < 0.3) {
+      if (Math.random() < 0.2) {
         checkVersionAndSync();
       }
-    } else {
+    } else if (!isSseConnected) {
+      // Fast polling fallback only when SSE socket is disconnected
       checkVersionAndSync();
+    } else {
+      // When SSE is connected, only occasional 25s periodic integrity check
+      const now = Date.now();
+      if (now - lastServerContactTime > 20000) {
+        checkVersionAndSync();
+      }
     }
-  }, 3500);
+  }, 4000);
 
   return () => {
     isSubscribed = false;

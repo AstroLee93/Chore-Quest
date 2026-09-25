@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
@@ -111,6 +112,7 @@ async function callGeminiWithFallback<T>(
   throw lastError;
 }
 
+app.use(compression());
 app.use(express.json({ limit: '25mb' }));
 
 // File persistence path
@@ -148,7 +150,7 @@ function initDatabase() {
     } else {
       (currentDatabase as any)._rev = currentDatabaseRev;
       (currentDatabase as any)._updatedAt = currentDatabaseUpdatedAt;
-      fs.writeFileSync(DB_FILE, JSON.stringify(currentDatabase, null, 2), 'utf-8');
+      fs.writeFileSync(DB_FILE, JSON.stringify(currentDatabase), 'utf-8');
       console.log('[Server] Initialized new database file with seed data.');
     }
   } catch (err) {
@@ -158,15 +160,38 @@ function initDatabase() {
 
 initDatabase();
 
+// Non-blocking, atomic, debounced disk persistence
+let diskWriteTimer: NodeJS.Timeout | null = null;
+let isWritingDisk = false;
+let pendingDiskWrite = false;
+
 function persistDatabaseToDisk() {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (diskWriteTimer) clearTimeout(diskWriteTimer);
+  diskWriteTimer = setTimeout(async () => {
+    diskWriteTimer = null;
+    if (isWritingDisk) {
+      pendingDiskWrite = true;
+      return;
     }
-    fs.writeFileSync(DB_FILE, JSON.stringify(currentDatabase, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('[Server] Failed to write database to disk:', err);
-  }
+    isWritingDisk = true;
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        await fs.promises.mkdir(DATA_DIR, { recursive: true });
+      }
+      const dataStr = JSON.stringify(currentDatabase);
+      const tempFile = `${DB_FILE}.tmp.${Date.now()}`;
+      await fs.promises.writeFile(tempFile, dataStr, 'utf-8');
+      await fs.promises.rename(tempFile, DB_FILE);
+    } catch (err) {
+      console.error('[Server] Failed to write database to disk:', err);
+    } finally {
+      isWritingDisk = false;
+      if (pendingDiskWrite) {
+        pendingDiskWrite = false;
+        persistDatabaseToDisk();
+      }
+    }
+  }, 80);
 }
 
 // SSE (Server-Sent Events) clients for real-time synchronization

@@ -889,12 +889,25 @@ export const importDatabaseJSON = (jsonString: string): FamilyDatabase => {
   };
 };
 
-// Check if a chore is scheduled for today
-export const isChoreScheduledForDate = (chore: ChoreItem, dateStr: string): boolean => {
-  if (!chore.isActive) return false;
+// Fast memoized cache for day-of-week lookups by date string
+const dayOfWeekCache = new Map<string, 0 | 1 | 2 | 3 | 4 | 5 | 6>();
+
+export const getDayOfWeekFromDateStr = (dateStr: string): 0 | 1 | 2 | 3 | 4 | 5 | 6 => {
+  if (!dateStr) return 0;
+  let cached = dayOfWeekCache.get(dateStr);
+  if (cached !== undefined) return cached;
   const [year, month, day] = dateStr.split('-').map(Number);
   const date = new Date(year, month - 1, day);
-  const dayOfWeek = date.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, 6=Sat
+  cached = date.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  if (dayOfWeekCache.size > 200) dayOfWeekCache.clear();
+  dayOfWeekCache.set(dateStr, cached);
+  return cached;
+};
+
+// Check if a chore is scheduled for today (high-performance O(1) query)
+export const isChoreScheduledForDate = (chore: ChoreItem, dateStr: string): boolean => {
+  if (!chore.isActive) return false;
+  const dayOfWeek = getDayOfWeekFromDateStr(dateStr);
 
   switch (chore.frequency) {
     case 'daily':
@@ -1001,32 +1014,34 @@ export const getBountyChores = (database: FamilyDatabase): ChoreItem[] => {
  */
 export const getMvpKid = (kids: KidProfile[], logs: ChoreLog[] = []): KidProfile | null => {
   if (!kids || kids.length === 0) return null;
-  const maxStars = Math.max(...kids.map((k) => k.stars));
+  let maxStars = -1;
+  for (let i = 0; i < kids.length; i++) {
+    if (kids[i].stars > maxStars) maxStars = kids[i].stars;
+  }
   if (maxStars <= 0) return null;
 
-  const topKids = kids.filter((k) => k.stars === maxStars);
+  const topKids: KidProfile[] = [];
+  for (let i = 0; i < kids.length; i++) {
+    if (kids[i].stars === maxStars) topKids.push(kids[i]);
+  }
   if (topKids.length === 1) return topKids[0];
+  if (topKids.length === 0) return null;
 
-  // Tie-breaker: find the latest star-earning log timestamp for each tied kid
-  // The kid with the EARLIEST timestamp earned the points FIRST!
+  // Single-pass through logs to find latest star-earning timestamp for tied top kids
+  const topKidIds = new Set(topKids.map((k) => k.id));
   const kidLatestTime = new Map<string, number>();
 
-  topKids.forEach((kid) => {
-    const kidLogs = (logs || []).filter(
-      (l) => l.kidId === kid.id && l.status === 'completed' && (l.starsAwarded || 0) > 0 && l.completedAt
-    );
-
-    if (kidLogs.length > 0) {
-      const sortedTimes = kidLogs
-        .map((l) => new Date(l.completedAt!).getTime())
-        .filter((t) => !isNaN(t))
-        .sort((a, b) => b - a); // latest first
-
-      kidLatestTime.set(kid.id, sortedTimes[0] || 0);
-    } else {
-      kidLatestTime.set(kid.id, 0);
+  const safeLogs = logs || [];
+  for (let i = 0; i < safeLogs.length; i++) {
+    const l = safeLogs[i];
+    if (l && topKidIds.has(l.kidId) && l.status === 'completed' && (l.starsAwarded || 0) > 0 && l.completedAt) {
+      const t = new Date(l.completedAt).getTime();
+      if (!isNaN(t)) {
+        const cur = kidLatestTime.get(l.kidId) || 0;
+        if (t > cur) kidLatestTime.set(l.kidId, t);
+      }
     }
-  });
+  }
 
   const sorted = [...topKids].sort((a, b) => {
     const timeA = kidLatestTime.get(a.id) ?? 0;

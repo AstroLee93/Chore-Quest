@@ -2,15 +2,17 @@ import React, { useState, useMemo } from 'react';
 import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home, Sun, Brain, BookOpen } from 'lucide-react';
 import { KidProfile, ChoreItem, ChoreCategory, ChoreLog, AppSettings, RewardItem, CalendarEvent, FamilyDatabase } from '../types';
 import { ChoreCard } from './ChoreCard';
-import { SkipReasonModal } from './SkipReasonModal';
-import { ChoreTimerModal } from './ChoreTimerModal';
-import { ChoreWheelModal } from './ChoreWheelModal';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
-import { BadgeModal } from './BadgeModal';
-import { BountyBoardModal } from './BountyBoardModal';
-import { BrainTeaserModal } from './BrainTeaserModal';
-import { ReadingLogModal } from './ReadingLogModal';
 import { getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
+
+// Code-split auxiliary modals for instant dashboard loading & minimized memory
+const SkipReasonModal = React.lazy(() => import('./SkipReasonModal').then((m) => ({ default: m.SkipReasonModal })));
+const ChoreTimerModal = React.lazy(() => import('./ChoreTimerModal').then((m) => ({ default: m.ChoreTimerModal })));
+const ChoreWheelModal = React.lazy(() => import('./ChoreWheelModal').then((m) => ({ default: m.ChoreWheelModal })));
+const BadgeModal = React.lazy(() => import('./BadgeModal').then((m) => ({ default: m.BadgeModal })));
+const BountyBoardModal = React.lazy(() => import('./BountyBoardModal').then((m) => ({ default: m.BountyBoardModal })));
+const BrainTeaserModal = React.lazy(() => import('./BrainTeaserModal').then((m) => ({ default: m.BrainTeaserModal })));
+const ReadingLogModal = React.lazy(() => import('./ReadingLogModal').then((m) => ({ default: m.ReadingLogModal })));
 import {
   isReadingCompletedToday,
   findReadingChore,
@@ -631,40 +633,44 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
         )}
 
         {/* Active Embedded Subscreen: Brain Teaser, Reading Log, or Quest Badges */}
-        {isBrainTeaserOpen && database && onUpdateDatabase ? (
-          <div className="w-full pt-1">
-            <BrainTeaserModal
-              isOpen={true}
-              embedded={true}
-              kid={kid}
-              database={database}
-              onUpdateDatabase={onUpdateDatabase}
-              onClose={() => setIsBrainTeaserOpen(false)}
-            />
-          </div>
-        ) : isReadingLogOpen && database && onUpdateDatabase ? (
-          <div className="w-full pt-1">
-            <ReadingLogModal
-              isOpen={true}
-              embedded={true}
-              kid={kid}
-              database={database}
-              onUpdateDatabase={onUpdateDatabase}
-              onClose={() => setIsReadingLogOpen(false)}
-            />
-          </div>
-        ) : isBadgeModalOpen ? (
-          <div className="w-full pt-1">
-            <BadgeModal
-              isOpen={true}
-              embedded={true}
-              kid={kid}
-              badges={kidBadges}
-              initialBadgeId={selectedBadgeModalId}
-              onClose={() => setIsBadgeModalOpen(false)}
-            />
-          </div>
-        ) : (
+        <React.Suspense fallback={<div className="w-full p-8 text-center text-sm font-black text-indigo-400 animate-pulse">Loading mission activity...</div>}>
+          {isBrainTeaserOpen && database && onUpdateDatabase ? (
+            <div className="w-full pt-1">
+              <BrainTeaserModal
+                isOpen={true}
+                embedded={true}
+                kid={kid}
+                database={database}
+                onUpdateDatabase={onUpdateDatabase}
+                onClose={() => setIsBrainTeaserOpen(false)}
+              />
+            </div>
+          ) : isReadingLogOpen && database && onUpdateDatabase ? (
+            <div className="w-full pt-1">
+              <ReadingLogModal
+                isOpen={true}
+                embedded={true}
+                kid={kid}
+                database={database}
+                onUpdateDatabase={onUpdateDatabase}
+                onClose={() => setIsReadingLogOpen(false)}
+              />
+            </div>
+          ) : isBadgeModalOpen ? (
+            <div className="w-full pt-1">
+              <BadgeModal
+                isOpen={true}
+                embedded={true}
+                kid={kid}
+                badges={kidBadges}
+                initialBadgeId={selectedBadgeModalId}
+                onClose={() => setIsBadgeModalOpen(false)}
+              />
+            </div>
+          ) : null}
+        </React.Suspense>
+
+        {!isBrainTeaserOpen && !isReadingLogOpen && !isBadgeModalOpen && (
           <>
             {/* Kid-Coin Gamified Savings Mission & Cosmic Rocket Goal Track */}
             {settings?.kidCoinEnabled !== false && database && (
@@ -897,62 +903,69 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
         )}
 
-      {/* Focus Timer Modal */}
-      {activeTimerChore && (
-        <ChoreTimerModal
-          chore={activeTimerChore}
-          isOpen={!!activeTimerChore}
-          onClose={() => setActiveTimerChore(null)}
-          onCompleteChore={(chore) => {
-            onToggleCompleteChore(chore);
-            setActiveTimerChore(null);
-          }}
-        />
-      )}
+      {/* Auxiliary Modals wrapped in local Suspense so dashboard never blanks out */}
+      <React.Suspense fallback={null}>
+        {/* Focus Timer Modal */}
+        {activeTimerChore && (
+          <ChoreTimerModal
+            chore={activeTimerChore}
+            isOpen={!!activeTimerChore}
+            onClose={() => setActiveTimerChore(null)}
+            onCompleteChore={(chore) => {
+              onToggleCompleteChore(chore);
+              setActiveTimerChore(null);
+            }}
+          />
+        )}
 
-      {/* Chore Roulette Wheel Modal */}
-      <ChoreWheelModal
-        isOpen={isWheelOpen}
-        chores={todaysChores.length > 0 ? todaysChores : chores}
-        activeKid={kid}
-        onClose={() => setIsWheelOpen(false)}
-        onStartTimer={(chore) => {
-          setIsWheelOpen(false);
-          setActiveTimerChore(chore);
-        }}
-        onSelectChore={(chore) => {
-          setIsWheelOpen(false);
-          if (chore.timerMinutes) {
-            setActiveTimerChore(chore);
-          }
-        }}
-      />
+        {/* Chore Roulette Wheel Modal - strictly rendered only when open */}
+        {isWheelOpen && (
+          <ChoreWheelModal
+            isOpen={isWheelOpen}
+            chores={todaysChores.length > 0 ? todaysChores : chores}
+            activeKid={kid}
+            onClose={() => setIsWheelOpen(false)}
+            onStartTimer={(chore) => {
+              setIsWheelOpen(false);
+              setActiveTimerChore(chore);
+            }}
+            onSelectChore={(chore) => {
+              setIsWheelOpen(false);
+              if (chore.timerMinutes) {
+                setActiveTimerChore(chore);
+              }
+            }}
+          />
+        )}
 
-      {/* Skip Reason Modal */}
-      <SkipReasonModal
-        isOpen={!!skipModalChore}
-        chore={skipModalChore}
-        onConfirmSkip={(choreId, reasonCat, note) => {
-          onSkipChoreWithReason(choreId, reasonCat, note);
-          setSkipModalChore(null);
-        }}
-        onClose={() => setSkipModalChore(null)}
-      />
+        {/* Skip Reason Modal - strictly rendered only when open */}
+        {!!skipModalChore && (
+          <SkipReasonModal
+            isOpen={!!skipModalChore}
+            chore={skipModalChore}
+            onConfirmSkip={(choreId, reasonCat, note) => {
+              onSkipChoreWithReason(choreId, reasonCat, note);
+              setSkipModalChore(null);
+            }}
+            onClose={() => setSkipModalChore(null)}
+          />
+        )}
 
-      {/* Western Bounty Board Pop-up Modal */}
-      {isBountyBoardOpen && database && onUpdateDatabase && (
-        <BountyBoardModal
-          isOpen={isBountyBoardOpen}
-          onClose={() => setIsBountyBoardOpen(false)}
-          database={database}
-          onUpdateDatabase={onUpdateDatabase}
-          currentKid={kid}
-          onStartTimer={(chore) => {
-            setIsBountyBoardOpen(false);
-            setActiveTimerChore(chore);
-          }}
-        />
-      )}
+        {/* Western Bounty Board Pop-up Modal */}
+        {isBountyBoardOpen && database && onUpdateDatabase && (
+          <BountyBoardModal
+            isOpen={isBountyBoardOpen}
+            onClose={() => setIsBountyBoardOpen(false)}
+            database={database}
+            onUpdateDatabase={onUpdateDatabase}
+            currentKid={kid}
+            onStartTimer={(chore) => {
+              setIsBountyBoardOpen(false);
+              setActiveTimerChore(chore);
+            }}
+          />
+        )}
+      </React.Suspense>
     </div>
   );
 };

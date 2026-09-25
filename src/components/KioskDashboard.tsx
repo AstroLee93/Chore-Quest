@@ -1,26 +1,29 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock, Hourglass, AlertTriangle } from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
-import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent, RewardItem, RewardRedemption } from '../types';
+import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent, RewardItem, RewardRedemption, ChoreCategory } from '../types';
 import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getMvpKid } from '../utils/storage';
 import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar';
 import { getCurrentDayOfWeekKey, DEFAULT_WEEKLY_MENU } from '../utils/menu';
 import { sound } from '../utils/sound';
 import { checkCategoryTimeWindow, checkChoreTimeWindow } from '../utils/timeWindow';
 import { AppThemeId, APP_THEMES } from '../utils/theme';
+import { KioskClock } from './KioskClock';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
-import { ChoreTimerModal } from './ChoreTimerModal';
-import { FamilyGoalModal } from './FamilyGoalModal';
-import { WeeklyMenuModal } from './WeeklyMenuModal';
 import { ParentPinModal } from './ParentPinModal';
 import { KidPinModal } from './KidPinModal';
 import { ActionMenu } from './ActionMenu';
-import { KidSnackRequestModal } from './KidSnackRequestModal';
-import { RewardStoreModal } from './RewardStoreModal';
-import { KidAvatarModal } from './KidAvatarModal';
-import { BountyBoardModal } from './BountyBoardModal';
-import { BrainTeaserModal } from './BrainTeaserModal';
-import { ReadingLogModal } from './ReadingLogModal';
+
+// Code-split auxiliary popups for lightning-fast kiosk responsiveness & minimal memory footprint
+const ChoreTimerModal = React.lazy(() => import('./ChoreTimerModal').then((m) => ({ default: m.ChoreTimerModal })));
+const FamilyGoalModal = React.lazy(() => import('./FamilyGoalModal').then((m) => ({ default: m.FamilyGoalModal })));
+const WeeklyMenuModal = React.lazy(() => import('./WeeklyMenuModal').then((m) => ({ default: m.WeeklyMenuModal })));
+const KidSnackRequestModal = React.lazy(() => import('./KidSnackRequestModal').then((m) => ({ default: m.KidSnackRequestModal })));
+const RewardStoreModal = React.lazy(() => import('./RewardStoreModal').then((m) => ({ default: m.RewardStoreModal })));
+const KidAvatarModal = React.lazy(() => import('./KidAvatarModal').then((m) => ({ default: m.KidAvatarModal })));
+const BountyBoardModal = React.lazy(() => import('./BountyBoardModal').then((m) => ({ default: m.BountyBoardModal })));
+const BrainTeaserModal = React.lazy(() => import('./BrainTeaserModal').then((m) => ({ default: m.BrainTeaserModal })));
+const ReadingLogModal = React.lazy(() => import('./ReadingLogModal').then((m) => ({ default: m.ReadingLogModal })));
 import { getGradeLevelInfo, getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
 import {
   isReadingCompletedToday,
@@ -51,7 +54,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   onOpenCalendar,
   onOpenMenu,
 }) => {
-  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
+  const [currentMinuteTime, setCurrentMinuteTime] = useState<Date>(() => new Date());
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [activeTimerChore, setActiveTimerChore] = useState<ChoreItem | null>(null);
   const [isBountyBoardOpen, setIsBountyBoardOpen] = useState<boolean>(false);
@@ -75,11 +78,42 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const todayDayKey = useMemo(() => getCurrentDayOfWeekKey(), []);
   const todayMenuPlan = (database.weeklyMenu?.days || DEFAULT_WEEKLY_MENU.days)[todayDayKey] || DEFAULT_WEEKLY_MENU.days[todayDayKey];
 
-  // Live clock ticker
+  // Update time window calculations on a 30s cadence (chores use minute-level schedules)
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => setCurrentMinuteTime(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
+
+  // Indexed lookups for O(1) query performance
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, ChoreCategory>();
+    (database.categories || []).forEach((c) => map.set(c.id, c));
+    return map;
+  }, [database.categories]);
+
+  const completedChoreSet = useMemo(() => {
+    const set = new Set<string>();
+    const logs = database.logs || [];
+    for (let i = 0; i < logs.length; i++) {
+      const l = logs[i];
+      if (l && l.date === todayStr && l.status === 'completed') {
+        set.add(`${l.kidId}:${l.choreId}`);
+      }
+    }
+    return set;
+  }, [database.logs, todayStr]);
+
+  const todayLogMap = useMemo(() => {
+    const map = new Map<string, ChoreLog>();
+    const logs = database.logs || [];
+    for (let i = 0; i < logs.length; i++) {
+      const l = logs[i];
+      if (l && l.date === todayStr) {
+        map.set(`${l.kidId}:${l.choreId}`, l);
+      }
+    }
+    return map;
+  }, [database.logs, todayStr]);
 
   // Track fullscreen changes
   useEffect(() => {
@@ -226,16 +260,14 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
     [mvpKid]
   );
 
-  // Per-kid mission summary calculations
+  // Per-kid mission summary calculations (O(1) set-backed lookups)
   const kidStats = useMemo(() => {
     return database.kids.map((kid) => {
       const kidChores = (database.chores || []).filter(
         (c) => c.isActive && isChoreScheduledForDate(c, todayStr) && isChoreAssignedToKid(c, kid.id)
       );
       const completedCount = kidChores.filter((c) =>
-        (database.logs || []).some(
-          (l) => l.choreId === c.id && l.kidId === kid.id && l.date === todayStr && l.status === 'completed'
-        )
+        completedChoreSet.has(`${kid.id}:${c.id}`)
       ).length;
       const totalChores = kidChores.length;
       const percent = totalChores > 0 ? Math.round((completedCount / totalChores) * 100) : 100;
@@ -254,7 +286,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         level,
       };
     });
-  }, [database.kids, database.chores, database.logs, todayStr, mvpKid]);
+  }, [database.kids, database.chores, completedChoreSet, todayStr, mvpKid]);
 
   const { totalFamilyChoresToday, totalFamilyCompletedToday } = useMemo(() => {
     let scheduled = 0;
@@ -274,19 +306,16 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         (c) => c.isActive && isChoreScheduledForDate(c, todayStr) && isChoreAssignedToKid(c, kid.id)
       );
       kidChores.forEach((chore) => {
-        const log = (database.logs || []).find(
-          (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
-        );
-        if (log?.status === 'completed') return;
-        const category = (database.categories || []).find((c) => c.id === chore.categoryId);
-        const timeStatus = checkChoreTimeWindow(chore, category, currentTime);
+        if (completedChoreSet.has(`${kid.id}:${chore.id}`)) return;
+        const category = categoryMap.get(chore.categoryId);
+        const timeStatus = checkChoreTimeWindow(chore, category, currentMinuteTime);
         if (timeStatus.isAllowed && timeStatus.isNearingExpiration) {
           count++;
         }
       });
     });
     return count;
-  }, [database.kids, database.chores, database.logs, database.categories, todayStr, currentTime]);
+  }, [database.kids, database.chores, completedChoreSet, categoryMap, todayStr, currentMinuteTime]);
 
   const handleCheerMvp = useCallback(() => {
     sound.playStarEarned();
@@ -320,47 +349,13 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           </div>
         </div>
 
-        {/* Center: Themed Clock & Live Weather */}
-        <div className={`flex items-center gap-4 sm:gap-6 px-5 py-2.5 rounded-2xl ${theme.kioskClockBg} self-stretch sm:self-auto justify-center flex-wrap`}>
-          <div className="text-left">
-            <div className={`text-2xl sm:text-3xl font-black tracking-tight font-mono ${theme.kioskClockText}`}>
-              {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </div>
-            <div className="text-[11px] font-bold opacity-80 text-white">
-              {currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
-            </div>
-          </div>
-
-          <div className="h-8 w-px bg-white/20" />
-
-          {/* Live Weather */}
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{WEATHER_CONDITIONS[todayWeather.condition]?.icon || '☀️'}</span>
-            <div>
-              <div className="text-sm font-black text-white">
-                {todayWeather.tempHigh}°{database.settings.tempUnit || 'F'}
-              </div>
-              <div className="text-[10px] font-semibold opacity-80 text-white capitalize">
-                {todayWeather.condition.replace('_', ' ')}
-              </div>
-            </div>
-          </div>
-
-          {/* Expiring Chores Live Household Indicator */}
-          {householdExpiringChoresCount > 0 && (
-            <>
-              <div className="h-8 w-px bg-white/20 hidden sm:block" />
-              <div
-                id="kiosk-header-expiring-alert"
-                className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/25 border border-amber-400/50 text-amber-200 text-xs font-black shadow-sm animate-pulse"
-                title={`${householdExpiringChoresCount} mission${householdExpiringChoresCount > 1 ? 's are' : ' is'} nearing time window expiration!`}
-              >
-                <Hourglass className="w-3.5 h-3.5 text-amber-300" />
-                <span>{householdExpiringChoresCount} Ending Soon!</span>
-              </div>
-            </>
-          )}
-        </div>
+        {/* Center: Themed Clock & Live Weather (Isolated re-render for maximum speed) */}
+        <KioskClock
+          theme={theme}
+          todayWeather={todayWeather}
+          tempUnit={database.settings.tempUnit}
+          householdExpiringChoresCount={householdExpiringChoresCount}
+        />
 
         {/* Right: Dinner Menu, Calendar, Fullscreen & Exit */}
         <div className="flex items-center gap-2 flex-wrap self-end lg:self-center relative z-50">
@@ -517,18 +512,15 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         >
           {kidStats.map(({ kid, kidChores, completedCount, totalChores, percent, isAllDone, isMvp, level }) => {
             const expiringChores = kidChores.filter((chore) => {
-              const log = (database.logs || []).find(
-                (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
-              );
-              if (log?.status === 'completed') return false;
-              const category = (database.categories || []).find((c) => c.id === chore.categoryId);
-              const timeStatus = checkChoreTimeWindow(chore, category, currentTime);
+              if (completedChoreSet.has(`${kid.id}:${chore.id}`)) return false;
+              const category = categoryMap.get(chore.categoryId);
+              const timeStatus = checkChoreTimeWindow(chore, category, currentMinuteTime);
               return timeStatus.isAllowed && timeStatus.isNearingExpiration;
             });
             const kidExpiringCount = expiringChores.length;
             const hasUrgentChore = expiringChores.some((chore) => {
-              const category = (database.categories || []).find((c) => c.id === chore.categoryId);
-              return checkChoreTimeWindow(chore, category, currentTime).isUrgentExpiration;
+              const category = categoryMap.get(chore.categoryId);
+              return checkChoreTimeWindow(chore, category, currentMinuteTime).isUrgentExpiration;
             });
 
             return (
@@ -752,30 +744,21 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                 <div className="space-y-2 mt-3 max-h-72 overflow-y-auto pr-1">
                   {(() => {
                     const expiringChoresCount = kidChores.filter((chore) => {
-                      const log = (database.logs || []).find(
-                        (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
-                      );
-                      if (log?.status === 'completed') return false;
-                      const category = (database.categories || []).find((c) => c.id === chore.categoryId);
-                      const timeStatus = checkChoreTimeWindow(chore, category, currentTime);
+                      if (completedChoreSet.has(`${kid.id}:${chore.id}`)) return false;
+                      const category = categoryMap.get(chore.categoryId);
+                      const timeStatus = checkChoreTimeWindow(chore, category, currentMinuteTime);
                       return timeStatus.isAllowed && timeStatus.isNearingExpiration;
                     }).length;
 
                     const sortedKidChores = [...kidChores].sort((a, b) => {
-                      const logA = (database.logs || []).find(
-                        (l) => l.choreId === a.id && l.kidId === kid.id && l.date === todayStr
-                      );
-                      const logB = (database.logs || []).find(
-                        (l) => l.choreId === b.id && l.kidId === kid.id && l.date === todayStr
-                      );
-                      const isDoneA = logA?.status === 'completed';
-                      const isDoneB = logB?.status === 'completed';
+                      const isDoneA = completedChoreSet.has(`${kid.id}:${a.id}`);
+                      const isDoneB = completedChoreSet.has(`${kid.id}:${b.id}`);
                       if (isDoneA !== isDoneB) return isDoneA ? 1 : -1;
 
-                      const catA = (database.categories || []).find((c) => c.id === a.categoryId);
-                      const catB = (database.categories || []).find((c) => c.id === b.categoryId);
-                      const timeA = checkChoreTimeWindow(a, catA, currentTime);
-                      const timeB = checkChoreTimeWindow(b, catB, currentTime);
+                      const catA = categoryMap.get(a.categoryId);
+                      const catB = categoryMap.get(b.categoryId);
+                      const timeA = checkChoreTimeWindow(a, catA, currentMinuteTime);
+                      const timeB = checkChoreTimeWindow(b, catB, currentMinuteTime);
 
                       const isExpiringA = !isDoneA && timeA.isAllowed && timeA.isNearingExpiration;
                       const isExpiringB = !isDoneB && timeB.isAllowed && timeB.isNearingExpiration;
@@ -816,9 +799,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         )}
 
                         {sortedKidChores.map((chore) => {
-                          const log = (database.logs || []).find(
-                            (l) => l.choreId === chore.id && l.kidId === kid.id && l.date === todayStr
-                          );
+                          const log = todayLogMap.get(`${kid.id}:${chore.id}`);
                           const isDone = log?.status === 'completed';
                           const otherKidClaimLog = chore.isBounty
                             ? (database.logs || []).find(
@@ -830,8 +811,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                             : null;
                           const isClaimedByOther = !!otherKidClaimer;
 
-                          const category = (database.categories || []).find((c) => c.id === chore.categoryId);
-                          const timeStatus = checkChoreTimeWindow(chore, category, currentTime);
+                          const category = categoryMap.get(chore.categoryId);
+                          const timeStatus = checkChoreTimeWindow(chore, category, currentMinuteTime);
                           const isTimeLocked = !isDone && !isClaimedByOther && !timeStatus.isAllowed;
                           const isExpiringSoon = !isDone && !isClaimedByOther && !isTimeLocked && timeStatus.isAllowed && timeStatus.isNearingExpiration;
                           const isUrgent = isExpiringSoon && !!timeStatus.isUrgentExpiration;
@@ -1176,18 +1157,20 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
         />
       )}
 
-      {/* Focus Timer Modal in Kiosk */}
-      {activeTimerChore && (
-        <ChoreTimerModal
-          chore={activeTimerChore}
-          isOpen={!!activeTimerChore}
-          onClose={() => setActiveTimerChore(null)}
-          onCompleteChore={(chore) => {
-            const targetKid = database.kids.find((k) => isChoreAssignedToKid(chore, k.id)) || database.kids[0];
-            if (targetKid) handleQuickCompleteChore(chore, targetKid);
-          }}
-        />
-      )}
+      {/* Modals in Kiosk wrapped in local Suspense so kiosk ambient screen never blanks out */}
+      <React.Suspense fallback={null}>
+        {/* Focus Timer Modal in Kiosk */}
+        {activeTimerChore && (
+          <ChoreTimerModal
+            chore={activeTimerChore}
+            isOpen={!!activeTimerChore}
+            onClose={() => setActiveTimerChore(null)}
+            onCompleteChore={(chore) => {
+              const targetKid = database.kids.find((k) => isChoreAssignedToKid(chore, k.id)) || database.kids[0];
+              if (targetKid) handleQuickCompleteChore(chore, targetKid);
+            }}
+          />
+        )}
 
       {/* Family Goal Manager Modal */}
       {isGoalModalOpen && (
@@ -1322,6 +1305,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           }}
         />
       )}
+      </React.Suspense>
     </div>
   );
 };

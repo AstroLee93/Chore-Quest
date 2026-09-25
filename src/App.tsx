@@ -9,19 +9,39 @@ import { AppThemeId, APP_THEMES, getSavedThemeId, saveThemeId } from './utils/th
 import { Navbar } from './components/Navbar';
 import { KidSelector } from './components/KidSelector';
 import { KidDashboard } from './components/KidDashboard';
-import { ParentDashboard } from './components/ParentDashboard';
 import { ParentPinModal } from './components/ParentPinModal';
-import { RewardStoreModal } from './components/RewardStoreModal';
-import { PiGuideModal } from './components/PiGuideModal';
-import { CalendarView } from './components/Calendar/CalendarView';
 import { KioskDashboard } from './components/KioskDashboard';
-import { FamilyGoalModal } from './components/FamilyGoalModal';
-import { WeeklyMenuModal } from './components/WeeklyMenuModal';
-import { WeeklyGroceryModal } from './components/WeeklyGroceryModal';
-import { KidSnackRequestModal } from './components/KidSnackRequestModal';
-import { KidCoinVaultModal } from './components/KidCoin/KidCoinVaultModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Home } from 'lucide-react';
+
+// Code-split heavy secondary dashboards and modals for lightning-fast page loading & lower memory usage
+const ParentDashboard = React.lazy(() =>
+  import('./components/ParentDashboard').then((m) => ({ default: m.ParentDashboard }))
+);
+const WeeklyGroceryModal = React.lazy(() =>
+  import('./components/WeeklyGroceryModal').then((m) => ({ default: m.WeeklyGroceryModal }))
+);
+const WeeklyMenuModal = React.lazy(() =>
+  import('./components/WeeklyMenuModal').then((m) => ({ default: m.WeeklyMenuModal }))
+);
+const PiGuideModal = React.lazy(() =>
+  import('./components/PiGuideModal').then((m) => ({ default: m.PiGuideModal }))
+);
+const CalendarView = React.lazy(() =>
+  import('./components/Calendar/CalendarView').then((m) => ({ default: m.CalendarView }))
+);
+const FamilyGoalModal = React.lazy(() =>
+  import('./components/FamilyGoalModal').then((m) => ({ default: m.FamilyGoalModal }))
+);
+const RewardStoreModal = React.lazy(() =>
+  import('./components/RewardStoreModal').then((m) => ({ default: m.RewardStoreModal }))
+);
+const KidSnackRequestModal = React.lazy(() =>
+  import('./components/KidSnackRequestModal').then((m) => ({ default: m.KidSnackRequestModal }))
+);
+const KidCoinVaultModal = React.lazy(() =>
+  import('./components/KidCoin/KidCoinVaultModal').then((m) => ({ default: m.KidCoinVaultModal }))
+);
 
 export default function App() {
   const [database, setDatabase] = useState<FamilyDatabase>(() => loadDatabase());
@@ -537,65 +557,67 @@ export default function App() {
             </ErrorBoundary>
           </main>
 
-          {isSnackRequestOpen && (
-            <KidSnackRequestModal
-              isOpen={isSnackRequestOpen}
-              onClose={() => {
-                setIsSnackRequestOpen(false);
-                setSnackRequestKid(null);
-                handleReturnToKiosk();
-              }}
-              database={database}
-              onUpdateDatabase={handleUpdateDatabase}
-              initialKid={activeKid}
-              isParentMode={false}
-              onPostActionComplete={handleReturnToKiosk}
-            />
-          )}
+          <React.Suspense fallback={null}>
+            {isSnackRequestOpen && (
+              <KidSnackRequestModal
+                isOpen={isSnackRequestOpen}
+                onClose={() => {
+                  setIsSnackRequestOpen(false);
+                  setSnackRequestKid(null);
+                  handleReturnToKiosk();
+                }}
+                database={database}
+                onUpdateDatabase={handleUpdateDatabase}
+                initialKid={activeKid}
+                isParentMode={false}
+                onPostActionComplete={handleReturnToKiosk}
+              />
+            )}
 
-          {isRewardStoreOpen && (
-            <RewardStoreModal
-              isOpen={isRewardStoreOpen}
-              activeKid={activeKid}
-              rewards={database.rewards || []}
-              redemptions={database.redemptions || []}
-              settings={database.settings}
-              onRedeemReward={handleRedeemReward}
-              onPostActionComplete={handleReturnToKiosk}
-              isParentMode={false}
-              onUnpauseStore={() => {
-                handleUpdateDatabase({
-                  ...database,
-                  settings: {
-                    ...database.settings,
-                    pauseRewardStore: false,
-                  },
-                });
-              }}
-              onClose={() => {
-                setIsRewardStoreOpen(false);
-                handleReturnToKiosk();
-              }}
-            />
-          )}
+            {isRewardStoreOpen && (
+              <RewardStoreModal
+                isOpen={isRewardStoreOpen}
+                activeKid={activeKid}
+                rewards={database.rewards || []}
+                redemptions={database.redemptions || []}
+                settings={database.settings}
+                onRedeemReward={handleRedeemReward}
+                onPostActionComplete={handleReturnToKiosk}
+                isParentMode={false}
+                onUnpauseStore={() => {
+                  handleUpdateDatabase({
+                    ...database,
+                    settings: {
+                      ...database.settings,
+                      pauseRewardStore: false,
+                    },
+                  });
+                }}
+                onClose={() => {
+                  setIsRewardStoreOpen(false);
+                  handleReturnToKiosk();
+                }}
+              />
+            )}
 
-          {isCalendarOpen && (
-            <CalendarView
-              database={database}
-              activeKid={activeKid}
-              onUpdateDatabase={handleUpdateDatabase}
-              onClose={() => setIsCalendarOpen(false)}
-            />
-          )}
+            {isCalendarOpen && (
+              <CalendarView
+                database={database}
+                activeKid={activeKid}
+                onUpdateDatabase={handleUpdateDatabase}
+                onClose={() => setIsCalendarOpen(false)}
+              />
+            )}
 
-          {isGoalModalOpen && (
-            <FamilyGoalModal
-              isOpen={isGoalModalOpen}
-              database={database}
-              onClose={() => setIsGoalModalOpen(false)}
-              onUpdateDatabase={handleUpdateDatabase}
-            />
-          )}
+            {isGoalModalOpen && (
+              <FamilyGoalModal
+                isOpen={isGoalModalOpen}
+                database={database}
+                onClose={() => setIsGoalModalOpen(false)}
+                onUpdateDatabase={handleUpdateDatabase}
+              />
+            )}
+          </React.Suspense>
         </div>
       );
     }
@@ -616,25 +638,27 @@ export default function App() {
           onOpenMenu={() => setIsMenuOpen(true)}
         />
 
-        {isCalendarOpen && (
-          <CalendarView
-            database={database}
-            activeKid={activeKid}
-            onUpdateDatabase={handleUpdateDatabase}
-            onClose={() => setIsCalendarOpen(false)}
-          />
-        )}
+        <React.Suspense fallback={null}>
+          {isCalendarOpen && (
+            <CalendarView
+              database={database}
+              activeKid={activeKid}
+              onUpdateDatabase={handleUpdateDatabase}
+              onClose={() => setIsCalendarOpen(false)}
+            />
+          )}
 
-        {isMenuOpen && (
-          <WeeklyMenuModal
-            isOpen={isMenuOpen}
-            onClose={() => setIsMenuOpen(false)}
-            database={database}
-            onUpdateDatabase={handleUpdateDatabase}
-            activeKid={activeKid}
-            isParentMode={isParentMode}
-          />
-        )}
+          {isMenuOpen && (
+            <WeeklyMenuModal
+              isOpen={isMenuOpen}
+              onClose={() => setIsMenuOpen(false)}
+              database={database}
+              onUpdateDatabase={handleUpdateDatabase}
+              activeKid={activeKid}
+              isParentMode={isParentMode}
+            />
+          )}
+        </React.Suspense>
       </div>
     );
   }
@@ -678,17 +702,29 @@ export default function App() {
 
       <main className="flex-1 p-0 sm:pb-6 flex flex-col relative z-20">
         {isParentMode ? (
-          <ParentDashboard
-            database={database}
-            onUpdateDatabase={handleUpdateDatabase}
-            onExitParentMode={() => setIsParentMode(false)}
-            onOpenPiGuide={() => setIsPiGuideOpen(true)}
-            onOpenCalendar={() => setIsCalendarOpen(true)}
-            onOpenSnackRequest={(kid) => {
-              if (kid) setSnackRequestKid(kid);
-              setIsSnackRequestOpen(true);
-            }}
-          />
+          <React.Suspense
+            fallback={
+              <div className="flex-1 p-6 flex flex-col items-center justify-center min-h-[50vh] text-center">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-2xl animate-spin mb-3">
+                  ⚙️
+                </div>
+                <h3 className="text-base font-black text-slate-800 dark:text-white">Loading Parent Dashboard...</h3>
+                <p className="text-xs text-slate-500 mt-1 font-semibold">Preparing controls and chore manager</p>
+              </div>
+            }
+          >
+            <ParentDashboard
+              database={database}
+              onUpdateDatabase={handleUpdateDatabase}
+              onExitParentMode={() => setIsParentMode(false)}
+              onOpenPiGuide={() => setIsPiGuideOpen(true)}
+              onOpenCalendar={() => setIsCalendarOpen(true)}
+              onOpenSnackRequest={(kid) => {
+                if (kid) setSnackRequestKid(kid);
+                setIsSnackRequestOpen(true);
+              }}
+            />
+          </React.Suspense>
         ) : activeKid ? (
           <ErrorBoundary
             fallbackTitle={`Could not load ${activeKid.name}'s Missions`}
@@ -770,110 +806,114 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Global Application Modals (Mounted after footer for clean stacking context & z-index order) */}
-      {isSnackRequestOpen && (
-        <KidSnackRequestModal
-          isOpen={isSnackRequestOpen}
-          onClose={() => {
-            setIsSnackRequestOpen(false);
-            setSnackRequestKid(null);
+      {/* Global Application Modals (Mounted after footer with local Suspense so app layout never blanks out) */}
+      <React.Suspense fallback={null}>
+        {isSnackRequestOpen && (
+          <KidSnackRequestModal
+            isOpen={isSnackRequestOpen}
+            onClose={() => {
+              setIsSnackRequestOpen(false);
+              setSnackRequestKid(null);
+            }}
+            database={database}
+            onUpdateDatabase={handleUpdateDatabase}
+            initialKid={snackRequestKid || activeKid}
+            isParentMode={isParentMode}
+          />
+        )}
+
+        {isCalendarOpen && (
+          <CalendarView
+            database={database}
+            activeKid={activeKid}
+            onUpdateDatabase={handleUpdateDatabase}
+            onClose={() => setIsCalendarOpen(false)}
+          />
+        )}
+
+        {isMenuOpen && (
+          <WeeklyMenuModal
+            isOpen={isMenuOpen}
+            onClose={() => setIsMenuOpen(false)}
+            database={database}
+            onUpdateDatabase={handleUpdateDatabase}
+            activeKid={activeKid}
+            isParentMode={isParentMode}
+            onOpenGroceryList={() => setIsGroceryOpen(true)}
+          />
+        )}
+
+        {isGroceryOpen && (
+          <WeeklyGroceryModal
+            isOpen={isGroceryOpen}
+            onClose={() => setIsGroceryOpen(false)}
+            database={database}
+            onUpdateDatabase={handleUpdateDatabase}
+            activeKid={activeKid}
+            isParentMode={isParentMode}
+          />
+        )}
+
+        {isGoalModalOpen && (
+          <FamilyGoalModal
+            isOpen={isGoalModalOpen}
+            onClose={() => setIsGoalModalOpen(false)}
+            database={database}
+            onUpdateDatabase={handleUpdateDatabase}
+            isParentMode={isParentMode}
+          />
+        )}
+
+        <ParentPinModal
+          isOpen={isPinModalOpen}
+          correctPin={database.settings.parentPin}
+          isDefaultPin={database.settings.isDefaultPin ?? (database.settings.parentPin === '1234')}
+          onSuccess={() => {
+            setIsPinModalOpen(false);
+            setIsParentMode(true);
           }}
-          database={database}
-          onUpdateDatabase={handleUpdateDatabase}
-          initialKid={snackRequestKid || activeKid}
-          isParentMode={isParentMode}
+          onClose={() => setIsPinModalOpen(false)}
         />
-      )}
 
-      {isCalendarOpen && (
-        <CalendarView
-          database={database}
-          activeKid={activeKid}
-          onUpdateDatabase={handleUpdateDatabase}
-          onClose={() => setIsCalendarOpen(false)}
-        />
-      )}
+        {isRewardStoreOpen && activeKid && (
+          <RewardStoreModal
+            isOpen={isRewardStoreOpen}
+            activeKid={activeKid}
+            rewards={database.rewards}
+            redemptions={database.redemptions}
+            settings={database.settings}
+            onRedeemReward={handleRedeemReward}
+            isParentMode={isParentMode}
+            onUnpauseStore={() => {
+              handleUpdateDatabase({
+                ...database,
+                settings: {
+                  ...database.settings,
+                  pauseRewardStore: false,
+                },
+              });
+            }}
+            onClose={() => setIsRewardStoreOpen(false)}
+          />
+        )}
 
-      {isMenuOpen && (
-        <WeeklyMenuModal
-          isOpen={isMenuOpen}
-          onClose={() => setIsMenuOpen(false)}
-          database={database}
-          onUpdateDatabase={handleUpdateDatabase}
-          activeKid={activeKid}
-          isParentMode={isParentMode}
-          onOpenGroceryList={() => setIsGroceryOpen(true)}
-        />
-      )}
+        {isKidCoinVaultOpen && activeKid && (
+          <KidCoinVaultModal
+            isOpen={isKidCoinVaultOpen}
+            kid={activeKid}
+            database={database}
+            onClose={() => setIsKidCoinVaultOpen(false)}
+            onUpdateKid={(updatedKid) => {
+              const updatedKids = database.kids.map((k) => (k.id === updatedKid.id ? updatedKid : k));
+              handleUpdateDatabase({ ...database, kids: updatedKids });
+            }}
+          />
+        )}
 
-      {isGroceryOpen && (
-        <WeeklyGroceryModal
-          isOpen={isGroceryOpen}
-          onClose={() => setIsGroceryOpen(false)}
-          database={database}
-          onUpdateDatabase={handleUpdateDatabase}
-          activeKid={activeKid}
-          isParentMode={isParentMode}
-        />
-      )}
-
-      {isGoalModalOpen && (
-        <FamilyGoalModal
-          isOpen={isGoalModalOpen}
-          onClose={() => setIsGoalModalOpen(false)}
-          database={database}
-          onUpdateDatabase={handleUpdateDatabase}
-          isParentMode={isParentMode}
-        />
-      )}
-
-      <ParentPinModal
-        isOpen={isPinModalOpen}
-        correctPin={database.settings.parentPin}
-        isDefaultPin={database.settings.isDefaultPin ?? (database.settings.parentPin === '1234')}
-        onSuccess={() => {
-          setIsPinModalOpen(false);
-          setIsParentMode(true);
-        }}
-        onClose={() => setIsPinModalOpen(false)}
-      />
-
-      {activeKid && (
-        <RewardStoreModal
-          isOpen={isRewardStoreOpen}
-          activeKid={activeKid}
-          rewards={database.rewards}
-          redemptions={database.redemptions}
-          settings={database.settings}
-          onRedeemReward={handleRedeemReward}
-          isParentMode={isParentMode}
-          onUnpauseStore={() => {
-            handleUpdateDatabase({
-              ...database,
-              settings: {
-                ...database.settings,
-                pauseRewardStore: false,
-              },
-            });
-          }}
-          onClose={() => setIsRewardStoreOpen(false)}
-        />
-      )}
-
-      {isKidCoinVaultOpen && activeKid && (
-        <KidCoinVaultModal
-          isOpen={isKidCoinVaultOpen}
-          kid={activeKid}
-          database={database}
-          onClose={() => setIsKidCoinVaultOpen(false)}
-          onUpdateKid={(updatedKid) => {
-            const updatedKids = database.kids.map((k) => (k.id === updatedKid.id ? updatedKid : k));
-            handleUpdateDatabase({ ...database, kids: updatedKids });
-          }}
-        />
-      )}
-
-      <PiGuideModal isOpen={isPiGuideOpen} onClose={() => setIsPiGuideOpen(false)} />
+        {isPiGuideOpen && (
+          <PiGuideModal isOpen={isPiGuideOpen} onClose={() => setIsPiGuideOpen(false)} />
+        )}
+      </React.Suspense>
     </div>
   );
 }

@@ -318,6 +318,19 @@ export interface SnackStarTiers {
   luxury: number; // Gourmet/Specialty e.g. 35
 }
 
+export interface AqaraCameraConfig {
+  enabled?: boolean;
+  cameraName?: string;
+  location?: string; // e.g. "Front Door & Porch", "Kids Playroom", "Backyard", "Kids Entrance"
+  rtspUrl?: string; // e.g. "rtsp://admin:password@192.168.1.150:554/live/ch0"
+  proxyUrl?: string; // optional WebRTC / HLS / HTTP stream URL from go2rtc, Scrypted, or Home Assistant
+  snapshotUrl?: string; // Direct snapshot URL e.g. "http://192.168.1.150/snapshot.jpg"
+  motionAlertsEnabled?: boolean;
+  chimeSoundEnabled?: boolean;
+  nightVisionMode?: 'auto' | 'on' | 'off';
+  streamQuality?: '1080p' | '720p' | '360p';
+}
+
 export type KioskTimeoutOption = 'off' | '1m' | '2m' | '3m' | '5m' | '10m' | '15m' | '30m';
 
 export interface AppSettings {
@@ -349,6 +362,7 @@ export interface AppSettings {
   brainTeaserEnabled?: boolean; // Toggle brain teaser challenges feature (default: true)
   readingRewardStars?: number; // Admin-determined points awarded for Reading Adventure (default: 5)
   readingDailyClaimLimit?: number; // Admin-determined maximum times stars can be claimed per day (e.g. 1 = once daily [default], 2 = 2x/day, 3 = 3x/day, 0 = unlimited)
+  aqaraCameraConfig?: AqaraCameraConfig; // Aqara G400 RTSP smart camera settings
 }
 
 export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';

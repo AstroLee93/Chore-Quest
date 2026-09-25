@@ -24,6 +24,7 @@ const KidAvatarModal = React.lazy(() => import('./KidAvatarModal').then((m) => (
 const BountyBoardModal = React.lazy(() => import('./BountyBoardModal').then((m) => ({ default: m.BountyBoardModal })));
 const BrainTeaserModal = React.lazy(() => import('./BrainTeaserModal').then((m) => ({ default: m.BrainTeaserModal })));
 const ReadingLogModal = React.lazy(() => import('./ReadingLogModal').then((m) => ({ default: m.ReadingLogModal })));
+const AqaraCameraModal = React.lazy(() => import('./AqaraCameraModal').then((m) => ({ default: m.AqaraCameraModal })));
 import { getGradeLevelInfo, getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
 import {
   isReadingCompletedToday,
@@ -71,6 +72,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [isBrainTeaserOpen, setIsBrainTeaserOpen] = useState<boolean>(false);
   const [readingLogKid, setReadingLogKid] = useState<KidProfile | null>(null);
   const [isReadingLogOpen, setIsReadingLogOpen] = useState<boolean>(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState<boolean>(false);
 
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = useMemo(() => getTodayDateString(), []);
@@ -349,12 +351,16 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           </div>
         </div>
 
-        {/* Center: Themed Clock & Live Weather (Isolated re-render for maximum speed) */}
+        {/* Center: Themed Clock & Live Weather with Standalone Video Camera Icon */}
         <KioskClock
           theme={theme}
           todayWeather={todayWeather}
           tempUnit={database.settings.tempUnit}
           householdExpiringChoresCount={householdExpiringChoresCount}
+          onOpenLiveCamera={() => {
+            sound.playTap();
+            setIsCameraModalOpen(true);
+          }}
         />
 
         {/* Right: Dinner Menu, Calendar, Fullscreen & Exit */}
@@ -1303,6 +1309,16 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
             setIsReadingLogOpen(false);
             setReadingLogKid(null);
           }}
+        />
+      )}
+
+      {/* Aqara G400 RTSP Live Camera Feed Modal */}
+      {isCameraModalOpen && (
+        <AqaraCameraModal
+          isOpen={isCameraModalOpen}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          onClose={() => setIsCameraModalOpen(false)}
         />
       )}
       </React.Suspense>

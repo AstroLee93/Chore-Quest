@@ -491,6 +491,85 @@ class SoundEngine {
     whooshOsc.start(now + 0.3);
     whooshOsc.stop(now + 3.0);
   }
+
+  // Aqara G400 Smart Doorbell Chime ("Ding-Dong!")
+  public playDoorbellChime() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // Ding (Higher pitch ~659.25Hz E5)
+    const dingOsc = ctx.createOscillator();
+    const dingGain = ctx.createGain();
+    dingOsc.type = 'sine';
+    dingOsc.frequency.setValueAtTime(659.25, now);
+    dingGain.gain.setValueAtTime(0.001, now);
+    dingGain.gain.linearRampToValueAtTime(0.35, now + 0.02);
+    dingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+    dingOsc.connect(dingGain);
+    dingGain.connect(ctx.destination);
+    dingOsc.start(now);
+    dingOsc.stop(now + 0.95);
+
+    // Dong (Lower pitch ~523.25Hz C5, slightly delayed by 400ms)
+    const dongOsc = ctx.createOscillator();
+    const dongGain = ctx.createGain();
+    dongOsc.type = 'sine';
+    dongOsc.frequency.setValueAtTime(523.25, now + 0.4);
+    dongGain.gain.setValueAtTime(0.001, now + 0.4);
+    dongGain.gain.linearRampToValueAtTime(0.38, now + 0.42);
+    dongGain.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+    dongOsc.connect(dongGain);
+    dongGain.connect(ctx.destination);
+    dongOsc.start(now + 0.4);
+    dongOsc.stop(now + 1.65);
+  }
+
+  // Camera Snapshot Shutter Click
+  public playCameraClick() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const clickOsc = ctx.createOscillator();
+    const clickGain = ctx.createGain();
+    clickOsc.type = 'triangle';
+    clickOsc.frequency.setValueAtTime(1400, now);
+    clickOsc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+
+    clickGain.gain.setValueAtTime(0.2, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+    clickOsc.connect(clickGain);
+    clickGain.connect(ctx.destination);
+    clickOsc.start(now);
+    clickOsc.stop(now + 0.08);
+  }
+
+  // Two-Way Radio / Intercom Mic Chirp
+  public playIntercomBeep() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.setValueAtTime(1760, now + 0.06);
+
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.13);
+  }
 }
 
 export const sound = new SoundEngine();

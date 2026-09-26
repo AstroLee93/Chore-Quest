@@ -88,10 +88,10 @@
    and selects across both Light Themes (Soft Sky) & Dark Themes (Buckeyes)
    ========================================================================= */
 
-/* 1. Default Baseline (Light Mode) */
-input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+/* 1. Default Baseline (Light Mode) - Wrapped in :where() for zero specificity so utility classes take precedence */
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
 textarea,
-select {
+select) {
   color: #0f172a;
   background-color: #ffffff;
   -webkit-text-fill-color: #0f172a;
@@ -103,7 +103,7 @@ select {
 .dark textarea:not(.bg-white):not(.bg-slate-50):not(.bg-slate-100):not(.bg-gray-50):not(.bg-yellow-50):not(.bg-amber-50),
 .dark select:not(.bg-white):not(.bg-slate-50):not(.bg-slate-100):not(.bg-gray-50):not(.bg-yellow-50):not(.bg-amber-50) {
   color: #ffffff !important;
-  background-color: #1e293b;
+  background-color: #1e293b !important;
   -webkit-text-fill-color: #ffffff !important;
   color-scheme: dark;
 }
@@ -179,22 +179,76 @@ textarea.bg-slate-50::placeholder,
 }
 
 /* 4. Guaranteed Dark-Surface Inputs:
-   When dark mode is active and the element has a dark surface,
-   the text MUST be bright crisp white (#ffffff) and never dark! */
+   When dark mode is active OR when the element has an explicit dark surface,
+   both background AND text must be guaranteed dark and high contrast! */
+input.bg-slate-800,
+textarea.bg-slate-800,
+select.bg-slate-800 {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color-scheme: dark !important;
+}
+
+input.bg-slate-900,
+textarea.bg-slate-900,
+select.bg-slate-900 {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color-scheme: dark !important;
+}
+
+input.bg-slate-950,
+textarea.bg-slate-950,
+select.bg-slate-950 {
+  background-color: #020617 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color-scheme: dark !important;
+}
+
+input.bg-zinc-800,
+textarea.bg-zinc-800,
+select.bg-zinc-800 {
+  background-color: #27272a !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color-scheme: dark !important;
+}
+
+input.bg-zinc-900,
+textarea.bg-zinc-900,
+select.bg-zinc-900 {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color-scheme: dark !important;
+}
+
+input.bg-black,
+textarea.bg-black,
+select.bg-black {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color-scheme: dark !important;
+}
+
+/* Dark Modal/Drawer Inputs: ensure any input inside dark surfaces has dark background and bright text */
+.bg-slate-900 input:not(.bg-white):not([class*="bg-white"]):not([class*="bg-slate-50"]):not([class*="bg-gray-50"]),
+.bg-slate-900 textarea:not(.bg-white):not([class*="bg-white"]),
+.bg-slate-950 input:not(.bg-white):not([class*="bg-white"]):not([class*="bg-slate-50"]):not([class*="bg-gray-50"]),
+.bg-slate-950 textarea:not(.bg-white):not([class*="bg-white"]) {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color-scheme: dark !important;
+}
+
 .dark input[class*="dark:bg-"],
 .dark textarea[class*="dark:bg-"],
 .dark select[class*="dark:bg-"],
-input.bg-slate-800,
-input.bg-slate-900,
-input.bg-zinc-800,
-input.bg-zinc-900,
-input.bg-black,
-textarea.bg-slate-800,
-textarea.bg-slate-900,
-textarea.bg-zinc-800,
-textarea.bg-zinc-900,
-select.bg-slate-800,
-select.bg-slate-900,
 .dark input[class*="dark:text-white"],
 .dark textarea[class*="dark:text-white"],
 .dark select[class*="dark:text-white"],
@@ -209,15 +263,25 @@ select.bg-slate-900,
   color-scheme: dark !important;
 }
 
+/* Emerald inputs */
+input.text-emerald-300,
+input.text-emerald-400 {
+  color: #6ee7b7 !important;
+  -webkit-text-fill-color: #6ee7b7 !important;
+}
+
 /* Dark Surface Placeholders */
 .dark input[class*="dark:bg-"]::placeholder,
 .dark textarea[class*="dark:bg-"]::placeholder,
 .dark input:not(.bg-white)::placeholder,
 .dark textarea:not(.bg-white)::placeholder,
 input.bg-slate-800::placeholder,
-input.bg-slate-900::placeholder {
-  color: #cbd5e1 !important;
-  -webkit-text-fill-color: #cbd5e1 !important;
+input.bg-slate-900::placeholder,
+input.bg-slate-950::placeholder,
+.bg-slate-900 input::placeholder,
+.bg-slate-950 input::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
   opacity: 1 !important;
 }
 

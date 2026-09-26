@@ -484,8 +484,14 @@ export const AqaraCameraModal: React.FC<AqaraCameraModalProps> = ({
   // Save RTSP / Proxy camera configuration
   const handleSaveConfig = () => {
     const trimmedRtsp = editRtspUrl.trim();
-    const trimmedProxy = editProxyUrl.trim();
+    let trimmedProxy = editProxyUrl.trim();
     const trimmedSnapshot = editSnapshotUrl.trim();
+
+    // Auto-normalize go2rtc WebRTC stream URL to append &muted=1 for Safari / iPadOS autoplay
+    if (trimmedProxy.includes('stream.html') && trimmedProxy.includes('mode=webrtc') && !trimmedProxy.includes('muted=')) {
+      const sep = trimmedProxy.includes('?') ? '&' : '?';
+      trimmedProxy = `${trimmedProxy}${sep}muted=1`;
+    }
 
     const updatedConfig: AqaraCameraConfig = {
       enabled: true,
@@ -500,15 +506,18 @@ export const AqaraCameraModal: React.FC<AqaraCameraModalProps> = ({
       streamQuality: '1080p',
     };
 
-    // 1. Immediately persist to localStorage
+    // 1. Immediately persist to localStorage (both primary and legacy keys)
     try {
-      localStorage.setItem('chorequest_aqara_camera_config', JSON.stringify(updatedConfig));
+      const payload = JSON.stringify(updatedConfig);
+      localStorage.setItem('chorequest_aqara_camera_config', payload);
+      localStorage.setItem('kidcoin_aqara_camera_config_v1', payload);
     } catch (err) {
       console.warn('Failed to save to localStorage:', err);
     }
 
     // 2. Update local state in modal immediately
     setConfig(updatedConfig);
+    setEditProxyUrl(trimmedProxy);
     setIsDemoModeActive(false); // When saved, always prioritize the user's real stream
     setStreamError(null);
     setIsStreamLoading(Boolean(trimmedProxy || (trimmedRtsp && trimmedRtsp.startsWith('http'))));
@@ -1134,7 +1143,8 @@ export const AqaraCameraModal: React.FC<AqaraCameraModalProps> = ({
                   value={editCameraName}
                   onChange={(e) => setEditCameraName(e.target.value)}
                   placeholder="e.g. Aqara G400 - Front Door"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-indigo-500 font-medium"
+                  style={{ backgroundColor: '#1e293b', color: '#ffffff', WebkitTextFillColor: '#ffffff' }}
+                  className="w-full !bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs !text-white placeholder:text-slate-500 focus:outline-hidden focus:border-indigo-500 font-medium transition-colors shadow-inner"
                 />
               </div>
 
@@ -1152,22 +1162,42 @@ export const AqaraCameraModal: React.FC<AqaraCameraModalProps> = ({
                   type="text"
                   value={editProxyUrl}
                   onChange={(e) => setEditProxyUrl(e.target.value)}
-                  placeholder="http://192.168.50.X:1984/stream.html?src=aqara&mode=webrtc"
-                  className="w-full bg-slate-800 border border-emerald-500/50 rounded-xl px-3 py-2 text-xs text-emerald-300 font-mono focus:outline-hidden focus:border-emerald-400"
+                  placeholder="http://192.168.50.X:1984/stream.html?src=aqara&mode=webrtc&muted=1"
+                  style={{ backgroundColor: '#1e293b', color: '#6ee7b7', WebkitTextFillColor: '#6ee7b7' }}
+                  className="w-full !bg-slate-800 border border-emerald-500/60 rounded-xl px-3.5 py-2.5 text-xs !text-emerald-300 font-mono placeholder:text-slate-500 focus:outline-hidden focus:border-emerald-400 transition-colors shadow-inner"
                 />
-                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                  <span className="text-[10px] text-slate-400">Presets:</span>
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  <span className="text-[10px] font-semibold text-slate-400">Presets:</span>
                   <button
                     type="button"
-                    onClick={() => setEditProxyUrl('http://192.168.50.X:1984/stream.html?src=aqara&mode=webrtc')}
-                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 cursor-pointer"
+                    onClick={() => {
+                      const hostMatch = editProxyUrl.match(/https?:\/\/[^/]+/);
+                      const base = hostMatch ? hostMatch[0] : 'http://192.168.50.X:1984';
+                      setEditProxyUrl(`${base}/stream.html?src=aqara&mode=webrtc&muted=1`);
+                    }}
+                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-0.5 rounded-md border border-slate-700 cursor-pointer font-medium active:scale-95 transition-all"
                   >
                     stream.html (WebRTC)
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEditProxyUrl('http://192.168.50.X:1984/api/stream.mp4?src=aqara')}
-                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 cursor-pointer"
+                    onClick={() => {
+                      const hostMatch = editProxyUrl.match(/https?:\/\/[^/]+/);
+                      const base = hostMatch ? hostMatch[0] : 'http://192.168.50.X:1984';
+                      setEditProxyUrl(`${base}/api/stream.mjpeg?src=aqara`);
+                    }}
+                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/40 cursor-pointer font-medium active:scale-95 transition-all"
+                  >
+                    stream.mjpeg (MJPEG)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const hostMatch = editProxyUrl.match(/https?:\/\/[^/]+/);
+                      const base = hostMatch ? hostMatch[0] : 'http://192.168.50.X:1984';
+                      setEditProxyUrl(`${base}/api/stream.mp4?src=aqara`);
+                    }}
+                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-0.5 rounded-md border border-slate-700 cursor-pointer font-medium active:scale-95 transition-all"
                   >
                     api/stream.mp4 (MSE)
                   </button>
@@ -1184,10 +1214,11 @@ export const AqaraCameraModal: React.FC<AqaraCameraModalProps> = ({
                   value={editRtspUrl}
                   onChange={(e) => setEditRtspUrl(e.target.value)}
                   placeholder="rtsp://admin:password@192.168.50.X:554/live/ch0"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-hidden focus:border-indigo-500"
+                  style={{ backgroundColor: '#1e293b', color: '#ffffff', WebkitTextFillColor: '#ffffff' }}
+                  className="w-full !bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs !text-white font-mono placeholder:text-slate-500 focus:outline-hidden focus:border-indigo-500 transition-colors shadow-inner"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
-                  Accepts <code className="text-emerald-300">rtsp://</code>, <code className="text-emerald-300">rtsps://</code>, <code className="text-emerald-300">ws://</code>, or local IPs.
+                  Accepts <code className="text-emerald-300">rtsp://</code>, <code className="text-emerald-300">rtsps://</code>, <code className="text-emerald-300">ws://</code>, <code className="text-emerald-300">http://</code>, or local IPs.
                 </span>
               </div>
 
@@ -1201,7 +1232,8 @@ export const AqaraCameraModal: React.FC<AqaraCameraModalProps> = ({
                   value={editSnapshotUrl}
                   onChange={(e) => setEditSnapshotUrl(e.target.value)}
                   placeholder="http://192.168.50.X:1984/api/frame.jpeg?src=aqara"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-hidden focus:border-indigo-500"
+                  style={{ backgroundColor: '#1e293b', color: '#ffffff', WebkitTextFillColor: '#ffffff' }}
+                  className="w-full !bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs !text-white font-mono placeholder:text-slate-500 focus:outline-hidden focus:border-indigo-500 transition-colors shadow-inner"
                 />
               </div>
             </div>

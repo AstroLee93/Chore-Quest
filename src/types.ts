@@ -562,6 +562,61 @@ export interface KidBadgeProgress {
   unlockedDate?: string;
 }
 
+export type HouseRuleCategory =
+  | 'respect'
+  | 'safety'
+  | 'chores'
+  | 'screens'
+  | 'bedtime'
+  | 'honesty'
+  | 'general';
+
+export interface HouseRuleConsequences {
+  firstOffense: string;
+  firstOffenseStars?: number; // Automatic deduction for 1st offense (default: 0)
+  secondOffense: string;
+  secondOffenseStars?: number; // Automatic deduction for 2nd offense (e.g. 2 or 5)
+  thirdOffense: string;
+  thirdOffenseStars?: number; // Automatic deduction for 3rd offense (e.g. 5, 10, 15)
+  starPenalty: number; // Primary linked star penalty amount
+  autoDeductEnabled?: boolean; // When true, infractions automatically deduct from child balance
+}
+
+export interface HouseRule {
+  id: string;
+  ruleNumber: number;
+  title: string;
+  description: string;
+  category: HouseRuleCategory;
+  icon?: string;
+  consequences: HouseRuleConsequences;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RuleInfractionLog {
+  id: string;
+  ruleId: string;
+  ruleTitle: string;
+  ruleNumber?: number;
+  category?: HouseRuleCategory;
+  kidId: string;
+  kidName: string;
+  kidAvatar?: string;
+  date: string; // YYYY-MM-DD
+  timestamp: string; // ISO string
+  offenseLevel: 1 | 2 | 3;
+  actionTaken: string;
+  starsDeducted: number;
+  previousBalance?: number;
+  newBalance?: number;
+  isPardoned?: boolean;
+  pardonedAt?: string;
+  notes?: string;
+  loggedBy: string;
+}
+
 export interface FamilyDatabase {
   version: number;
   settings: AppSettings;
@@ -579,6 +634,8 @@ export interface FamilyDatabase {
   weeklyGroceryList?: WeeklyGroceryList;
   customCalendarCategories?: CustomCalendarCategory[];
   readingLogs?: ReadingLogEntry[];
+  houseRules?: HouseRule[];
+  ruleInfractions?: RuleInfractionLog[];
   lastBackupDate?: string;
 }
 

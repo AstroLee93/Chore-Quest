@@ -25,6 +25,7 @@ const BountyBoardModal = React.lazy(() => import('./BountyBoardModal').then((m) 
 const BrainTeaserModal = React.lazy(() => import('./BrainTeaserModal').then((m) => ({ default: m.BrainTeaserModal })));
 const ReadingLogModal = React.lazy(() => import('./ReadingLogModal').then((m) => ({ default: m.ReadingLogModal })));
 const AqaraCameraModal = React.lazy(() => import('./AqaraCameraModal').then((m) => ({ default: m.AqaraCameraModal })));
+const HouseRulesModal = React.lazy(() => import('./HouseRulesModal').then((m) => ({ default: m.HouseRulesModal })));
 import { getGradeLevelInfo, getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
 import {
   isReadingCompletedToday,
@@ -73,6 +74,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [readingLogKid, setReadingLogKid] = useState<KidProfile | null>(null);
   const [isReadingLogOpen, setIsReadingLogOpen] = useState<boolean>(false);
   const [isCameraModalOpen, setIsCameraModalOpen] = useState<boolean>(false);
+  const [isHouseRulesModalOpen, setIsHouseRulesModalOpen] = useState<boolean>(false);
 
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = useMemo(() => getTodayDateString(), []);
@@ -363,45 +365,24 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           }}
         />
 
-        {/* Right: Dinner Menu, Calendar, Fullscreen & Exit */}
+        {/* Right: House Rules, Fullscreen & Exit */}
         <div className="flex items-center gap-2 flex-wrap self-end lg:self-center relative z-50">
-          {/* Dinner Menu Button */}
+          {/* House Rules Notebook Button */}
           <button
-            id="btn-kiosk-dinner-menu"
+            id="btn-kiosk-house-rules"
             onClick={() => {
               sound.playTap();
-              if (onOpenMenu) onOpenMenu();
-              else setIsMenuModalOpen(true);
+              setIsHouseRulesModalOpen(true);
             }}
-            className={`p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl ${theme.kioskFooterPillSecondaryBg} ${theme.kioskFooterPillSecondaryText} font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs`}
-            title="Open Weekly Dinner Menu & Kids' Choice Voting"
+            className={`p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl ${theme.kioskFooterPillSecondaryBg} ${theme.kioskFooterPillSecondaryText} font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs border border-amber-300/30 hover:border-amber-400`}
+            title="Open Family House Rules & Conduct Notebook"
           >
-            <span className="text-sm">{todayMenuPlan.icon || '🍽️'}</span>
-            <span className="hidden sm:inline">Dinner Menu</span>
-            {todayMenuPlan.votingEnabled && (
-              <span className="px-1.5 py-0.2 rounded-full bg-pink-600 text-white text-[10px] font-black animate-pulse">
-                Vote
-              </span>
-            )}
+            <span className="text-sm">📜</span>
+            <span className="hidden sm:inline">House Rules</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-400/30">
+              Rules
+            </span>
           </button>
-
-          {onOpenCalendar && (
-            <button
-              onClick={() => {
-                sound.playTap();
-                onOpenCalendar();
-              }}
-              className={`p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl ${theme.kioskClockBg} text-white font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95`}
-            >
-              <CalendarIcon className="w-4 h-4 text-amber-300" />
-              <span className="hidden sm:inline">Calendar</span>
-              {todayEvents.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-indigo-600 text-white text-[10px] font-black">
-                  {todayEvents.length}
-                </span>
-              )}
-            </button>
-          )}
 
           <button
             onClick={handleToggleFullscreen}
@@ -1319,6 +1300,17 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           database={database}
           onUpdateDatabase={onUpdateDatabase}
           onClose={() => setIsCameraModalOpen(false)}
+        />
+      )}
+
+      {/* House Rules Notebook Modal */}
+      {isHouseRulesModalOpen && (
+        <HouseRulesModal
+          isOpen={isHouseRulesModalOpen}
+          onClose={() => setIsHouseRulesModalOpen(false)}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          isParentMode={false}
         />
       )}
       </React.Suspense>

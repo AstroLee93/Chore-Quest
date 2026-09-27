@@ -40,6 +40,7 @@ interface NavbarProps {
   onToggleKiosk?: () => void;
   onOpenGoalManager?: () => void;
   onOpenVault?: () => void;
+  onOpenHouseRules?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -64,6 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleKiosk,
   onOpenGoalManager,
   onOpenVault,
+  onOpenHouseRules,
 }) => {
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const todayStr = getTodayDateString();
@@ -248,6 +250,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         onToggleKiosk={onToggleKiosk}
         onOpenGoalManager={onOpenGoalManager}
         onOpenVault={onOpenVault}
+        onOpenHouseRules={onOpenHouseRules}
       />
     </>
   );

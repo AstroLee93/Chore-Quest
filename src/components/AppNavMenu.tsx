@@ -49,6 +49,7 @@ export interface AppNavMenuProps {
   onToggleKiosk?: () => void;
   onOpenGoalManager?: () => void;
   onOpenVault?: () => void;
+  onOpenHouseRules?: () => void;
 }
 
 export const AppNavMenu: React.FC<AppNavMenuProps> = ({
@@ -75,6 +76,7 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
   onToggleKiosk,
   onOpenGoalManager,
   onOpenVault,
+  onOpenHouseRules,
 }) => {
   const [isThemeSectionExpanded, setIsThemeSectionExpanded] = useState<boolean>(false);
   const todayStr = getTodayDateString();
@@ -369,7 +371,31 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
                 </button>
               )}
 
-              {/* 5. Family Team Goal */}
+              {/* 5. House Rules Notebook Button */}
+              {onOpenHouseRules && (
+                <button
+                  id="btn-menu-house-rules"
+                  onClick={() => handleAction(onOpenHouseRules)}
+                  className="p-3.5 rounded-2xl bg-amber-50/90 hover:bg-amber-100/90 dark:bg-amber-950/30 dark:hover:bg-amber-950/50 border border-amber-200 dark:border-amber-900/40 text-amber-950 dark:text-amber-100 flex items-center justify-between gap-3 text-left transition-all cursor-pointer active:scale-95 shadow-xs"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 flex items-center justify-center text-xl shadow-2xs shrink-0">
+                      📜
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-black truncate">House Rules</div>
+                      <div className="text-[11px] font-semibold opacity-80 truncate">
+                        Code of conduct & penalties
+                      </div>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-lg bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 text-xs font-black shrink-0">
+                    Rules
+                  </span>
+                </button>
+              )}
+
+              {/* 6. Family Team Goal */}
               {onOpenGoalManager && (
                 <button
                   id="btn-menu-family-goal"

@@ -102,6 +102,7 @@ interface ParentDashboardProps {
   onOpenPiGuide: () => void;
   onOpenCalendar?: () => void;
   onOpenSnackRequest?: (kid?: KidProfile) => void;
+  onOpenHouseRules?: () => void;
 }
 
 export const ParentDashboard: React.FC<ParentDashboardProps> = ({
@@ -111,6 +112,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   onOpenPiGuide,
   onOpenCalendar,
   onOpenSnackRequest,
+  onOpenHouseRules,
 }) => {
   const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'menu' | 'chores' | 'rewards' | 'kids' | 'reading' | 'savings' | 'settings'>('activity');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
@@ -1073,16 +1075,33 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           </div>
         </div>
 
-        <button
-          id="btn-parent-exit-top"
-          onClick={() => {
-            sound.playTap();
-            onExitParentMode();
-          }}
-          className="px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-pink-500 hover:bg-pink-600 border border-pink-300 text-xs sm:text-sm font-black text-white transition-transform active:scale-95 cursor-pointer shrink-0 whitespace-nowrap shadow-xs"
-        >
-          ← Return to Kid View
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {onOpenHouseRules && (
+            <button
+              onClick={() => {
+                sound.playTap();
+                onOpenHouseRules();
+              }}
+              className="px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer transition-transform active:scale-95 shadow-xs border border-amber-300"
+              title="Open Family House Rules & Disciplinary Infractions Ledger"
+            >
+              <span>📜</span>
+              <span className="hidden sm:inline">House Rules & Ledger</span>
+              <span className="sm:hidden">Rules</span>
+            </button>
+          )}
+
+          <button
+            id="btn-parent-exit-top"
+            onClick={() => {
+              sound.playTap();
+              onExitParentMode();
+            }}
+            className="px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-pink-500 hover:bg-pink-600 border border-pink-300 text-xs sm:text-sm font-black text-white transition-transform active:scale-95 cursor-pointer shrink-0 whitespace-nowrap shadow-xs"
+          >
+            ← Return to Kid View
+          </button>
+        </div>
       </div>
 
       {/* Shared Family Goal Banner */}

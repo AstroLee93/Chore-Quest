@@ -3,6 +3,7 @@ import { getInitialSeedEvents } from './calendar';
 import { DEFAULT_WEEKLY_MENU } from './menu';
 import { DEFAULT_WEEKLY_GROCERY_LIST } from './grocery';
 import { createDefaultGoalsForKid, createDefaultTransactionsForKid } from './kidCoin';
+import { DEFAULT_HOUSE_RULES, getHouseRules, getRuleInfractions } from './houseRules';
 
 const STORAGE_KEY = 'chorequest_family_db_v1';
 
@@ -659,6 +660,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       starsAwarded: 5,
     },
   ],
+  houseRules: DEFAULT_HOUSE_RULES,
+  ruleInfractions: [],
 };
 
 // Storage operations
@@ -778,6 +781,13 @@ export const loadDatabase = (): FamilyDatabase => {
       }));
     }
 
+    if (!parsed.houseRules || parsed.houseRules.length === 0) {
+      parsed.houseRules = getHouseRules(parsed);
+    }
+    if (!parsed.ruleInfractions) {
+      parsed.ruleInfractions = getRuleInfractions(parsed);
+    }
+
     return parsed;
   } catch (err) {
     console.error('Error loading database from localStorage:', err);
@@ -885,6 +895,8 @@ export const importDatabaseJSON = (jsonString: string): FamilyDatabase => {
     weeklyMenu: parsed.weeklyMenu || DEFAULT_WEEKLY_MENU,
     weeklyGroceryList: parsed.weeklyGroceryList || DEFAULT_WEEKLY_GROCERY_LIST,
     readingLogs: parsed.readingLogs || [],
+    houseRules: parsed.houseRules || DEFAULT_HOUSE_RULES,
+    ruleInfractions: parsed.ruleInfractions || [],
     lastBackupDate: new Date().toISOString(),
   };
 };

@@ -42,6 +42,9 @@ const KidSnackRequestModal = React.lazy(() =>
 const KidCoinVaultModal = React.lazy(() =>
   import('./components/KidCoin/KidCoinVaultModal').then((m) => ({ default: m.KidCoinVaultModal }))
 );
+const HouseRulesModal = React.lazy(() =>
+  import('./components/HouseRulesModal').then((m) => ({ default: m.HouseRulesModal }))
+);
 
 export default function App() {
   const [database, setDatabase] = useState<FamilyDatabase>(() => loadDatabase());
@@ -59,6 +62,7 @@ export default function App() {
   const [isSnackRequestOpen, setIsSnackRequestOpen] = useState<boolean>(false);
   const [snackRequestKid, setSnackRequestKid] = useState<KidProfile | null>(null);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
+  const [isHouseRulesOpen, setIsHouseRulesOpen] = useState<boolean>(false);
   const [isSyncConnected, setIsSyncConnected] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<AppThemeId>(() => getSavedThemeId());
 
@@ -698,6 +702,7 @@ export default function App() {
         onToggleKiosk={handleEnterKiosk}
         onOpenGoalManager={() => setIsGoalModalOpen(true)}
         onOpenVault={() => setIsKidCoinVaultOpen(true)}
+        onOpenHouseRules={() => setIsHouseRulesOpen(true)}
       />
 
       <main className="flex-1 p-0 sm:pb-6 flex flex-col relative z-20">
@@ -723,6 +728,7 @@ export default function App() {
                 if (kid) setSnackRequestKid(kid);
                 setIsSnackRequestOpen(true);
               }}
+              onOpenHouseRules={() => setIsHouseRulesOpen(true)}
             />
           </React.Suspense>
         ) : activeKid ? (
@@ -912,6 +918,16 @@ export default function App() {
 
         {isPiGuideOpen && (
           <PiGuideModal isOpen={isPiGuideOpen} onClose={() => setIsPiGuideOpen(false)} />
+        )}
+
+        {isHouseRulesOpen && (
+          <HouseRulesModal
+            isOpen={isHouseRulesOpen}
+            onClose={() => setIsHouseRulesOpen(false)}
+            database={database}
+            onUpdateDatabase={handleUpdateDatabase}
+            isParentMode={isParentMode}
+          />
         )}
       </React.Suspense>
     </div>

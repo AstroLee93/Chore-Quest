@@ -19,16 +19,24 @@ import {
   AlertTriangle,
   RotateCw,
   Gift,
-  Eye,
   BookOpen,
-  ChevronRight,
   Sun,
   Moon,
-  Sunrise,
-  School,
   Cookie,
-  Sliders,
   Tv,
+  Coins,
+  Rocket,
+  TrendingUp,
+  Utensils,
+  ShoppingCart,
+  Calendar as CalendarIcon,
+  Video,
+  Award,
+  Brain,
+  Camera,
+  Heart,
+  DollarSign,
+  Scan,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import {
@@ -43,7 +51,16 @@ interface PiGuideModalProps {
   onClose: () => void;
 }
 
-type GuideTab = 'kids' | 'parents' | 'routine' | 'pi' | 'all';
+export type GuideTab =
+  | 'kids'
+  | 'parents'
+  | 'kidcoin'
+  | 'rewards'
+  | 'calendar'
+  | 'camera'
+  | 'routine'
+  | 'pi'
+  | 'all';
 
 export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<GuideTab>('kids');
@@ -91,10 +108,10 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/75 backdrop-blur-xs animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-xs animate-fade-in">
       <div
         id="pi-guide-dialog"
-        className="bg-yellow-50 w-full max-w-4xl rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-7 shadow-2xl border-2 sm:border-4 border-yellow-300 max-h-[94vh] flex flex-col overflow-hidden"
+        className="bg-yellow-50 w-full max-w-5xl rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-7 shadow-2xl border-2 sm:border-4 border-yellow-300 max-h-[95vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 pb-3 sm:pb-4 border-b-2 border-yellow-200 shrink-0">
@@ -108,11 +125,11 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
                   ChoreQuest Family Instruction Guide
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-yellow-300 text-yellow-900 border border-yellow-400 shrink-0">
-                  Kids & Parents Edition
+                  Complete 2026 Master Edition
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-600 font-bold truncate">
-                Comprehensive illustrated instructions • Raspberry Pi local network setup
+                Illustrated handbook for kids & parents • Chores, KidCoin, Front Door Camera, Meal Planner & Pi Server
               </p>
             </div>
           </div>
@@ -132,8 +149,8 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
         {/* Quick Export Toolbar */}
         <div className="no-print bg-white p-2 sm:p-2.5 rounded-2xl border border-yellow-200 shadow-2xs mt-3 flex flex-wrap items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-1.5 text-xs font-black text-slate-700">
-            <Share2Icon className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Export in Your Preferred Format:</span>
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Export & Print for the Family Fridge:</span>
           </div>
           <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
             <button
@@ -212,7 +229,67 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
             }`}
           >
             <Shield className="w-3.5 h-3.5" />
-            <span>Parent's Command Guide</span>
+            <span>Parent's Command</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playTap();
+              setActiveTab('kidcoin');
+            }}
+            className={`px-3 py-2 rounded-xl sm:rounded-2xl text-xs font-black flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
+              activeTab === 'kidcoin'
+                ? 'bg-emerald-600 text-white shadow-xs border-2 border-emerald-700 scale-[1.02]'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-emerald-50'
+            }`}
+          >
+            <Rocket className="w-3.5 h-3.5" />
+            <span>KidCoin & Savings</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playTap();
+              setActiveTab('rewards');
+            }}
+            className={`px-3 py-2 rounded-xl sm:rounded-2xl text-xs font-black flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
+              activeTab === 'rewards'
+                ? 'bg-pink-500 text-white shadow-xs border-2 border-pink-600 scale-[1.02]'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-pink-50'
+            }`}
+          >
+            <Gift className="w-3.5 h-3.5" />
+            <span>Rewards & Goals</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playTap();
+              setActiveTab('calendar');
+            }}
+            className={`px-3 py-2 rounded-xl sm:rounded-2xl text-xs font-black flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
+              activeTab === 'calendar'
+                ? 'bg-cyan-600 text-white shadow-xs border-2 border-cyan-700 scale-[1.02]'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-cyan-50'
+            }`}
+          >
+            <Utensils className="w-3.5 h-3.5" />
+            <span>Meals, Grocery & Calendar</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playTap();
+              setActiveTab('camera');
+            }}
+            className={`px-3 py-2 rounded-xl sm:rounded-2xl text-xs font-black flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
+              activeTab === 'camera'
+                ? 'bg-violet-600 text-white shadow-xs border-2 border-violet-700 scale-[1.02]'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-violet-50'
+            }`}
+          >
+            <Video className="w-3.5 h-3.5" />
+            <span>Front Door Camera & Kiosk</span>
           </button>
 
           <button
@@ -222,12 +299,12 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
             }}
             className={`px-3 py-2 rounded-xl sm:rounded-2xl text-xs font-black flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
               activeTab === 'routine'
-                ? 'bg-pink-500 text-white shadow-xs border-2 border-pink-600 scale-[1.02]'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-pink-50'
+                ? 'bg-amber-600 text-white shadow-xs border-2 border-amber-700 scale-[1.02]'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-amber-50'
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span>Routines & Time Windows</span>
+            <span>Routines & Hours</span>
           </button>
 
           <button
@@ -237,12 +314,12 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
             }}
             className={`px-3 py-2 rounded-xl sm:rounded-2xl text-xs font-black flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
               activeTab === 'pi'
-                ? 'bg-emerald-600 text-white shadow-xs border-2 border-emerald-700 scale-[1.02]'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-emerald-50'
+                ? 'bg-rose-600 text-white shadow-xs border-2 border-rose-700 scale-[1.02]'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-rose-50'
             }`}
           >
             <span>🍓</span>
-            <span>Raspberry Pi 5 Setup</span>
+            <span>Raspberry Pi 5</span>
           </button>
 
           <button
@@ -261,7 +338,7 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
           </button>
         </div>
 
-        {/* Scrollable Guide Content (Also targets #printable-guide during print) */}
+        {/* Scrollable Guide Content */}
         <div
           id="printable-guide"
           className="flex-1 overflow-y-auto mt-3 pr-1 sm:pr-2 space-y-4 text-slate-700 text-xs sm:text-sm"
@@ -273,7 +350,7 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-2xl">⭐</span>
                   <h3 className="text-base sm:text-lg font-black text-amber-950">
-                    The Kid Mission Handbook: How to Play & Earn
+                    Part 1: The Kid Mission Handbook (How to Play & Earn)
                   </h3>
                 </div>
                 <p className="text-xs text-amber-900 font-bold">
@@ -292,7 +369,7 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
                       <h4 className="font-black text-slate-800 text-sm">Choose Your Avatar & Profile</h4>
                     </div>
                     <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                      Tap your name card on the home screen. Pick your favorite emoji avatar, custom color, and see your current Level (Level 1 Novice all the way to Level 5 Chore Champion) and daily streak!
+                      Tap your name card on the home screen. Pick your favorite emoji avatar, custom color, and see your current Level (Level 1 Novice all the way to Level 5 Chore Champion) and daily flame streak!
                     </p>
                   </div>
                   <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] font-black text-amber-800">
@@ -405,7 +482,7 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
                       <h4 className="font-black text-slate-800 text-sm">Can't Finish? Give a Reason</h4>
                     </div>
                     <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                      If you're sick, out of cleaning supplies, or need adult help, tap the three dots or "Can't Complete" button. Select a polite explanation so Mom and Lex stay in the loop!
+                      If you're sick, out of cleaning supplies, or need adult help, tap the "Can't Complete" button. Select a polite explanation so parents understand why the chore was skipped!
                     </p>
                   </div>
                   <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] font-black text-rose-800">
@@ -418,18 +495,18 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
                 <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="w-7 h-7 rounded-xl bg-pink-500 text-white font-black text-sm flex items-center justify-center">
+                      <span className="w-7 h-7 rounded-xl bg-indigo-500 text-white font-black text-sm flex items-center justify-center">
                         8
                       </span>
-                      <h4 className="font-black text-slate-800 text-sm">Reward Store & Snack Requests 🍪</h4>
+                      <h4 className="font-black text-slate-800 text-sm">Reading Log Adventure & Badges 📚</h4>
                     </div>
                     <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                      Visit the Reward Store to trade your earned stars for screen time, allowance, outings, or toys. You can also send a custom Snack & Treat Request directly to your parents!
+                      Log your daily reading minutes and book titles! Track total reading time, level up your Reading Streak, and unlock special achievement badges (Bookworm, Speed Reader, and Master Scholar).
                     </p>
                   </div>
-                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] font-black text-pink-800">
-                    <Gift className="w-3.5 h-3.5 text-pink-600" />
-                    <span>Watch your star balance grow as you help the family!</span>
+                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] font-black text-indigo-800">
+                    <Award className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Collect all achievement badges across the board!</span>
                   </div>
                 </div>
               </div>
@@ -443,7 +520,7 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
                 <div className="flex items-center gap-2 mb-1">
                   <Shield className="w-6 h-6 text-indigo-900" />
                   <h3 className="text-base sm:text-lg font-black text-indigo-950">
-                    Parent Command & Admin Guide
+                    Part 2: Parent Command & Admin Guide
                   </h3>
                 </div>
                 <p className="text-xs text-indigo-900 font-bold">
@@ -461,7 +538,7 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
                     <h4 className="font-black text-slate-800 text-sm">Parent PIN Access</h4>
                   </div>
                   <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                    Open the navigation menu and enter your 4-digit Parent PIN. The default PIN is <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-indigo-900 font-black">1234</code>. You can change this anytime under Parent Settings.
+                    Open the navigation menu and enter your 4-digit Parent PIN. The default PIN is <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-indigo-900 font-black">1234</code>. You can change this anytime under Parent Settings for complete household privacy.
                   </p>
                 </div>
 
@@ -532,29 +609,297 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
                     <h4 className="font-black text-slate-800 text-sm">Kitchen Wall Kiosk Mode 📺</h4>
                   </div>
                   <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                    Mount an old iPad, Android tablet, or touch monitor in the kitchen. Launch Kiosk Mode for a high-contrast, always-on household scoreboard with MVP leaderboards and chimes.
+                    Mount an old iPad, Android tablet, or touch monitor in the kitchen. Launch Kiosk Mode for a high-contrast, always-on household scoreboard with MVP leaderboards, digital clock, and front door camera button.
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* TAB 3: DAILY ROUTINES & TIME WINDOWS */}
-          {(activeTab === 'routine' || activeTab === 'all') && (
+          {/* TAB 3: KIDCOIN & SAVINGS MISSIONS */}
+          {(activeTab === 'kidcoin' || activeTab === 'all') && (
+            <div className={`space-y-3 sm:space-y-4 ${activeTab === 'all' ? 'pt-6 border-t-2 border-emerald-200 print-page-break' : ''}`}>
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-emerald-100/80 border-2 border-emerald-300">
+                <div className="flex items-center gap-2 mb-1">
+                  <Rocket className="w-6 h-6 text-emerald-900" />
+                  <h3 className="text-base sm:text-lg font-black text-emerald-950">
+                    Part 3: KidCoin Financial System & Rocket Savings Missions
+                  </h3>
+                </div>
+                <p className="text-xs text-emerald-900 font-bold">
+                  Teach lifelong financial literacy, real-dollar savings goals, compound interest calculations, and allowance conversions.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
+                      🪙
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">What is KidCoin?</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    KidCoin is your family's private digital currency that bridges chore stars and real-world allowance. Kids track their total balance, see deposits from completed chore missions, and learn how money is managed.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border-2 border-emerald-400 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-black">
+                      🚀
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Interactive Rocket Savings Missions</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Kids can set a savings target (like a new Lego set, bicycle, or video game). As they save KidCoins towards their mission, an interactive rocket fuels up on their screen and initiates a launch celebration when the goal is reached!
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
+                      📈
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Compound Interest Earnings</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Teach kids the magic of compounding! Parents can enable weekly compound interest (e.g. 5% or 10%). The app calculates weekly growth, showing children how patience and saving money generates extra passive income.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
+                      💳
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Allowance & Star Conversion</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Parents can establish the exchange rate between earned chore stars and real money (e.g., 10 Stars = $1.00). Kids can choose whether to cash out for immediate treats or deposit into their long-term KidCoin savings.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: REWARDS, SNACK REQUESTS & FAMILY GOALS */}
+          {(activeTab === 'rewards' || activeTab === 'all') && (
             <div className={`space-y-3 sm:space-y-4 ${activeTab === 'all' ? 'pt-6 border-t-2 border-pink-200 print-page-break' : ''}`}>
               <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-pink-100/80 border-2 border-pink-300">
                 <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-6 h-6 text-pink-900" />
+                  <Gift className="w-6 h-6 text-pink-900" />
                   <h3 className="text-base sm:text-lg font-black text-pink-950">
-                    Recommended Family Time Windows & Routine
+                    Part 4: Rewards, Snack Requests, Family Goals & Mind Quests
                   </h3>
                 </div>
                 <p className="text-xs text-pink-900 font-bold">
+                  Keep motivation high with immediate incentives, collaborative household goals, and daily brain teaser trivia challenges.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-black">
+                      🎁
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">The Reward Store</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Trade stars for privileges: 30 minutes of video games, choosing dinner, staying up 30 minutes late on Friday, or special weekend outings. Parents can add custom rewards anytime.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-black">
+                      🍪
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Kid Snack & Treat Requests</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Kids can browse the snack catalog and submit a request to Mom or Lex. Parents review the request in the admin queue, verify the kid's star balance, and approve or decline with a personalized note.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border-2 border-pink-300 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black">
+                      🏆
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Shared Family Goals (Teamwork Meter)</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Encourage siblings to work together! Set a collective household goal like a Family Pizza Party (100 Stars) or Water Park Trip (250 Stars). All kids' completed chores contribute to a shared progress bar!
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-black">
+                      🧠
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Mind Quest Brain Teasers & Trivia</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Engage young minds with age-tailored daily trivia, logic puzzles, and math challenges. Kids earn bonus stars for solving riddles, and the Top Brains Leaderboard spotlights the week's sharpest thinkers!
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: MEALS, GROCERY & CALENDAR */}
+          {(activeTab === 'calendar' || activeTab === 'all') && (
+            <div className={`space-y-3 sm:space-y-4 ${activeTab === 'all' ? 'pt-6 border-t-2 border-cyan-200 print-page-break' : ''}`}>
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-cyan-100/80 border-2 border-cyan-300">
+                <div className="flex items-center gap-2 mb-1">
+                  <Utensils className="w-6 h-6 text-cyan-900" />
+                  <h3 className="text-base sm:text-lg font-black text-cyan-950">
+                    Part 5: Family Calendar, Meal Planner & Smart Grocery Management
+                  </h3>
+                </div>
+                <p className="text-xs text-cyan-900 font-bold">
+                  Streamline household logistics, plan nutritious weekly menus, and automate grocery shopping with barcode scanning.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-800 flex items-center justify-center font-black">
+                      📅
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Unified Family Calendar</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    View daily and monthly schedules, doctor appointments, soccer practices, school holidays, and chore deadlines in one place. Supports optional two-way Google Calendar synchronization!
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-800 flex items-center justify-center font-black">
+                      🍳
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Weekly Meal Planner & Recipe Explorer</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Plan breakfasts, lunches, and dinners from Monday through Sunday. Open recipe cards to review ingredients, prep times, step-by-step instructions, and kids' favorite meals.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-800 flex items-center justify-center font-black">
+                      🛒
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Categorized Grocery Shopping List</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Missing pantry items? Add groceries categorized by aisle (Produce, Dairy, Meat, Bakery, Pantry). Ingredients from your planned weekly meals can be added with a single tap.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border-2 border-cyan-400 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-cyan-600 text-white flex items-center justify-center font-black">
+                      🔍
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Barcode Scanning & Receipt Import</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Scan retail barcodes directly using your device's camera to look up products instantly. Use Receipt Import to scan store receipts for automatic price estimates and pantry check-offs.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: FRONT DOOR CAMERA & KIOSK */}
+          {(activeTab === 'camera' || activeTab === 'all') && (
+            <div className={`space-y-3 sm:space-y-4 ${activeTab === 'all' ? 'pt-6 border-t-2 border-violet-200 print-page-break' : ''}`}>
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-violet-100/80 border-2 border-violet-300">
+                <div className="flex items-center gap-2 mb-1">
+                  <Video className="w-6 h-6 text-violet-900" />
+                  <h3 className="text-base sm:text-lg font-black text-violet-950">
+                    Part 6: Front Door Camera & Kitchen Wall Kiosk Integration
+                  </h3>
+                </div>
+                <p className="text-xs text-violet-900 font-bold">
+                  Stream live security camera feeds from go2rtc on your Raspberry Pi directly to your iPad kiosk and family devices.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-violet-100 text-violet-800 flex items-center justify-center font-black">
+                      📹
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Aqara G400 + go2rtc Streaming</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    ChoreQuest connects to your local <strong>go2rtc</strong> server running on port 1984. Enter your stream URL (e.g. <code className="bg-slate-100 text-violet-900 px-1 py-0.5 rounded font-mono text-[11px]">http://192.168.50.X:1984/stream.html?src=aqara&amp;mode=webrtc&amp;muted=1</code>) to view the live porch feed without cloud fees.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border-2 border-violet-400 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center font-black">
+                      🛡️
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">iPadOS Kiosk Resilience & MJPEG Fallback</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Designed specifically for wall-mounted iPads: automatically adds <code className="font-mono text-emerald-700 bg-emerald-50 px-1 rounded">&amp;muted=1</code> so Safari allows autoplay. If a WebRTC socket pauses when the iPad sleeps, tap the HUD button to switch to MJPEG streaming (<code className="font-mono text-[11px]">/api/stream.mjpeg</code>) for 100% uninterrupted display.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-violet-100 text-violet-800 flex items-center justify-center font-black">
+                      📢
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Two-Way Chime Broadcast & Audio</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Broadcast quick voice alerts to the kids ("Someone is at the front door! 🚪", "Dinner is ready! 🍽️", "10 minute warning before bedtime! 🛏️") with audio chimes and visual banners.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-violet-100 text-violet-800 flex items-center justify-center font-black">
+                      🌙
+                    </div>
+                    <h4 className="font-black text-slate-800 text-sm">Daylight & IR Night Vision Modes</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    Toggle between crisp full-color Daylight mode and high-contrast Infrared Night Vision directly from the camera modal header. Take instant snapshots and download them with one tap.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: DAILY ROUTINES & TIME WINDOWS */}
+          {(activeTab === 'routine' || activeTab === 'all') && (
+            <div className={`space-y-3 sm:space-y-4 ${activeTab === 'all' ? 'pt-6 border-t-2 border-amber-200 print-page-break' : ''}`}>
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-amber-100/80 border-2 border-amber-300">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-6 h-6 text-amber-900" />
+                  <h3 className="text-base sm:text-lg font-black text-amber-950">
+                    Part 7: Recommended Family Time Windows & Routine
+                  </h3>
+                </div>
+                <p className="text-xs text-amber-900 font-bold">
                   Time-gating ensures chores happen at natural parts of the day so kids develop reliable, consistent habits.
                 </p>
               </div>
 
-              {/* Visual Routine Schedule Table / Cards */}
+              {/* Visual Routine Schedule Cards */}
               <div className="space-y-2.5">
                 {/* Morning */}
                 <div className="p-3.5 sm:p-4 rounded-2xl bg-white border-2 border-amber-300 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -662,17 +1007,17 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
             </div>
           )}
 
-          {/* TAB 4: RASPBERRY PI 5 SETUP */}
+          {/* TAB 8: RASPBERRY PI 5 SETUP */}
           {(activeTab === 'pi' || activeTab === 'all') && (
-            <div className={`space-y-3 sm:space-y-4 ${activeTab === 'all' ? 'pt-6 border-t-2 border-emerald-200 print-page-break' : ''}`}>
-              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-emerald-100/80 border-2 border-emerald-300">
+            <div className={`space-y-3 sm:space-y-4 ${activeTab === 'all' ? 'pt-6 border-t-2 border-rose-200 print-page-break' : ''}`}>
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-rose-100/80 border-2 border-rose-300">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-2xl">🍓</span>
-                  <h3 className="text-base sm:text-lg font-black text-emerald-950">
-                    Raspberry Pi 5 Setup & Home Wi-Fi Hosting
+                  <h3 className="text-base sm:text-lg font-black text-rose-950">
+                    Part 8: Raspberry Pi 5 Setup & Home Wi-Fi Hosting
                   </h3>
                 </div>
-                <p className="text-xs text-emerald-900 font-bold">
+                <p className="text-xs text-rose-900 font-bold">
                   Host ChoreQuest 100% locally on your home network with zero monthly cloud subscriptions.
                 </p>
               </div>
@@ -758,7 +1103,7 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
                     100% Local Data Privacy & Security
                   </h4>
                   <p className="text-xs text-emerald-800 mt-0.5 leading-relaxed font-bold">
-                    All chore logs, kid profiles, reasons, and star balances reside strictly inside your home network. Zero external tracking or subscription lock-in!
+                    All chore logs, kid profiles, KidCoin balances, meal plans, and camera streams reside strictly inside your home network. Zero external tracking or subscription lock-in!
                   </p>
                 </div>
               </div>
@@ -786,26 +1131,3 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
     </div>
   );
 };
-
-function Share2Icon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="18" cy="5" r="3" />
-      <circle cx="6" cy="12" r="3" />
-      <circle cx="18" cy="19" r="3" />
-      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-    </svg>
-  );
-}

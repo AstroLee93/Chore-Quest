@@ -227,15 +227,21 @@ export default function App() {
 
     if (existingLog?.status === 'completed') return;
 
+    const categoryObj = database.categories.find((c) => c.id === chore.categoryId);
+
     const newLog: ChoreLog = {
       id: existingLog?.id || `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       choreId: chore.id,
+      choreTitle: chore.title,
+      choreIcon: chore.icon,
+      categoryName: categoryObj?.name,
       kidId: activeKid.id,
       date: todayStr,
       status: 'completed',
       completedAt: new Date().toISOString(),
       starsAwarded: chore.stars,
       verifiedByParent: false,
+      completedSubtasks: chore.subtasks,
     };
 
     const updatedLogs = [
@@ -346,9 +352,15 @@ export default function App() {
   ) => {
     if (!activeKid) return;
 
+    const matchingChore = database.chores.find((c) => c.id === choreId);
+    const categoryObj = matchingChore ? database.categories.find((c) => c.id === matchingChore.categoryId) : undefined;
+
     const newLog: ChoreLog = {
       id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       choreId,
+      choreTitle: matchingChore?.title,
+      choreIcon: matchingChore?.icon,
+      categoryName: categoryObj?.name,
       kidId: activeKid.id,
       date: todayStr,
       status: 'skipped',

@@ -289,11 +289,16 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
         ...(notes.trim() ? [`💭 "${notes.trim()}"`] : []),
       ];
 
+      const readingTitle = `📚 Reading: ${bookTitle.trim()}${chapterCompleted ? ` (${chapterCompleted.trim()})` : ''}`;
+
       if (existingChoreLogIndex >= 0) {
         // Already completed today, append notes
         const existingLog = updatedLogs[existingChoreLogIndex];
         updatedLogs[existingChoreLogIndex] = {
           ...existingLog,
+          choreTitle: readingTitle,
+          choreIcon: coverEmoji || '📚',
+          categoryName: 'Reading & Literacy',
           completedSubtasks: Array.from(new Set([...(existingLog.completedSubtasks || []), ...choreSubtaskLog])),
         };
       } else {
@@ -301,6 +306,9 @@ export const ReadingLogModal: React.FC<ReadingLogModalProps> = ({
         updatedLogs.push({
           id: `log-read-${Date.now()}`,
           choreId: readingChore.id,
+          choreTitle: readingTitle,
+          choreIcon: coverEmoji || '📚',
+          categoryName: 'Reading & Literacy',
           kidId: kid.id,
           date: todayStr,
           status: 'completed',

@@ -154,26 +154,37 @@ export const BountyBoardModal: React.FC<BountyBoardModalProps> = ({
       ? database.logs[existingLogIndex].id
       : `log-bounty-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
 
+    const bountyTitle = `🎯 Bounty: ${chore.title}`;
+    const bountyIcon = chore.icon || '🎯';
+
     let updatedLogs: ChoreLog[];
     if (existingLogIndex >= 0) {
       updatedLogs = [...database.logs];
       updatedLogs[existingLogIndex] = {
         ...updatedLogs[existingLogIndex],
+        choreTitle: bountyTitle,
+        choreIcon: bountyIcon,
+        categoryName: 'Bonus Bounty',
         status: 'completed',
         completedAt: new Date().toISOString(),
         starsAwarded: starsEarned,
         verifiedByParent: false,
+        completedSubtasks: chore.subtasks || updatedLogs[existingLogIndex].completedSubtasks,
       };
     } else {
       const newLog: ChoreLog = {
         id: logId,
         choreId: chore.id,
+        choreTitle: bountyTitle,
+        choreIcon: bountyIcon,
+        categoryName: 'Bonus Bounty',
         kidId: kid.id,
         date: todayStr,
         status: 'completed',
         completedAt: new Date().toISOString(),
         starsAwarded: starsEarned,
         verifiedByParent: false,
+        completedSubtasks: chore.subtasks,
       };
       updatedLogs = [...(database.logs || []), newLog];
     }

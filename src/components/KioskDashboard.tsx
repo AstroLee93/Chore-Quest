@@ -168,27 +168,36 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
     );
 
     const starsEarned = chore.stars + (chore.bountyBonusStars || 0);
+    const categoryObj = database.categories.find((c) => c.id === chore.categoryId);
     let updatedLogs: ChoreLog[];
 
     if (existingLogIndex >= 0) {
       updatedLogs = [...database.logs];
       updatedLogs[existingLogIndex] = {
         ...updatedLogs[existingLogIndex],
+        choreTitle: chore.title,
+        choreIcon: chore.icon,
+        categoryName: categoryObj?.name,
         status: 'completed',
         completedAt: new Date().toISOString(),
         starsAwarded: starsEarned,
         verifiedByParent: false,
+        completedSubtasks: chore.subtasks || updatedLogs[existingLogIndex].completedSubtasks,
       };
     } else {
       const newLog: ChoreLog = {
         id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         choreId: chore.id,
+        choreTitle: chore.title,
+        choreIcon: chore.icon,
+        categoryName: categoryObj?.name,
         kidId: kid.id,
         date: todayStr,
         status: 'completed',
         completedAt: new Date().toISOString(),
         starsAwarded: starsEarned,
         verifiedByParent: false,
+        completedSubtasks: chore.subtasks,
       };
       updatedLogs = [...(database.logs || []), newLog];
     }

@@ -298,13 +298,16 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
               {
                 id: `log-teaser-${Date.now()}`,
                 choreId: `brain-teaser-${currentTeaser.id}`,
+                choreTitle: `🧠 Brain Teaser: ${currentTeaser.question.slice(0, 48)}...`,
+                choreIcon: '🧠',
+                categoryName: 'Brain Teasers & Learning',
                 kidId: currentKid.id,
                 date: todayStr,
                 status: 'completed' as const,
                 completedAt: new Date().toISOString(),
                 starsAwarded: starsToAward,
                 completedSubtasks: [
-                  `Brain Teaser (${currentTeaser.isAiGenerated ? '✨ AI' : '📚'} • ${gradeInfo.shortLabel}): ${currentTeaser.question.slice(0, 45)}...`,
+                  `Brain Teaser (${currentTeaser.isAiGenerated ? '✨ AI' : '📚'} • ${gradeInfo.shortLabel}): ${currentTeaser.question}`,
                 ],
               },
               ...(database.logs || []),

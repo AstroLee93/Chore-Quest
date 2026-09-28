@@ -62,7 +62,7 @@ import {
   ReadingLogEntry,
   KidBookShelfItem,
 } from '../types';
-import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON, getKioskTimeoutMs } from '../utils/storage';
+import { getTodayDateString, formatDateDisplay, getKidLevelInfo, exportDatabaseJSON, importDatabaseJSON, getKioskTimeoutMs, resolveChoreLogDetails } from '../utils/storage';
 import { sound } from '../utils/sound';
 import { formatTime12Hour, checkCategoryTimeWindow } from '../utils/timeWindow';
 import { GROCERY_IMPORTANCE_METADATA } from '../utils/grocery';
@@ -585,8 +585,21 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   const handleDeleteChore = (choreId: string) => {
     sound.playTap();
     if (confirm('Are you sure you want to delete this chore?')) {
+      const deletedChore = database.chores.find((c) => c.id === choreId);
+      const categoryObj = deletedChore ? database.categories.find((cat) => cat.id === deletedChore.categoryId) : undefined;
       const updatedChores = database.chores.filter((c) => c.id !== choreId);
-      onUpdateDatabase({ ...database, chores: updatedChores });
+      const updatedLogs = (database.logs || []).map((l) => {
+        if (l.choreId === choreId) {
+          return {
+            ...l,
+            choreTitle: l.choreTitle || deletedChore?.title,
+            choreIcon: l.choreIcon || deletedChore?.icon,
+            categoryName: l.categoryName || categoryObj?.name,
+          };
+        }
+        return l;
+      });
+      onUpdateDatabase({ ...database, chores: updatedChores, logs: updatedLogs });
     }
   };
 
@@ -1217,9 +1230,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
                 {pendingVerificationChores.map((log) => {
-                  const chore = database.chores.find((c) => c.id === log.choreId);
+                  const details = resolveChoreLogDetails(log, database);
                   const kid = database.kids.find((k) => k.id === log.kidId);
-                  const category = database.categories.find((c) => c.id === chore?.categoryId);
 
                   return (
                     <div
@@ -1235,17 +1247,29 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                               borderColor: kid?.color || '#10b981',
                             }}
                           >
-                            {kid?.avatar || '⭐'}
+                            {details.icon || kid?.avatar || '⭐'}
                           </div>
                           <div className="min-w-0">
-                            <h4 className="font-black text-xs sm:text-sm text-slate-900 truncate">
-                              {chore?.title || 'Completed Chore'}
-                            </h4>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className="font-black text-xs sm:text-sm text-slate-900 truncate">
+                                {details.title}
+                              </h4>
+                              {details.isBounty && (
+                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-200 text-amber-950 border border-amber-300">
+                                  🎯 Bounty
+                                </span>
+                              )}
+                              {details.isArchivedOrCustom && (
+                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                  Archived Task
+                                </span>
+                              )}
+                            </div>
                             <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5 flex-wrap">
                               <span>By <strong>{kid?.name || 'Child'}</strong></span>
-                              {category && (
+                              {details.categoryName && (
                                 <span className="text-[10px] bg-slate-100 px-1.5 py-0.2 rounded font-semibold text-slate-600">
-                                  {category.name}
+                                  {details.categoryName}
                                 </span>
                               )}
                             </div>
@@ -1257,6 +1281,20 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                           +{log.starsAwarded} ⭐
                         </span>
                       </div>
+
+                      {/* Completed Steps / Checklist Details if available */}
+                      {details.subtasks && details.subtasks.length > 0 && (
+                        <div className="bg-emerald-50/80 p-2 rounded-lg border border-emerald-200 text-[11px] text-emerald-950 space-y-0.5">
+                          <div className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">
+                            Completed Steps / Notes:
+                          </div>
+                          <ul className="list-disc list-inside space-y-0.5 font-medium text-emerald-900">
+                            {details.subtasks.map((step, idx) => (
+                              <li key={idx} className="truncate">{step}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
                       {/* Details & Timestamp */}
                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 text-[11px] flex items-center justify-between text-slate-600">
@@ -1287,7 +1325,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             onClick={() => {
                               setBonusStarModalKid(kid);
                               setBonusStarsAmount(5);
-                              setBonusStarReason(`Awesome job completing ${chore?.title || 'chore'}!`);
+                              setBonusStarReason(`Awesome job completing ${details.title}!`);
                             }}
                             className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-xs transition-all cursor-pointer shrink-0 active:scale-95"
                             title="Award bonus points for great work"
@@ -1922,7 +1960,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
             ) : (
               filteredLogs.map((log) => {
-                const chore = database.chores.find((c) => c.id === log.choreId);
+                const details = resolveChoreLogDetails(log, database);
                 const kid = database.kids.find((k) => k.id === log.kidId);
                 const isCompleted = log.status === 'completed';
                 const isSkipped = log.status === 'skipped';
@@ -1944,7 +1982,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                         className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center text-lg sm:text-2xl shrink-0 shadow-2xs border border-white"
                         style={{ backgroundColor: `${kid?.color || '#f59e0b'}30` }}
                       >
-                        {kid?.avatar || '⭐'}
+                        {details.icon || kid?.avatar || '⭐'}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -1953,9 +1991,21 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             {kid?.name || 'Child'}
                           </span>
                           <span className="text-slate-400 text-xs">•</span>
-                          <span className="text-xs font-bold text-slate-700 truncate max-w-[140px] sm:max-w-none">
-                            {chore?.title || 'Chore'}
+                          <span className="text-xs font-bold text-slate-900 truncate max-w-[160px] sm:max-w-none">
+                            {details.title}
                           </span>
+
+                          {details.isBounty && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.2 rounded-full bg-amber-200 text-amber-950 border border-amber-300">
+                              🎯 Bounty
+                            </span>
+                          )}
+
+                          {details.isArchivedOrCustom && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                              Archived Task
+                            </span>
+                          )}
 
                           {/* Status Badge */}
                           {isCompleted && (
@@ -1972,6 +2022,20 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                             </span>
                           )}
                         </div>
+
+                        {/* Completed Details / Subtasks Box */}
+                        {isCompleted && details.subtasks && details.subtasks.length > 0 && (
+                          <div className="mt-1 p-1.5 sm:p-2 rounded-lg bg-emerald-50/80 border border-emerald-200 text-[11px] text-emerald-950">
+                            <div className="font-black flex items-center gap-1 text-[10px] text-emerald-800 uppercase tracking-wider mb-0.5">
+                              <span>Completed Details:</span>
+                            </div>
+                            <ul className="list-disc list-inside space-y-0.5 text-[11px] text-emerald-900 font-medium">
+                              {details.subtasks.map((step, idx) => (
+                                <li key={idx} className="truncate">{step}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
                         {/* Skipped Reason Box */}
                         {isSkipped && (
@@ -1990,15 +2054,21 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                           </div>
                         )}
 
-                        {/* Timestamp */}
-                        {log.completedAt && (
-                          <p className="text-[10px] text-slate-400 font-bold mt-0.5">
-                            {new Date(log.completedAt).toLocaleTimeString(undefined, {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            })}
-                          </p>
-                        )}
+                        {/* Timestamp & Category */}
+                        <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400 font-bold flex-wrap">
+                          {details.categoryName && (
+                            <span className="text-slate-500 font-semibold">{details.categoryName}</span>
+                          )}
+                          {details.categoryName && log.completedAt && <span>•</span>}
+                          {log.completedAt && (
+                            <span>
+                              {new Date(log.completedAt).toLocaleTimeString(undefined, {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -2051,7 +2121,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                                   onClick: () => {
                                     setBonusStarModalKid(kid);
                                     setBonusStarsAmount(5);
-                                    setBonusStarReason(`Great job on ${chore?.title || 'chores'}!`);
+                                    setBonusStarReason(`Great job on ${details.title}!`);
                                   },
                                 },
                               ]

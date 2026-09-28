@@ -204,6 +204,9 @@ export type TaskStatus = 'pending' | 'completed' | 'skipped';
 export interface ChoreLog {
   id: string;
   choreId: string;
+  choreTitle?: string; // Snapshotted title of the chore when completed/skipped
+  choreIcon?: string; // Snapshotted emoji/icon of the chore
+  categoryName?: string; // Snapshotted category of the chore
   kidId: string;
   date: string; // YYYY-MM-DD
   status: TaskStatus;

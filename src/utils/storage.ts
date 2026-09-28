@@ -476,6 +476,9 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     {
       id: 'log-1',
       choreId: 'chore-1',
+      choreTitle: 'Make Bed & Tidy Pillows',
+      choreIcon: '🛏️',
+      categoryName: 'Morning Routine',
       kidId: 'kid-1',
       date: getTodayDateString(),
       status: 'completed',
@@ -486,6 +489,9 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     {
       id: 'log-2',
       choreId: 'chore-2',
+      choreTitle: 'Brush Teeth & Face Wash',
+      choreIcon: '🪥',
+      categoryName: 'Morning Routine',
       kidId: 'kid-1',
       date: getTodayDateString(),
       status: 'completed',
@@ -496,6 +502,9 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     {
       id: 'log-3',
       choreId: 'chore-9',
+      choreTitle: 'Recycling Sort & Bin Staging',
+      choreIcon: '♻️',
+      categoryName: 'Afternoon Missions',
       kidId: 'kid-1',
       date: getTodayDateString(),
       status: 'skipped',
@@ -506,6 +515,9 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     {
       id: 'log-4',
       choreId: 'chore-1',
+      choreTitle: 'Make Bed & Tidy Pillows',
+      choreIcon: '🛏️',
+      categoryName: 'Morning Routine',
       kidId: 'kid-2',
       date: getTodayDateString(),
       status: 'completed',
@@ -664,6 +676,157 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
   ruleInfractions: [],
 };
 
+export interface ChoreLogDisplayDetails {
+  title: string;
+  icon: string;
+  categoryName?: string;
+  isBounty?: boolean;
+  subtasks: string[];
+  isArchivedOrCustom?: boolean;
+}
+
+/**
+ * Robustly resolves the real, human-readable name, icon, and details of any chore log.
+ * Prevents generic "Chore" or "Completed Chore" fallbacks by checking snapshots, active chores,
+ * brain teasers, reading logs, default seed data, subtask descriptions, and humanized slugs.
+ */
+export const resolveChoreLogDetails = (
+  log: ChoreLog,
+  database?: FamilyDatabase
+): ChoreLogDisplayDetails => {
+  const subtasks = log.completedSubtasks || [];
+
+  // 1. Direct snapshot on the log itself (if informative)
+  if (
+    log.choreTitle &&
+    log.choreTitle !== 'Chore' &&
+    log.choreTitle !== 'Completed Chore' &&
+    log.choreTitle !== 'Chore Complete'
+  ) {
+    return {
+      title: log.choreTitle,
+      icon: log.choreIcon || '⭐',
+      categoryName: log.categoryName,
+      isBounty: log.choreTitle.toLowerCase().includes('bounty'),
+      subtasks,
+      isArchivedOrCustom: false,
+    };
+  }
+
+  // 2. Look up in active database chores
+  const chore = database?.chores?.find((c) => c.id === log.choreId);
+  if (chore?.title) {
+    const category = database?.categories?.find((cat) => cat.id === chore.categoryId);
+    return {
+      title: chore.title,
+      icon: chore.icon || '⭐',
+      categoryName: category?.name,
+      isBounty: chore.isBounty,
+      subtasks: subtasks.length > 0 ? subtasks : (chore.subtasks || []),
+      isArchivedOrCustom: false,
+    };
+  }
+
+  // 3. Brain Teaser missions (e.g. choreId: "brain-teaser-...")
+  if (
+    log.choreId?.startsWith('brain-teaser') ||
+    subtasks.some((s) => s.toLowerCase().includes('brain teaser'))
+  ) {
+    const firstSub = subtasks.find((s) => s.toLowerCase().includes('brain teaser')) || subtasks[0];
+    let teaserSnippet = '';
+    if (firstSub) {
+      const parts = firstSub.split(':');
+      teaserSnippet = parts.length > 1 ? parts.slice(1).join(':').trim() : firstSub;
+    }
+    const cleanSnippet = teaserSnippet.replace(/^["']|["']$/g, '');
+    const title = cleanSnippet
+      ? `🧠 Brain Teaser: ${cleanSnippet.slice(0, 50)}${cleanSnippet.length > 50 ? '...' : ''}`
+      : '🧠 Daily Brain Teaser Challenge';
+
+    return {
+      title,
+      icon: '🧠',
+      categoryName: 'Brain Teasers & Learning',
+      isBounty: false,
+      subtasks,
+      isArchivedOrCustom: false,
+    };
+  }
+
+  // 4. Reading log missions (e.g. choreId: "chore-6" or reading subtasks)
+  if (
+    log.choreId?.toLowerCase().includes('read') ||
+    log.choreId === 'chore-6' ||
+    subtasks.some((s) => s.toLowerCase().includes('read') || s.toLowerCase().includes('chapter'))
+  ) {
+    const firstSub = subtasks[0];
+    const title = firstSub
+      ? `📚 Reading: ${firstSub.replace(/^Reading:?\s*/i, '')}`
+      : '📚 Daily Reading Adventure';
+
+    return {
+      title,
+      icon: '📚',
+      categoryName: 'Reading & Literacy',
+      isBounty: false,
+      subtasks,
+      isArchivedOrCustom: false,
+    };
+  }
+
+  // 5. Look up in DEFAULT_SEED_DATA chores (in case chore was deleted or customized)
+  const seedChore = DEFAULT_SEED_DATA.chores?.find((c) => c.id === log.choreId);
+  if (seedChore?.title) {
+    const seedCat = DEFAULT_SEED_DATA.categories?.find((cat) => cat.id === seedChore.categoryId);
+    return {
+      title: seedChore.title,
+      icon: seedChore.icon || '⭐',
+      categoryName: seedCat?.name,
+      isBounty: seedChore.isBounty,
+      subtasks: subtasks.length > 0 ? subtasks : (seedChore.subtasks || []),
+      isArchivedOrCustom: true,
+    };
+  }
+
+  // 6. If subtasks exist with descriptions
+  if (subtasks.length > 0 && subtasks[0] && subtasks[0].trim().length > 3) {
+    return {
+      title: subtasks[0],
+      icon: '📋',
+      categoryName: 'Custom Checklist Mission',
+      isBounty: false,
+      subtasks,
+      isArchivedOrCustom: true,
+    };
+  }
+
+  // 7. Humanize meaningful slug ID (e.g. "chore-make-bed" -> "Make Bed")
+  if (log.choreId && !log.choreId.startsWith('log-')) {
+    const cleanId = log.choreId.replace(/^(chore-|task-)/i, '').replace(/[-_]/g, ' ').trim();
+    if (cleanId.length > 2 && !/^\d+$/.test(cleanId)) {
+      const humanized = cleanId.replace(/\b\w/g, (char) => char.toUpperCase());
+      return {
+        title: humanized,
+        icon: '⭐',
+        categoryName: 'Custom Task',
+        isBounty: false,
+        subtasks,
+        isArchivedOrCustom: true,
+      };
+    }
+  }
+
+  // 8. Graceful Fallback
+  return {
+    title: log.status === 'skipped' ? 'Assigned Household Task' : 'Completed Household Mission',
+    icon: '⭐',
+    categoryName: 'General Mission',
+    isBounty: false,
+    subtasks,
+    isArchivedOrCustom: true,
+  };
+};
+
 // Storage operations
 export const loadDatabase = (): FamilyDatabase => {
   if (typeof window === 'undefined') return DEFAULT_SEED_DATA;
@@ -788,6 +951,22 @@ export const loadDatabase = (): FamilyDatabase => {
       parsed.ruleInfractions = getRuleInfractions(parsed);
     }
 
+    // Migrate & backfill legacy logs that are missing choreTitle or have generic placeholders
+    if (parsed.logs && Array.isArray(parsed.logs)) {
+      parsed.logs = parsed.logs.map((log: ChoreLog) => {
+        if (!log.choreTitle || log.choreTitle === 'Chore' || log.choreTitle === 'Completed Chore' || log.choreTitle === 'Chore Complete') {
+          const details = resolveChoreLogDetails(log, parsed);
+          return {
+            ...log,
+            choreTitle: details.title,
+            choreIcon: details.icon,
+            categoryName: details.categoryName,
+          };
+        }
+        return log;
+      });
+    }
+
     return parsed;
   } catch (err) {
     console.error('Error loading database from localStorage:', err);
@@ -885,7 +1064,18 @@ export const importDatabaseJSON = (jsonString: string): FamilyDatabase => {
     kids: parsed.kids || [],
     categories: parsed.categories || [],
     chores: parsed.chores || [],
-    logs: parsed.logs || [],
+    logs: (parsed.logs || []).map((log: ChoreLog) => {
+      if (!log.choreTitle || log.choreTitle === 'Chore' || log.choreTitle === 'Completed Chore' || log.choreTitle === 'Chore Complete') {
+        const details = resolveChoreLogDetails(log, parsed);
+        return {
+          ...log,
+          choreTitle: details.title,
+          choreIcon: details.icon,
+          categoryName: details.categoryName,
+        };
+      }
+      return log;
+    }),
     rewards: parsed.rewards || [],
     redemptions: parsed.redemptions || [],
     events: parsed.events || getInitialSeedEvents(),

@@ -82,6 +82,26 @@
   scrollbar-width: none;
 }
 
+/* Modern, ultra-sleek dark scrollbar */
+.scrollbar-sleek {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+.scrollbar-sleek::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-sleek::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-sleek::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+.scrollbar-sleek::-webkit-scrollbar-thumb:hover {
+  background: rgba(251, 191, 36, 0.6);
+}
+
 /* =========================================================================
    UNIVERSAL FORM INPUT CONTRAST & ACCESSIBILITY SYSTEM
    Guarantees 100% visible, high-contrast text in all inputs, textareas,
@@ -334,16 +354,19 @@ textarea:-webkit-autofill {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Printable Guide Styles */
+/* Printable Guide & House Rules Styles */
 @media print {
   body * {
     visibility: hidden;
   }
   #printable-guide,
-  #printable-guide * {
+  #printable-guide *,
+  #printable-house-rules,
+  #printable-house-rules * {
     visibility: visible;
   }
-  #printable-guide {
+  #printable-guide,
+  #printable-house-rules {
     position: absolute;
     left: 0;
     top: 0;

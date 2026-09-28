@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   X,
   Shield,
@@ -10,6 +10,9 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUp,
   Printer,
   Lock,
   Unlock,
@@ -122,7 +125,106 @@ export const HouseRulesModal: React.FC<HouseRulesModalProps> = ({
   const [historySeverityFilter, setHistorySeverityFilter] = useState<string>('all');
   const [historySearchQuery, setHistorySearchQuery] = useState<string>('');
 
-  if (!isOpen) return null;
+  // Scroll management & back-to-top state
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
+
+  // Lock background body scroll while House Rules modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
+  // Ensure scroll container starts cleanly at top when opened or tab/category switched
+  useEffect(() => {
+    if (isOpen && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+      setShowScrollTop(false);
+    }
+  }, [isOpen, activeTab, selectedCategory]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const top = e.currentTarget.scrollTop;
+    setShowScrollTop(top > 250);
+  };
+
+  const handleScrollToTop = () => {
+    sound.playTap();
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Category bar scroll & auto-hiding scrollbar indicator
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const categoryScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isCategoryScrolling, setIsCategoryScrolling] = useState<boolean>(false);
+  const [canScrollCatLeft, setCanScrollCatLeft] = useState<boolean>(false);
+  const [canScrollCatRight, setCanScrollCatRight] = useState<boolean>(false);
+  const [catScrollProgress, setCatScrollProgress] = useState<number>(0);
+  const [catThumbRatio, setCatThumbRatio] = useState<number>(25);
+
+  const checkCategoryScrollability = () => {
+    const el = categoryScrollRef.current;
+    if (!el) return;
+    const canLeft = el.scrollLeft > 3;
+    const canRight = el.scrollLeft < el.scrollWidth - el.clientWidth - 3;
+    setCanScrollCatLeft(canLeft);
+    setCanScrollCatRight(canRight);
+
+    if (el.scrollWidth > el.clientWidth) {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      const progress = Math.min(100, Math.max(0, (el.scrollLeft / maxScroll) * 100));
+      const ratio = Math.max(15, Math.min(60, (el.clientWidth / el.scrollWidth) * 100));
+      setCatScrollProgress(progress);
+      setCatThumbRatio(ratio);
+    }
+  };
+
+  const handleCategoryScroll = () => {
+    checkCategoryScrollability();
+    setIsCategoryScrolling(true);
+    if (categoryScrollTimeoutRef.current) {
+      clearTimeout(categoryScrollTimeoutRef.current);
+    }
+    categoryScrollTimeoutRef.current = setTimeout(() => {
+      setIsCategoryScrolling(false);
+    }, 900);
+  };
+
+  const handleCategoryWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY !== 0 && categoryScrollRef.current) {
+      categoryScrollRef.current.scrollLeft += e.deltaY;
+      handleCategoryScroll();
+    }
+  };
+
+  const handleScrollCategory = (direction: 'left' | 'right') => {
+    sound.playTap();
+    const el = categoryScrollRef.current;
+    if (!el) return;
+    const delta = direction === 'left' ? -220 : 220;
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+    setIsCategoryScrolling(true);
+    if (categoryScrollTimeoutRef.current) {
+      clearTimeout(categoryScrollTimeoutRef.current);
+    }
+    categoryScrollTimeoutRef.current = setTimeout(() => {
+      setIsCategoryScrolling(false);
+    }, 1100);
+  };
+
+  useEffect(() => {
+    checkCategoryScrollability();
+    const handleResize = () => checkCategoryScrollability();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (categoryScrollTimeoutRef.current) clearTimeout(categoryScrollTimeoutRef.current);
+    };
+  }, [rules.length, activeTab]);
 
   // Selected kid and rule objects for logging infractions
   const activeKidObject = database.kids.find((k) => k.id === selectedKidId) || database.kids[0];
@@ -457,8 +559,18 @@ export const HouseRulesModal: React.FC<HouseRulesModalProps> = ({
     window.print();
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in select-none">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          sound.playTap();
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in"
+    >
       {/* Toast Notification */}
       {actionSuccessToast && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-60 bg-amber-500 text-slate-950 font-black px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2 text-xs sm:text-sm animate-bounce border-2 border-slate-900">
@@ -468,7 +580,10 @@ export const HouseRulesModal: React.FC<HouseRulesModalProps> = ({
       )}
 
       {/* Main Container */}
-      <div className="relative w-full max-w-4xl bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[96vh] border-2 border-slate-800">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-4xl bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[92vh] max-h-[92vh] border-2 border-slate-800 my-auto"
+      >
         {/* Top Metallic / Leather Header Bar */}
         <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
@@ -555,9 +670,9 @@ export const HouseRulesModal: React.FC<HouseRulesModalProps> = ({
           </div>
         </div>
 
-        {/* Tab Subheader */}
-        <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none shrink-0">
-          <div className="flex items-center gap-1.5">
+        {/* Row 1: Mode Switcher & Admin Actions */}
+        <div className="bg-slate-900 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* 1. Public Notebook Rules Tab */}
             <button
               onClick={() => {
@@ -590,7 +705,7 @@ export const HouseRulesModal: React.FC<HouseRulesModalProps> = ({
                     : 'bg-slate-800 text-rose-300 hover:bg-slate-700 border border-rose-900/60'
                 }`}
               >
-                <Shield className="w-3 h-3 text-rose-300 fill-current" />
+                <Shield className="w-3.5 h-3.5 text-rose-300 fill-current" />
                 <span>Admin Infractions Ledger</span>
                 {infractions.length > 0 && (
                   <span className="px-1.5 py-0.2 rounded-full bg-slate-950 text-white text-[10px] font-mono">
@@ -601,70 +716,144 @@ export const HouseRulesModal: React.FC<HouseRulesModalProps> = ({
             )}
           </div>
 
-          {/* Notebook Category Filter (when on notebook tab) */}
-          {activeTab === 'notebook' && (
-            <div className="flex items-center gap-1 overflow-x-auto">
-              <span className="text-[10px] font-bold text-slate-400 mr-1 hidden sm:inline">Category:</span>
-              <button
-                onClick={() => setSelectedCategory('all')}
-                className={`px-2 py-1 rounded-lg text-[10px] font-black cursor-pointer transition-all ${
-                  selectedCategory === 'all'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                All
-              </button>
-              {Object.keys(CATEGORY_TAGS).map((catKey) => {
-                const tag = CATEGORY_TAGS[catKey as HouseRuleCategory];
-                return (
-                  <button
-                    key={catKey}
-                    onClick={() => setSelectedCategory(catKey)}
-                    className={`px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all whitespace-nowrap ${
-                      selectedCategory === catKey
-                        ? 'bg-amber-400 text-slate-950 font-black'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>{tag.icon}</span>
-                    <span className="ml-1 hidden md:inline">{tag.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
           {/* Admin Rule Add Controls */}
           {isAdminUnlocked && activeTab === 'notebook' && (
-            <div className="flex items-center gap-1.5 ml-auto">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={handleOpenNewRule}
-                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-1 cursor-pointer transition-all active:scale-95 shadow-sm"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Rule</span>
               </button>
               <button
                 onClick={handleResetDefaults}
-                className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-[10px] cursor-pointer"
+                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs cursor-pointer border border-slate-700"
                 title="Reset to Family Defaults"
               >
-                <RotateCcw className="w-3 h-3" />
+                <RotateCcw className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
         </div>
 
+        {/* Row 2: Dedicated Sleek Category Filter Bar (Auto-Hiding Scrollbar & Smooth Navigation) */}
+        {activeTab === 'notebook' && (
+          <div className="bg-slate-950/80 border-b border-slate-800 px-3 py-1.5 shrink-0 relative flex flex-col justify-center">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-[11px] font-bold text-slate-400 shrink-0 hidden sm:flex items-center gap-1 select-none mr-1">
+                <Filter className="w-3 h-3 text-amber-400" />
+                <span>Category:</span>
+              </span>
+
+              {/* Left Scroll Arrow */}
+              {canScrollCatLeft && (
+                <button
+                  type="button"
+                  onClick={() => handleScrollCategory('left')}
+                  className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 shrink-0 cursor-pointer shadow-sm transition-all active:scale-90 z-10"
+                  title="Scroll categories left"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {/* Scrollable Pills Container with mouse wheel support */}
+              <div
+                ref={categoryScrollRef}
+                onScroll={handleCategoryScroll}
+                onWheel={handleCategoryWheel}
+                className="flex-1 flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5 select-none"
+              >
+                <button
+                  onClick={() => {
+                    sound.playTap();
+                    setSelectedCategory('all');
+                  }}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-black cursor-pointer transition-all shrink-0 ${
+                    selectedCategory === 'all'
+                      ? 'bg-amber-400 text-slate-950 shadow-xs ring-1 ring-amber-300'
+                      : 'bg-slate-800/70 text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  ✨ All ({rules.length})
+                </button>
+
+                {Object.keys(CATEGORY_TAGS).map((catKey) => {
+                  const tag = CATEGORY_TAGS[catKey as HouseRuleCategory];
+                  const count = rules.filter((r) => r.category === catKey).length;
+                  const isSelected = selectedCategory === catKey;
+                  return (
+                    <button
+                      key={catKey}
+                      onClick={() => {
+                        sound.playTap();
+                        setSelectedCategory(catKey);
+                      }}
+                      className={`px-2.5 py-1 rounded-xl text-[11px] font-bold cursor-pointer transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                        isSelected
+                          ? 'bg-amber-400 text-slate-950 font-black shadow-xs ring-1 ring-amber-300'
+                          : 'bg-slate-800/70 text-slate-300 hover:text-white hover:bg-slate-800'
+                      }`}
+                    >
+                      <span>{tag.icon}</span>
+                      <span>{tag.label}</span>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono ${
+                          isSelected ? 'bg-slate-950/25 text-slate-950' : 'bg-slate-900 text-slate-400'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right Scroll Arrow */}
+              {canScrollCatRight && (
+                <button
+                  type="button"
+                  onClick={() => handleScrollCategory('right')}
+                  className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 shrink-0 cursor-pointer shadow-sm transition-all active:scale-90 z-10"
+                  title="Scroll categories right"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Micro Auto-Hiding Scrollbar Indicator (Only visible while user is scrolling!) */}
+            <div
+              className={`w-full max-w-[200px] mx-auto mt-1 h-[3px] bg-slate-800/50 rounded-full overflow-hidden transition-opacity duration-300 pointer-events-none ${
+                isCategoryScrolling ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <div
+                className="h-full bg-amber-400/90 rounded-full transition-all duration-75"
+                style={{
+                  width: `${catThumbRatio}%`,
+                  marginLeft: `${(catScrollProgress / 100) * (100 - catThumbRatio)}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Scrollable Main Area */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-slate-950 flex flex-col items-center">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 min-h-0 w-full overflow-y-auto scrollbar-sleek p-3 sm:p-5 pb-20 sm:pb-28 bg-slate-950 flex flex-col items-center overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {activeTab === 'notebook' ? (
             /* =========================================================================
                PHYSICAL NOTEBOOK PAD CANVAS (KID & FAMILY FRIENDLY)
                ========================================================================= */
             <div
               id="printable-house-rules"
-              className="w-full max-w-3xl bg-[#fefcf3] text-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl border-4 border-amber-900/40 relative overflow-hidden flex flex-col"
+              className="w-full max-w-3xl bg-[#fefcf3] text-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl border-4 border-amber-900/40 relative overflow-hidden flex flex-col shrink-0"
               style={{
                 backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, rgba(148, 163, 184, 0.25) 31px, rgba(148, 163, 184, 0.25) 32px)',
               }}
@@ -882,7 +1071,7 @@ export const HouseRulesModal: React.FC<HouseRulesModalProps> = ({
                ADMIN-ONLY HISTORICAL INFRACTIONS LEDGER
                Tracks date, specific rule broken, star penalty applied & audit trail
                ========================================================================= */
-            <div className="w-full max-w-4xl space-y-4">
+            <div className="w-full max-w-4xl space-y-4 shrink-0 pb-8">
               {/* Ledger Summary Analytics Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-3.5">
@@ -1136,6 +1325,19 @@ export const HouseRulesModal: React.FC<HouseRulesModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Back to Top Floating Button */}
+        {showScrollTop && (
+          <button
+            type="button"
+            onClick={handleScrollToTop}
+            className="absolute bottom-5 right-6 z-30 px-3.5 py-2 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-2xl border-2 border-slate-900 font-black flex items-center gap-1.5 text-xs transition-all animate-bounce cursor-pointer active:scale-95"
+            title="Back to Top of House Rules"
+          >
+            <ArrowUp className="w-4 h-4 stroke-[3]" />
+            <span className="font-black">Top</span>
+          </button>
+        )}
       </div>
 
       {/* =========================================================================

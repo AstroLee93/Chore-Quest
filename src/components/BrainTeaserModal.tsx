@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Brain,
@@ -39,11 +39,392 @@ import {
   getDailyTeasersAnsweredToday,
   hasReachedDailyTeaserLimit,
   fetchAiBrainTeaser,
+  getKidRecentQuestions,
+  getKidRecentAnswers,
+  getKidRecentConcepts,
   BRAIN_TEASER_SUBJECTS,
   getSubjectInfo,
 } from '../utils/brainTeasers';
 import { sound } from '../utils/sound';
 import { getTodayDateString } from '../utils/storage';
+import { fireConfetti } from '../utils/confetti';
+
+export interface BrainTeaserDisplayProps {
+  currentTeaser: BrainTeaser;
+  gradeInfo: { label: string; shortLabel: string; icon?: string; ages?: string };
+  selectedOptionIndex: number | null;
+  isAnswerSubmitted: boolean;
+  isCorrect: boolean;
+  showHint: boolean;
+  earnedStarsToast: number | null;
+  answeredToday: number;
+  dailyLimit: number;
+  freePracticeMode: boolean;
+  isAdminPreview: boolean;
+  isGeneratingAi: boolean;
+  onSelectOption: (index: number) => void;
+  onShowHint: () => void;
+  onRefreshQuestion: () => void;
+  onOpenLeaderboard: () => void;
+  onOpenProgress: () => void;
+}
+
+/**
+ * Animated Brain Teaser display component with fluid fade-in and scale animations,
+ * interactive spring options, and gamified visual polish.
+ */
+export const BrainTeaserDisplay: React.FC<BrainTeaserDisplayProps> = ({
+  currentTeaser,
+  gradeInfo,
+  selectedOptionIndex,
+  isAnswerSubmitted,
+  isCorrect,
+  showHint,
+  earnedStarsToast,
+  answeredToday,
+  dailyLimit,
+  freePracticeMode,
+  isAdminPreview,
+  isGeneratingAi,
+  onSelectOption,
+  onShowHint,
+  onRefreshQuestion,
+  onOpenLeaderboard,
+  onOpenProgress,
+}) => {
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={currentTeaser.id}
+        initial={{ opacity: 0, scale: 0.94, y: 14 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: -12 }}
+        transition={{
+          duration: 0.38,
+          ease: [0.16, 1, 0.3, 1], // fluid deceleration curve
+        }}
+        className="space-y-4 sm:space-y-5"
+      >
+        {/* Subject Badge, AI Indicator & Teaser Counter */}
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.04 }}
+          className="flex items-center justify-between gap-2 flex-wrap"
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-extrabold text-xs border border-purple-200 dark:border-purple-800/60 shadow-2xs">
+              <span>{currentTeaser.subjectIcon}</span>
+              <span>{currentTeaser.subjectLabel}</span>
+            </span>
+
+            {currentTeaser.isAiGenerated ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black text-[11px] shadow-xs">
+                <Sparkles className="w-3 h-3 text-amber-300 fill-amber-300 animate-pulse" />
+                Gemini AI Challenge
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] border border-slate-200 dark:border-slate-700">
+                📚 Curriculum Bank
+              </span>
+            )}
+
+            {currentTeaser.conceptTag && (
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 font-bold text-[10px] border border-amber-200 dark:border-amber-800/60">
+                {currentTeaser.conceptTag}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!isAnswerSubmitted && (
+              <motion.button
+                id="btn-refresh-question"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onRefreshQuestion}
+                disabled={isGeneratingAi}
+                title="Generate a brand new AI question"
+                className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/60 text-slate-700 dark:text-slate-300 hover:text-purple-700 dark:hover:text-purple-300 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs"
+              >
+                <RefreshCw className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                <span>New Question</span>
+              </motion.button>
+            )}
+
+            {!isAdminPreview ? (
+              freePracticeMode ? (
+                <span className="px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-black text-xs border border-purple-300 dark:border-purple-700">
+                  Practice Mode 🧠
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1">
+                  <Star className="w-3 h-3 text-amber-500 fill-amber-400" />
+                  Daily Question {Math.min(answeredToday + 1, dailyLimit)} of {dailyLimit}
+                  <span className="text-purple-600 dark:text-purple-400 font-extrabold ml-1">• 1 Try</span>
+                </span>
+              )
+            ) : (
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                Level: {gradeInfo.shortLabel}
+              </span>
+            )}
+
+            <button
+              id="btn-top-brains-leaderboard-center"
+              onClick={onOpenLeaderboard}
+              className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 dark:hover:bg-amber-900/70 text-amber-900 dark:text-amber-200 font-extrabold text-xs border border-amber-300/80 dark:border-amber-700/80 flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95"
+              title="View Top Brains Leaderboard"
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-600 fill-amber-500 shrink-0" />
+              <span>Top Brains 🏆</span>
+            </button>
+
+            <button
+              id="btn-brain-progress-center"
+              onClick={onOpenProgress}
+              className="px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 text-indigo-900 dark:text-indigo-200 font-extrabold text-xs border border-indigo-300/80 dark:border-indigo-700/80 flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95"
+              title="View Subject Progress Bar Graph"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span>Progress 📊</span>
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Question Card with Smooth Scale & Fade-in */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.32, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+          className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-purple-50/20 dark:from-slate-800/80 dark:to-purple-950/20 border border-slate-200 dark:border-slate-700/80 shadow-xs"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-purple-600/15 text-purple-600 dark:text-purple-400 flex items-center justify-center font-black text-sm shrink-0 mt-0.5 shadow-2xs">
+              Q
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug">
+              {currentTeaser.question}
+            </h3>
+          </div>
+        </motion.div>
+
+        {/* Multiple Choice Options with Staggered Entrance & Interactive Hover/Tap */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+          {currentTeaser.options.map((optionText, idx) => {
+            const isSelected = selectedOptionIndex === idx;
+            const isThisCorrect = currentTeaser.correctAnswerIndex === idx;
+
+            let buttonStyles =
+              'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-700/80 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-slate-800';
+            let optionLetterBg =
+              'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200';
+
+            if (isAnswerSubmitted) {
+              if (isThisCorrect) {
+                buttonStyles =
+                  'bg-emerald-500/15 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200 border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/30';
+                optionLetterBg = 'bg-emerald-500 text-white';
+              } else if (isSelected && !isCorrect) {
+                buttonStyles =
+                  'bg-rose-500/15 dark:bg-rose-950/40 text-rose-950 dark:text-rose-200 border-rose-400 dark:border-rose-500 ring-2 ring-rose-500/20';
+                optionLetterBg = 'bg-rose-500 text-white';
+              } else {
+                buttonStyles =
+                  'bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-800 opacity-60';
+                optionLetterBg = 'bg-slate-200 dark:bg-slate-700 text-slate-400';
+              }
+            } else if (isSelected) {
+              buttonStyles =
+                'bg-purple-50 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 border-purple-500 ring-2 ring-purple-500/30';
+              optionLetterBg = 'bg-purple-600 text-white';
+            }
+
+            const optionLetters = ['A', 'B', 'C', 'D'];
+
+            return (
+              <motion.button
+                key={idx}
+                id={`btn-teaser-opt-${idx}`}
+                initial={{ opacity: 0, scale: 0.94, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{
+                  duration: 0.28,
+                  delay: 0.12 + idx * 0.05,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                whileHover={!isAnswerSubmitted ? { scale: 1.015, y: -1 } : {}}
+                whileTap={!isAnswerSubmitted ? { scale: 0.985 } : {}}
+                onClick={() => onSelectOption(idx)}
+                disabled={isAnswerSubmitted}
+                className={`p-3 sm:p-3.5 rounded-2xl border text-left flex items-center gap-3 transition-colors ${
+                  isAnswerSubmitted ? 'cursor-default' : 'cursor-pointer'
+                } shadow-xs ${buttonStyles}`}
+              >
+                <span
+                  className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${optionLetterBg}`}
+                >
+                  {optionLetters[idx]}
+                </span>
+                <span className="font-bold text-sm sm:text-base flex-1">
+                  {optionText}
+                </span>
+                {isAnswerSubmitted && isThisCorrect && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                    className="flex items-center gap-1.5 shrink-0"
+                  >
+                    {!isCorrect && (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 text-[10px] font-black uppercase tracking-wider border border-emerald-300 dark:border-emerald-700">
+                        Correct Answer
+                      </span>
+                    )}
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  </motion.div>
+                )}
+                {isAnswerSubmitted && isSelected && !isCorrect && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                    className="flex items-center gap-1.5 shrink-0"
+                  >
+                    <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/70 text-rose-800 dark:text-rose-200 text-[10px] font-black uppercase tracking-wider border border-rose-300 dark:border-rose-700">
+                      Your Choice
+                    </span>
+                    <XCircle className="w-5 h-5 text-rose-500" />
+                  </motion.div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+
+        {/* Hint Accordion with Smooth Expansion */}
+        <div>
+          {!showHint ? (
+            <motion.button
+              id="btn-show-hint"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onShowHint}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer py-1"
+            >
+              <Lightbulb className="w-3.5 h-3.5" />
+              <span>Need a thinking prompt? Tap for a clue before submitting! 💡</span>
+            </motion.button>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, height: 0 }}
+              animate={{ opacity: 1, scale: 1, height: 'auto' }}
+              exit={{ opacity: 0, scale: 0.96, height: 0 }}
+              transition={{ duration: 0.28, ease: 'easeOut' }}
+              className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-xs flex flex-col gap-2 shadow-2xs"
+            >
+              <div className="flex items-start gap-2.5">
+                <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-black">Thinking Clue: </span>
+                  <span>{currentTeaser.hint}</span>
+                </div>
+              </div>
+              {currentTeaser.thinkingAngle && (
+                <div className="pl-6 border-t border-amber-200/60 dark:border-amber-800/40 pt-2 flex items-start gap-1.5 text-amber-800/90 dark:text-amber-300/90">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Think Outside the Box: </span>
+                    <span className="italic">{currentTeaser.thinkingAngle}</span>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </div>
+
+        {/* Answer Result Feedback Card with Spring Animation */}
+        {isAnswerSubmitted && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 14 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 24 }}
+            className={`p-4 sm:p-5 rounded-2xl border shadow-sm ${
+              isCorrect
+                ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
+                : 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 1.25, 1] }}
+                transition={{ duration: 0.35 }}
+                className="text-2xl shrink-0"
+              >
+                {isCorrect ? '🎉' : '❌'}
+              </motion.div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-base font-black">
+                    {isCorrect ? 'Outstanding Job! Correct on First Attempt!' : 'Incorrect on First Attempt'}
+                  </h4>
+                  {isCorrect && earnedStarsToast && earnedStarsToast > 0 ? (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 20, delay: 0.15 }}
+                      className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-xs inline-flex items-center gap-1 shadow-xs"
+                    >
+                      <Sparkles className="w-3 h-3 fill-slate-950 text-slate-950" />
+                      +{earnedStarsToast} Stars Earned!
+                    </motion.span>
+                  ) : !isCorrect ? (
+                    <span className="px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 font-black text-xs inline-flex items-center gap-1 border border-rose-300 dark:border-rose-700">
+                      0 Stars • 1 Attempt Used
+                    </span>
+                  ) : null}
+                </div>
+
+                {!isCorrect && (
+                  <p className="text-xs text-rose-800 dark:text-rose-200 mt-1.5 font-semibold leading-relaxed">
+                    Brain teaser points are only awarded if answered correctly on the very first attempt. The correct answer is revealed above so you can learn from it!
+                  </p>
+                )}
+
+                {/* Educational Explanation / Fun Fact */}
+                <div className="mt-2.5 text-xs sm:text-sm font-medium leading-relaxed opacity-95">
+                  <p className="font-bold mb-1 text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>💡</span>
+                    <span>Learning Breakdown & Fun Fact:</span>
+                  </p>
+                  <p className="text-slate-700 dark:text-slate-300 bg-white/70 dark:bg-slate-900/60 p-3 rounded-xl border border-black/5 dark:border-white/5">
+                    {currentTeaser.funFactExplanation}
+                  </p>
+                </div>
+
+                {/* Daily Limit Reached Note */}
+                {!isAdminPreview && !freePracticeMode && answeredToday + 1 >= dailyLimit && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="mt-3 p-2.5 rounded-xl bg-purple-100/80 dark:bg-purple-900/40 border border-purple-300/80 dark:border-purple-700 text-purple-950 dark:text-purple-200 text-xs font-bold flex items-center gap-2"
+                  >
+                    <span className="text-base">🌟</span>
+                    <span>
+                      Daily brain teaser attempt finished ({dailyLimit}/{dailyLimit})! Head to your daily chores to earn more stars, or tap Practice More to keep exploring!
+                    </span>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+};
 
 interface BrainTeaserModalProps {
   isOpen: boolean;
@@ -70,7 +451,8 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
   const [activeGrade, setActiveGrade] = useState<GradeLevel>(currentGrade);
   const [currentTeaser, setCurrentTeaser] = useState<BrainTeaser>(() => {
     if (currentKid) {
-      return getDailyTeaserForKid(currentKid);
+      const recent = getKidRecentQuestions(currentKid, database.logs || []);
+      return getDailyTeaserForKid(currentKid, undefined, 0, recent);
     }
     return getTeasersForGrade('1st_grade')[0];
   });
@@ -94,6 +476,11 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
   const todayStr = getTodayDateString();
   const answeredToday = currentKid ? getDailyTeasersAnsweredToday(currentKid, todayStr) : 0;
   const isLimitReachedInitially = !isAdminPreview && answeredToday >= dailyLimit && !freePracticeMode;
+
+  // In-session tracking to guarantee NO questions repeated within the active user session
+  const sessionSeenIdsRef = useRef<Set<string>>(new Set());
+  const sessionSeenQuestionsRef = useRef<string[]>([]);
+  const sessionSeenAnswersRef = useRef<string[]>([]);
 
   // Strict Per-Kid Subject Assignment:
   // If in kid mode (!isAdminPreview), subject is strictly locked to the kid's assigned brainTeaserSubject (defaulting to 'any').
@@ -124,16 +511,42 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
       : assignedSubject;
 
     try {
+      const baseQuestions = currentKid ? getKidRecentQuestions(currentKid, database.logs || []) : [];
+      const baseAnswers = currentKid ? getKidRecentAnswers(currentKid, database.logs || []) : [];
+      const baseConcepts = currentKid ? getKidRecentConcepts(currentKid, database.logs || []) : [];
       const completedIds = currentKid?.brainTeaserHistory?.completedQuestionIds || [];
+
+      // Combine persistent historical data with current session seen questions & answers
+      const combinedExcludeIds = Array.from(new Set([...completedIds, ...Array.from(sessionSeenIdsRef.current)]));
+      const combinedQuestions = Array.from(new Set([...sessionSeenQuestionsRef.current, ...baseQuestions]));
+      const combinedAnswers = Array.from(new Set([...sessionSeenAnswersRef.current, ...baseAnswers]));
+      const combinedConcepts = Array.from(new Set(baseConcepts));
+
       const teaser = await fetchAiBrainTeaser({
         gradeLevel: grade,
         kidName: currentKid?.name,
-        excludeQuestionIds: completedIds,
+        excludeQuestionIds: combinedExcludeIds,
+        recentQuestions: combinedQuestions,
+        recentConcepts: combinedConcepts,
+        recentAnswers: combinedAnswers,
         preferredSubject: targetSubject !== 'any' ? targetSubject : undefined,
       });
+
+      // Track in session seen so if the user clicks "New Question" or "Next Question" it won't repeat
+      if (teaser?.id) sessionSeenIdsRef.current.add(teaser.id);
+      if (teaser?.question) sessionSeenQuestionsRef.current.push(teaser.question.trim());
+      if (Array.isArray(teaser?.options) && typeof teaser?.correctAnswerIndex === 'number' && teaser.options[teaser.correctAnswerIndex]) {
+        sessionSeenAnswersRef.current.push(teaser.options[teaser.correctAnswerIndex].trim());
+      }
+
       setCurrentTeaser(teaser);
     } catch (err) {
       console.warn('[BrainTeaser] AI generation failed, using catalog question:', err);
+      const baseQuestions = currentKid ? getKidRecentQuestions(currentKid, database.logs || []) : [];
+      const baseAnswers = currentKid ? getKidRecentAnswers(currentKid, database.logs || []) : [];
+      const combinedQuestions = Array.from(new Set([...sessionSeenQuestionsRef.current, ...baseQuestions]));
+      const combinedAnswers = Array.from(new Set([...sessionSeenAnswersRef.current, ...baseAnswers]));
+
       const fallback = getDailyTeaserForKid(
         {
           ...(currentKid || (database.kids[0] as KidProfile)),
@@ -141,8 +554,15 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
           brainTeaserSubject: targetSubject as BrainTeaserSubject,
         },
         todayStr,
-        answeredToday
+        answeredToday,
+        combinedQuestions,
+        combinedAnswers
       );
+      if (fallback?.id) sessionSeenIdsRef.current.add(fallback.id);
+      if (fallback?.question) sessionSeenQuestionsRef.current.push(fallback.question.trim());
+      if (Array.isArray(fallback?.options) && typeof fallback?.correctAnswerIndex === 'number' && fallback.options[fallback.correctAnswerIndex]) {
+        sessionSeenAnswersRef.current.push(fallback.options[fallback.correctAnswerIndex].trim());
+      }
       setCurrentTeaser(fallback);
     } finally {
       setIsGeneratingAi(false);
@@ -220,6 +640,7 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
     if (correct) {
       sound.playRewardRedeemed();
       setShowConfetti(true);
+      fireConfetti();
     } else {
       sound.playSkipNotice();
     }
@@ -270,6 +691,25 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
             },
           };
 
+          const prevRecentQuestions = history.recentQuestionTexts || [];
+          const updatedRecentQuestions = Array.from(
+            new Set([currentTeaser.question.trim(), ...prevRecentQuestions])
+          ).slice(0, 75);
+
+          const prevRecentAnswers = history.recentAnswers || [];
+          const currentAnswer = (Array.isArray(currentTeaser.options) && typeof currentTeaser.correctAnswerIndex === 'number')
+            ? currentTeaser.options[currentTeaser.correctAnswerIndex]
+            : '';
+          const updatedRecentAnswers = Array.from(
+            new Set([currentAnswer.trim(), ...prevRecentAnswers])
+          ).filter(Boolean).slice(0, 40);
+
+          const prevRecentConcepts = history.recentConcepts || [];
+          const concept = currentTeaser.conceptTag || currentTeaser.subjectLabel || currentTeaser.subject;
+          const updatedRecentConcepts = Array.from(
+            new Set([concept.trim(), ...prevRecentConcepts])
+          ).slice(0, 30);
+
           const updatedHistory = {
             ...history,
             lastCompletedDate: todayStr,
@@ -278,6 +718,9 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
             totalCorrect: (history.totalCorrect || 0) + (correct ? 1 : 0),
             totalStarsEarned: (history.totalStarsEarned || 0) + starsToAward,
             completedQuestionIds: Array.from(new Set([...(history.completedQuestionIds || []), currentTeaser.id])),
+            recentQuestionTexts: updatedRecentQuestions,
+            recentAnswers: updatedRecentAnswers,
+            recentConcepts: updatedRecentConcepts,
             subjectStats: updatedSubjectStats,
           };
 
@@ -684,282 +1127,34 @@ export const BrainTeaserModal: React.FC<BrainTeaserModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <>
-                  {/* Subject Badge, AI Indicator & Teaser Counter */}
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-extrabold text-xs border border-purple-200 dark:border-purple-800/60">
-                        <span>{currentTeaser.subjectIcon}</span>
-                        <span>{currentTeaser.subjectLabel}</span>
-                      </span>
-
-                      {currentTeaser.isAiGenerated ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black text-[11px] shadow-xs">
-                          <Sparkles className="w-3 h-3 text-amber-300 fill-amber-300" />
-                          Gemini AI Challenge
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] border border-slate-200 dark:border-slate-700">
-                          📚 Curriculum Bank
-                        </span>
-                      )}
-
-                      {currentTeaser.conceptTag && (
-                        <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 font-bold text-[10px] border border-amber-200 dark:border-amber-800/60">
-                          {currentTeaser.conceptTag}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {!isAnswerSubmitted && (
-                        <button
-                          id="btn-refresh-question"
-                          onClick={handleRefreshQuestion}
-                          disabled={isGeneratingAi}
-                          title="Generate a brand new AI question"
-                          className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/60 text-slate-700 dark:text-slate-300 hover:text-purple-700 dark:hover:text-purple-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-95"
-                        >
-                          <RefreshCw className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                          <span>New Question</span>
-                        </button>
-                      )}
-
-                      {!isAdminPreview ? (
-                        freePracticeMode ? (
-                          <span className="px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-black text-xs border border-purple-300 dark:border-purple-700">
-                            Practice Mode 🧠
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1">
-                            <Star className="w-3 h-3 text-amber-500 fill-amber-400" />
-                            Daily Question {Math.min(answeredToday + 1, dailyLimit)} of {dailyLimit}
-                            <span className="text-purple-600 dark:text-purple-400 font-extrabold ml-1">• 1 Try</span>
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                          Level: {gradeInfo.shortLabel}
-                        </span>
-                      )}
-
-                      <button
-                        id="btn-top-brains-leaderboard-center"
-                        onClick={() => {
-                          sound.playFanfare();
-                          setShowLeaderboard(true);
-                        }}
-                        className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 dark:hover:bg-amber-900/70 text-amber-900 dark:text-amber-200 font-extrabold text-xs border border-amber-300/80 dark:border-amber-700/80 flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95"
-                        title="View Top Brains Leaderboard"
-                      >
-                        <Trophy className="w-3.5 h-3.5 text-amber-600 fill-amber-500 shrink-0" />
-                        <span>Top Brains 🏆</span>
-                      </button>
-
-                      <button
-                        id="btn-brain-progress-center"
-                        onClick={() => {
-                          sound.playTap();
-                          setShowProgressModal(true);
-                        }}
-                        className="px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 text-indigo-900 dark:text-indigo-200 font-extrabold text-xs border border-indigo-300/80 dark:border-indigo-700/80 flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95"
-                        title="View Subject Progress Bar Graph"
-                      >
-                        <BarChart3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                        <span>Progress 📊</span>
-                      </button>
-                    </div>
-                  </div>
-
-              {/* Question Card */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 shadow-xs">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-purple-600/15 text-purple-600 dark:text-purple-400 flex items-center justify-center font-black text-sm shrink-0 mt-0.5">
-                    Q
-                  </div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug">
-                    {currentTeaser.question}
-                  </h3>
-                </div>
-              </div>
-
-              {/* Multiple Choice Options */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                {currentTeaser.options.map((optionText, idx) => {
-                  const isSelected = selectedOptionIndex === idx;
-                  const isThisCorrect = currentTeaser.correctAnswerIndex === idx;
-
-                  let buttonStyles =
-                    'bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-700/80 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-slate-800';
-                  let optionLetterBg =
-                    'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200';
-
-                  if (isAnswerSubmitted) {
-                    if (isThisCorrect) {
-                      buttonStyles =
-                        'bg-emerald-500/15 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200 border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/30';
-                      optionLetterBg = 'bg-emerald-500 text-white';
-                    } else if (isSelected && !isCorrect) {
-                      buttonStyles =
-                        'bg-rose-500/15 dark:bg-rose-950/40 text-rose-950 dark:text-rose-200 border-rose-400 dark:border-rose-500 ring-2 ring-rose-500/20';
-                      optionLetterBg = 'bg-rose-500 text-white';
-                    } else {
-                      buttonStyles =
-                        'bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-800 opacity-60';
-                      optionLetterBg = 'bg-slate-200 dark:bg-slate-700 text-slate-400';
-                    }
-                  } else if (isSelected) {
-                    buttonStyles =
-                      'bg-purple-50 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 border-purple-500 ring-2 ring-purple-500/30';
-                    optionLetterBg = 'bg-purple-600 text-white';
-                  }
-
-                  const optionLetters = ['A', 'B', 'C', 'D'];
-
-                  return (
-                    <button
-                      key={idx}
-                      id={`btn-teaser-opt-${idx}`}
-                      onClick={() => handleSelectOption(idx)}
-                      disabled={isAnswerSubmitted}
-                      className={`p-3 sm:p-3.5 rounded-2xl border text-left flex items-center gap-3 transition-all duration-150 ${
-                        isAnswerSubmitted ? 'cursor-default' : 'cursor-pointer active:scale-[0.99]'
-                      } shadow-xs ${buttonStyles}`}
-                    >
-                      <span
-                        className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${optionLetterBg}`}
-                      >
-                        {optionLetters[idx]}
-                      </span>
-                      <span className="font-bold text-sm sm:text-base flex-1">
-                        {optionText}
-                      </span>
-                      {isAnswerSubmitted && isThisCorrect && (
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {!isCorrect && (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 text-[10px] font-black uppercase tracking-wider border border-emerald-300 dark:border-emerald-700">
-                              Correct Answer
-                            </span>
-                          )}
-                          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                        </div>
-                      )}
-                      {isAnswerSubmitted && isSelected && !isCorrect && (
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/70 text-rose-800 dark:text-rose-200 text-[10px] font-black uppercase tracking-wider border border-rose-300 dark:border-rose-700">
-                            Your Choice
-                          </span>
-                          <XCircle className="w-5 h-5 text-rose-500" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Hint Accordion */}
-              <div>
-                {!showHint ? (
-                  <button
-                    id="btn-show-hint"
-                    onClick={() => {
-                      sound.playTap();
-                      setShowHint(true);
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer py-1"
-                  >
-                    <Lightbulb className="w-3.5 h-3.5" />
-                    <span>Need a thinking prompt? Tap for a clue before submitting! 💡</span>
-                  </button>
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-xs flex flex-col gap-2"
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-black">Thinking Clue: </span>
-                        <span>{currentTeaser.hint}</span>
-                      </div>
-                    </div>
-                    {currentTeaser.thinkingAngle && (
-                      <div className="pl-6 border-t border-amber-200/60 dark:border-amber-800/40 pt-2 flex items-start gap-1.5 text-amber-800/90 dark:text-amber-300/90">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-bold">Think Outside the Box: </span>
-                          <span className="italic">{currentTeaser.thinkingAngle}</span>
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </div>
-
-              {/* Answer Result Feedback Card */}
-              {isAnswerSubmitted && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`p-4 sm:p-5 rounded-2xl border shadow-sm ${
-                    isCorrect
-                      ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100'
-                      : 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="text-2xl shrink-0">
-                      {isCorrect ? '🎉' : '❌'}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-base font-black">
-                          {isCorrect ? 'Outstanding Job! Correct on First Attempt!' : 'Incorrect on First Attempt'}
-                        </h4>
-                        {isCorrect && earnedStarsToast && earnedStarsToast > 0 ? (
-                          <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-xs inline-flex items-center gap-1 shadow-xs">
-                            <Sparkles className="w-3 h-3 fill-slate-950 text-slate-950" />
-                            +{earnedStarsToast} Stars Earned!
-                          </span>
-                        ) : !isCorrect ? (
-                          <span className="px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 font-black text-xs inline-flex items-center gap-1 border border-rose-300 dark:border-rose-700">
-                            0 Stars • 1 Attempt Used
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {!isCorrect && (
-                        <p className="text-xs text-rose-800 dark:text-rose-200 mt-1.5 font-semibold leading-relaxed">
-                          Brain teaser points are only awarded if answered correctly on the very first attempt. The correct answer is revealed above so you can learn from it!
-                        </p>
-                      )}
-
-                      {/* Educational Explanation / Fun Fact */}
-                      <div className="mt-2.5 text-xs sm:text-sm font-medium leading-relaxed opacity-95">
-                        <p className="font-bold mb-1 text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                          <span>💡</span>
-                          <span>Learning Breakdown & Fun Fact:</span>
-                        </p>
-                        <p className="text-slate-700 dark:text-slate-300 bg-white/70 dark:bg-slate-900/60 p-3 rounded-xl border border-black/5 dark:border-white/5">
-                          {currentTeaser.funFactExplanation}
-                        </p>
-                      </div>
-
-                      {/* Daily Limit Reached Note */}
-                      {!isAdminPreview && !freePracticeMode && answeredToday + 1 >= dailyLimit && (
-                        <div className="mt-3 p-2.5 rounded-xl bg-purple-100/80 dark:bg-purple-900/40 border border-purple-300/80 dark:border-purple-700 text-purple-950 dark:text-purple-200 text-xs font-bold flex items-center gap-2">
-                          <span className="text-base">🌟</span>
-                          <span>
-                            Daily brain teaser attempt finished ({dailyLimit}/{dailyLimit})! Head to your daily chores to earn more stars, or tap Practice More to keep exploring!
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-                </>
+                <BrainTeaserDisplay
+                  currentTeaser={currentTeaser}
+                  gradeInfo={gradeInfo}
+                  selectedOptionIndex={selectedOptionIndex}
+                  isAnswerSubmitted={isAnswerSubmitted}
+                  isCorrect={isCorrect}
+                  showHint={showHint}
+                  earnedStarsToast={earnedStarsToast}
+                  answeredToday={answeredToday}
+                  dailyLimit={dailyLimit}
+                  freePracticeMode={freePracticeMode}
+                  isAdminPreview={isAdminPreview}
+                  isGeneratingAi={isGeneratingAi}
+                  onSelectOption={handleSelectOption}
+                  onShowHint={() => {
+                    sound.playTap();
+                    setShowHint(true);
+                  }}
+                  onRefreshQuestion={handleRefreshQuestion}
+                  onOpenLeaderboard={() => {
+                    sound.playFanfare();
+                    setShowLeaderboard(true);
+                  }}
+                  onOpenProgress={() => {
+                    sound.playTap();
+                    setShowProgressModal(true);
+                  }}
+                />
               )}
             </div>
           )}

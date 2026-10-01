@@ -105,6 +105,9 @@ export interface BrainTeaserHistory {
   totalCorrect?: number;
   totalStarsEarned?: number;
   completedQuestionIds?: string[];
+  recentQuestionTexts?: string[]; // Rolling window of recent question texts to guarantee non-repetition
+  recentConcepts?: string[]; // Rolling window of subject concepts/topics
+  recentAnswers?: string[]; // Rolling window of recent correct answers to avoid identical punchlines/answers
   subjectStats?: Partial<Record<BrainTeaserSubject, BrainTeaserSubjectStat>>;
 }
 

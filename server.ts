@@ -65,12 +65,31 @@ function getFallbackEstimate(name: string, quantity?: string): number {
   return Number(basePrice.toFixed(2));
 }
 
+// Quota & circuit-breaker state for AI services to prevent repeated 429 quota exhaustion
+let geminiQuotaCooldownUntil = 0;
+
+function isGeminiQuotaExhausted(): boolean {
+  return Date.now() < geminiQuotaCooldownUntil;
+}
+
+function triggerGeminiQuotaCooldown(delaySeconds = 60) {
+  geminiQuotaCooldownUntil = Date.now() + (delaySeconds * 1000);
+  console.info(`[Server] Gemini quota rate limit hit. Entering ${delaySeconds}s circuit breaker cooldown.`);
+}
+
 // Resilient Gemini model caller with exponential retry and model fallback cascade
 async function callGeminiWithFallback<T>(
   ai: GoogleGenAI,
   callFn: (modelName: string) => Promise<T>,
   preferredModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest']
 ): Promise<T> {
+  if (isGeminiQuotaExhausted()) {
+    const remainingSecs = Math.ceil((geminiQuotaCooldownUntil - Date.now()) / 1000);
+    const quotaErr = new Error(`Gemini quota cooldown active (${remainingSecs}s remaining); using offline fallback.`);
+    (quotaErr as any).isQuota = true;
+    throw quotaErr;
+  }
+
   let lastError: any = null;
 
   for (let mIdx = 0; mIdx < preferredModels.length; mIdx++) {
@@ -84,17 +103,31 @@ async function callGeminiWithFallback<T>(
       } catch (err: any) {
         lastError = err;
         const errStr = String(err?.message || err || '');
+        const isQuota =
+          errStr.includes('429') ||
+          errStr.includes('RESOURCE_EXHAUSTED') ||
+          errStr.includes('quota') ||
+          errStr.includes('Quota');
+
+        if (isQuota) {
+          triggerGeminiQuotaCooldown(60);
+        }
+
         const isTemporary =
+          isQuota ||
           errStr.includes('503') ||
           errStr.includes('UNAVAILABLE') ||
           errStr.includes('high demand') ||
-          errStr.includes('429') ||
-          errStr.includes('RESOURCE_EXHAUSTED') ||
           errStr.includes('overloaded');
 
         // If another model is available in the cascade, seamlessly transition without retrying the congested model
         if (isTemporary && !isLastModel) {
-          console.info(`[Server] Model ${model} unavailable (high demand/quota); transitioning to ${preferredModels[mIdx + 1]}...`);
+          console.info(`[Server] Model ${model} unavailable (${isQuota ? 'quota limit' : 'congested'}); transitioning to ${preferredModels[mIdx + 1]}...`);
+          break;
+        }
+
+        // Quota exhaustion cannot be solved with an 800ms retry; break immediately to use offline/catalog fallback
+        if (isQuota) {
           break;
         }
 
@@ -892,7 +925,7 @@ app.post('/api/tips', async (req, res) => {
 
     const ai = getGenAI();
 
-    if (ai) {
+    if (ai && !isGeminiQuotaExhausted()) {
       try {
         const prompt = `You are "Captain Penny", an enthusiastic, encouraging astronaut savings mentor helping a kid named ${kidName} (age ${age}) save for their dream goal: "${goalName}" costing $${targetCost.toFixed(2)}.
 Current financial telemetry:
@@ -1007,7 +1040,250 @@ const GRADE_CURRICULUM_GUIDELINES: Record<string, string> = {
 - Language: High-school intellectual curiosity, witty, thought-provoking.`,
 };
 
-function getFallbackCatalogTeaser(gradeLevel: string, excludeIds: string[] = [], preferredSubject?: string): BrainTeaser {
+// Rich subtopic matrix to guarantee high variety and rotate students through fresh learning concepts
+const CURRICULUM_TOPIC_MATRIX: Record<string, string[]> = {
+  kindergarten: [
+    'Counting everyday playful objects (1 to 10)',
+    'Basic addition (+1, +2) with toys and animals',
+    'Geometric shapes in daily life (circles, triangles, squares, rectangles)',
+    'Primary and secondary colors mixing (yellow + blue = green)',
+    'Rhyming word pairs (cat/hat, star/car, frog/log)',
+    'Baby animal names (bear cub, horse foal, duck duckling)',
+    'Opposites and spatial reasoning (tall/short, heavy/light, above/below)',
+    'Five human senses (seeing with eyes, tasting sweet things)',
+    'Weather and seasons (what clothes for snowy or rainy days)',
+    'Day versus night animals (owls and bats awake at night)',
+    'Ocean creature wonders (clownfish, sea stars, dolphins)',
+    'Farm life and helpers (chickens, bees making honey)',
+    'Healthy food and fruits (apples growing on trees, carrots in dirt)',
+    'Sound patterns and instruments (drums, bells, triangles)',
+    'Water states in play (ice melting into water, steam from soup)',
+  ],
+  '1st_grade': [
+    'Addition & subtraction combinations within 20',
+    'Telling time on an analog clock (hours and half-hours)',
+    'Skip counting by 2s, 5s, and 10s',
+    'Plant biology (what roots, stems, leaves, and flowers do)',
+    'Animal habitats (desert vs ocean vs arctic vs rainforest)',
+    'Phonics, compound words, and word puzzles (sun + flower = sunflower)',
+    'Simple coin values (pennies, nickels, dimes)',
+    'Seasons, weather cycles, and cloud types',
+    'Light and shadow exploration (how shadows change size)',
+    'Animal adaptations (bird beaks, camel humps, camouflage)',
+    'Magnets and magnetic materials (iron vs plastic vs wood)',
+    'Life cycles of frogs and butterflies (caterpillar to chrysalis)',
+    'Basic patterns and shape attributes (sides and vertices)',
+    'States of matter (solid rock, liquid milk, gas inside balloons)',
+    'Deductive riddle clues about everyday tools and objects',
+  ],
+  '2nd_grade': [
+    'Two-digit mental math and regrouping strategies',
+    'US currency math: counting combinations of quarters, dimes, nickels, pennies',
+    'Place value reasoning (hundreds, tens, ones)',
+    'Measurement units: comparing inches, feet, yards, centimeters, meters',
+    'States of matter and phase changes (evaporation, condensation, freezing)',
+    'Pollinators and plant reproduction (bees, pollen, seed dispersal)',
+    'Cardinals directions (North, South, East, West) and map symbols',
+    'Fossils, dinosaurs, and Earth layers',
+    'Simple machines: ramps, wheels, levers, and pulleys',
+    'Properties of materials (hardness, flexibility, buoyancy in water)',
+    'Homophones and spelling patterns (there/their, pair/pear, sea/see)',
+    'Animal classifications (mammals with hair/milk vs birds with feathers)',
+    'Water cycle steps (sun evaporates water into vapor)',
+    'Even vs odd number logic and grouping',
+    'Calendar math and elapsed days/weeks',
+  ],
+  '3rd_grade': [
+    'Multiplication arrays and quick division facts',
+    'Understanding unit fractions (1/2, 1/3, 1/4, 3/4) visually',
+    'Planets of our Solar System and orbital facts',
+    'Food chains, producers, consumers, and decomposers in nature',
+    'Weather forecasting, air pressure, thermometers, and meteorology',
+    'Idioms, figurative language, and curious metaphors',
+    'Perimeter and area of simple rectangles',
+    'Forces: static electricity, gravity, and magnetic repulsion',
+    'Earth science: weathering, erosion, and volcano mechanics',
+    'Human body skeleton, bones, and muscle pairs',
+    'Metric conversions and liquid volume (milliliters, liters)',
+    'Time intervals and elapsed time problem-solving',
+    'Animal communication (whale songs, bee waggle dances, bird calls)',
+    'Mystery word analogies (glove is to hand as shoe is to foot)',
+    'Lateral thinking logic grid puzzles',
+  ],
+  '4th_grade': [
+    'Multi-digit multiplication and long division remainders',
+    'Geometric angle classification: acute, right, obtuse, straight',
+    'Forms of energy: kinetic, potential, electrical, thermal, acoustic',
+    'Geology: rock cycle (igneous, sedimentary, metamorphic) and mineral tests',
+    'Sensory animal adaptations and nocturnal echolocation (bats, owls)',
+    'Electricity circuits: series vs parallel, conductors vs insulators',
+    'US geography, rivers, mountain ranges, and state capitals',
+    'Fractions to decimals relationships (0.25 = 1/4, 0.5 = 1/2)',
+    'Sound waves, pitch, frequency, and vibrations',
+    'Plant photosynthesis chemistry basics (sunlight + carbon dioxide + water)',
+    'Advanced word roots (Latin & Greek prefixes: tele-, auto-, micro-, bio-)',
+    'Prime vs composite numbers and factor trees',
+    'Renewable energy: wind, solar, hydroelectric power',
+    'Optical science: reflection, refraction, and prism rainbows',
+    'Multi-step math deduction problems',
+  ],
+  '5th_grade': [
+    'Multiplying and dividing fractions with real-world scenarios',
+    'Decimals operations, rounding, and percentage calculations',
+    'Volume calculation (V = l x w x h) of 3D rectangular prisms',
+    'The four Earth spheres: atmosphere, geosphere, hydrosphere, biosphere',
+    'Human organ systems: circulatory, respiratory, nervous, and digestive',
+    'Gravity, planetary masses, and moon tidal forces',
+    'Ecosystem balances: invasive species and biodiversity food webs',
+    'Chemical vs physical changes (rusting vs melting, baking soda & vinegar)',
+    'Coordinate grid graphing in quadrant 1 (x, y coordinates)',
+    'Historical inventions that transformed the world (printing press, steam engine, compass)',
+    'Microscopic world: single-celled organisms, bacteria, and amoebas',
+    'World ocean currents and climate effects (Gulf Stream)',
+    'Logical syllogisms and deductive deduction matrix',
+    'Word etymology and Latin/Greek roots in science',
+    'Order of operations (PEMDAS / GEMDAS) brain teasers',
+  ],
+  middle_school: [
+    'Pre-algebra equations, variables, and balancing scales',
+    'Ratios, unit rates, and scale drawings',
+    'Cellular biology: nucleus, mitochondria, cell membrane, plant cell wall',
+    'Genetics basics: dominant vs recessive traits, DNA double helix',
+    'Periodic table of elements: hydrogen, oxygen, carbon, iron, helium',
+    'Newton’s three laws of motion with everyday physical examples',
+    'World history civilizations: Mesopotamian wheels, Egyptian pyramids, Roman aqueducts',
+    'Literary devices: irony, foreshadowing, alliteration, hyperbole',
+    'Caesar cipher cryptography, binary numbers, and logic codes',
+    'Plate tectonics, continental drift, and earthquake fault lines',
+    'Speed, velocity, acceleration, and distance-time graphs',
+    'Thermal energy transfer: conduction, convection, radiation',
+    'Ecology: nitrogen cycle, carbon footprints, renewable resources',
+    'Probability, permutations, and combinatorics teasers',
+    'Advanced lateral thinking and fallacy identification',
+  ],
+  high_school: [
+    'Algebraic reasoning and quadratic balance puzzles',
+    'Geometric proofs, Pythagorean triples, and spatial trigonometry',
+    'Physics: conservation of momentum, gravitational potential, kinetic energy',
+    'Chemistry: covalent vs ionic bonding, atomic electron orbitals, stoichiometry',
+    'Cellular respiration vs photosynthesis molecular cycles (ATP, glucose)',
+    'Evolutionary mechanisms: natural selection, genetic drift, mutations',
+    'Astronomy: black holes, light years, stellar nucleosynthesis, redshift',
+    'World literature motifs, rhetorical appeals (ethos, pathos, logos)',
+    'Cognitive biases and informal logical fallacies (ad hominem, straw man, confirmation bias)',
+    'Computer science algorithms: Big O complexity concepts, sorting logic, recursion',
+    'Macroeconomics and supply/demand equilibrium concepts',
+    'Neuroscience: neurons, synapses, neurotransmitters (dopamine, serotonin)',
+    'Complex probability conundrums (Monty Hall problem, birthday paradox)',
+    'Advanced cryptography, public key encryption principles, hash functions',
+    'Historical turning points and geopolitical strategy riddles',
+  ],
+};
+
+function isAnswerTooSimilarServer(ans1?: string, ans2?: string): boolean {
+  if (!ans1 || !ans2) return false;
+  const a1 = ans1.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
+  const a2 = ans2.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
+  if (!a1 || !a2) return false;
+  if (a1 === a2) return true;
+
+  const compact1 = a1.replace(/\s+/g, '');
+  const compact2 = a2.replace(/\s+/g, '');
+  if (compact1 === compact2) return true;
+  if (compact1 + 's' === compact2 || compact2 + 's' === compact1) return true;
+  if (compact1 + 'es' === compact2 || compact2 + 'es' === compact1) return true;
+
+  if (compact1.length >= 4 && compact2.length >= 4) {
+    if (compact1.includes(compact2) || compact2.includes(compact1)) return true;
+  }
+  return false;
+}
+
+function isQuestionTooSimilarServer(q1: string, q2: string): boolean {
+  if (!q1 || !q2) return false;
+  const s1 = q1.trim().toLowerCase();
+  const s2 = q2.trim().toLowerCase();
+  if (s1 === s2) return true;
+  if (s1.length > 15 && s2.length > 15) {
+    if (s1.includes(s2) || s2.includes(s1)) return true;
+  }
+  const stopWords = new Set([
+    'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'about', 'from',
+    'what', 'which', 'who', 'how', 'many', 'there', 'you', 'your', 'if',
+    'does', 'did', 'do', 'can', 'will', 'would', 'could', 'should',
+  ]);
+  const extractWords = (t: string) =>
+    t.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w));
+  const w1 = extractWords(q1);
+  const w2 = extractWords(q2);
+  if (w1.length === 0 || w2.length === 0) return false;
+  const set1 = new Set(w1);
+  const set2 = new Set(w2);
+  let overlap = 0;
+  for (const w of set1) {
+    if (set2.has(w)) overlap++;
+  }
+  const union = new Set([...w1, ...w2]).size;
+  if (overlap / Math.max(1, union) >= 0.33) return true;
+
+  // Check 2-word bigrams if there is vocabulary overlap
+  if (w1.length >= 2 && w2.length >= 2 && overlap >= 2) {
+    const bigrams1 = new Set<string>();
+    for (let i = 0; i <= w1.length - 2; i++) {
+      bigrams1.add(`${w1[i]}_${w1[i + 1]}`);
+    }
+    for (let j = 0; j <= w2.length - 2; j++) {
+      if (bigrams1.has(`${w2[j]}_${w2[j + 1]}`)) return true;
+    }
+  }
+
+  // Check 3-word n-gram shingles
+  if (w1.length >= 3 && w2.length >= 3) {
+    const trigrams1 = new Set<string>();
+    for (let i = 0; i <= w1.length - 3; i++) {
+      trigrams1.add(`${w1[i]}_${w1[i + 1]}_${w1[i + 2]}`);
+    }
+    for (let j = 0; j <= w2.length - 3; j++) {
+      if (trigrams1.has(`${w2[j]}_${w2[j + 1]}_${w2[j + 2]}`)) return true;
+    }
+  }
+
+  return false;
+}
+
+function isBrainTeaserDuplicateServer(
+  candidate: { question: string; options?: string[]; correctAnswerIndex?: number },
+  recentQuestions: string[],
+  recentAnswers: string[] = []
+): boolean {
+  if (!candidate || !candidate.question) return false;
+
+  if (recentQuestions.some((rq) => isQuestionTooSimilarServer(candidate.question, rq))) {
+    return true;
+  }
+
+  if (
+    Array.isArray(candidate.options) &&
+    typeof candidate.correctAnswerIndex === 'number' &&
+    candidate.options[candidate.correctAnswerIndex]
+  ) {
+    const candidateAnswer = candidate.options[candidate.correctAnswerIndex];
+    if (recentAnswers.some((ra) => isAnswerTooSimilarServer(candidateAnswer, ra))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getFallbackCatalogTeaser(
+  gradeLevel: string,
+  excludeIds: string[] = [],
+  preferredSubject?: string,
+  recentQuestions: string[] = [],
+  recentAnswers: string[] = []
+): BrainTeaser {
   let gradeTeasers = BRAIN_TEASERS_CATALOG.filter((t) => t.gradeLevel === gradeLevel);
   if (preferredSubject && preferredSubject !== 'any') {
     const subjectMatches = gradeTeasers.filter((t) => t.subject === preferredSubject);
@@ -1020,53 +1296,111 @@ function getFallbackCatalogTeaser(gradeLevel: string, excludeIds: string[] = [],
       }
     }
   }
-  const candidates = gradeTeasers.filter((t) => !excludeIds.includes(t.id));
-  if (candidates.length > 0) {
-    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+
+  // 1. Filter out exact completed IDs AND questions/answers too similar to recent history
+  const strictCandidates = gradeTeasers.filter(
+    (t) => !excludeIds.includes(t.id) && !isBrainTeaserDuplicateServer(t, recentQuestions, recentAnswers)
+  );
+  if (strictCandidates.length > 0) {
+    const pick = strictCandidates[Math.floor(Math.random() * strictCandidates.length)];
     return { ...pick, isAiGenerated: false };
   }
-  const allCandidates = BRAIN_TEASERS_CATALOG.filter((t) => !excludeIds.includes(t.id));
+
+  // 2. Try uncompleted catalog questions across all grades that avoid similarity
+  const allCandidates = BRAIN_TEASERS_CATALOG.filter(
+    (t) => !excludeIds.includes(t.id) && !isBrainTeaserDuplicateServer(t, recentQuestions, recentAnswers)
+  );
   if (allCandidates.length > 0) {
     const pick = allCandidates[Math.floor(Math.random() * allCandidates.length)];
     return { ...pick, isAiGenerated: false };
   }
+
+  // 3. Fallback to uncompleted IDs in current grade
+  const idCandidates = gradeTeasers.filter((t) => !excludeIds.includes(t.id));
+  if (idCandidates.length > 0) {
+    const pick = idCandidates[Math.floor(Math.random() * idCandidates.length)];
+    return { ...pick, isAiGenerated: false };
+  }
+
   const pool = gradeTeasers.length > 0 ? gradeTeasers : BRAIN_TEASERS_CATALOG;
   const pick = pool[Math.floor(Math.random() * pool.length)];
   return { ...pick, isAiGenerated: false };
 }
 
-app.post('/api/brain-teasers/generate', async (req, res) => {
+app.post(['/api/brain-teasers/generate', '/api/brain-teasers/daily'], async (req, res) => {
   try {
     const {
       gradeLevel = '1st_grade',
       kidName = 'Explorer',
       excludeQuestionIds = [],
       recentQuestions = [],
+      recentConcepts = [],
+      recentAnswers = [],
       preferredSubject,
     } = req.body;
 
     const validGrade = (gradeLevel in GRADE_CURRICULUM_GUIDELINES) ? gradeLevel : '1st_grade';
     const curriculumGuide = GRADE_CURRICULUM_GUIDELINES[validGrade] || GRADE_CURRICULUM_GUIDELINES['1st_grade'];
 
+    const sanitizedRecent = (Array.isArray(recentQuestions) ? recentQuestions : [])
+      .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
+      .slice(0, 50);
+
+    const sanitizedAnswers = (Array.isArray(recentAnswers) ? recentAnswers : [])
+      .filter((a): a is string => typeof a === 'string' && a.trim().length > 0)
+      .slice(0, 35);
+
+    const sanitizedConcepts = (Array.isArray(recentConcepts) ? recentConcepts : [])
+      .filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+      .slice(0, 25);
+
     const ai = getGenAI();
 
-    if (ai) {
-      try {
-        const subjectInstruction = preferredSubject && preferredSubject !== 'any'
-          ? `Focus primarily on the subject: "${preferredSubject}".`
-          : `Select an engaging subject among: math, science, nature, wordplay, logic, or riddle (rotate to ensure variety).`;
+    if (ai && !isGeminiQuotaExhausted()) {
+      // Pick a random sub-topic from the curriculum matrix that doesn't conflict with recent concepts
+      const topicOptions = CURRICULUM_TOPIC_MATRIX[validGrade] || CURRICULUM_TOPIC_MATRIX['1st_grade'];
+      const unusedTopics = topicOptions.filter(
+        (top) => !sanitizedConcepts.some((c) => top.toLowerCase().includes(c.toLowerCase()) || c.toLowerCase().includes(top.toLowerCase()))
+      );
+      const activeTopics = unusedTopics.length > 0 ? unusedTopics : topicOptions;
 
-        const recentFilter = recentQuestions.length > 0
-          ? `Do NOT repeat or closely mirror these recently answered questions:\n- ${recentQuestions.slice(0, 5).join('\n- ')}`
-          : `Ensure the question is creative, novel, and educational.`;
+      // Gemini generation loop with up to 3 smart retry attempts if a duplicate or similar question is generated
+      const maxAttempts = 3;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const chosenTopic = activeTopics[Math.floor(Math.random() * activeTopics.length)];
 
-        const prompt = `You are a master STEM & humanities educator crafting an interactive, daily brain teaser for a student named "${kidName}".
+          const subjectInstruction = preferredSubject && preferredSubject !== 'any'
+            ? `Focus strictly on the subject: "${preferredSubject}". Target thematic area: "${chosenTopic}".`
+            : `Target learning sub-topic: "${chosenTopic}". Select an engaging subject among math, science, nature, wordplay, logic, or riddle (rotating away from recently seen concepts: ${sanitizedConcepts.slice(0, 5).join(', ') || 'none'}).`;
+
+          const recentFilter = sanitizedRecent.length > 0
+            ? `CRITICAL ANTI-REPETITION MANDATE:
+The student has already completed the following questions. You MUST NOT repeat any of these, nor ask questions with similar punchlines, scenarios, or duplicate numbers/solutions:
+${sanitizedRecent.slice(0, 35).map((q) => `- "${q}"`).join('\n')}
+
+DO NOT USE TIRED CLICHÉ RIDDLES (e.g. what gets wetter as it dries, what has hands but cannot clap, what has to be broken before you use it, what goes up and never comes down, what belongs to you but others use it, footsteps, the piano, the coin).
+Every single question MUST be fresh, creative, educational, and grounded in authentic learning!`
+            : `GUARANTEE FRESHNESS: Provide a novel, creative, and educational question. DO NOT use cliché or overused riddles (e.g. towel, clock, egg, piano, coin).`;
+
+          const bannedAnswersClause = sanitizedAnswers.length > 0
+            ? `BANNED RECENT SOLUTIONS & ANSWERS (The correct answer CANNOT be any of these):
+${sanitizedAnswers.slice(0, 25).map((a) => `- "${a}"`).join('\n')}`
+            : '';
+
+          const retryClarification = attempt > 1
+            ? `NOTE (Attempt ${attempt}): The previous candidate was too similar to an existing completed question or answer. You must pick an entirely DIFFERENT premise, entity, and question setup!`
+            : '';
+
+          const prompt = `You are a master STEM & humanities educator crafting an interactive, daily brain teaser for a student named "${kidName}".
 The primary purpose is to help the child LEARN something genuinely new or VERIFY their school curriculum understanding, eliminating rote memorization.
 
 ${curriculumGuide}
 
 ${subjectInstruction}
+${retryClarification}
 ${recentFilter}
+${bannedAnswersClause}
 
 Requirements:
 1. Provide exactly FOUR multiple-choice options in the "options" array.
@@ -1094,65 +1428,87 @@ Respond in strict JSON with no surrounding text or markdown ticks:
   "funFactExplanation": "Why it's correct + fascinating Did you know fact!"
 }`;
 
-        const response = await callGeminiWithFallback(
-          ai,
-          async (modelName) => {
-            return await ai.models.generateContent({
-              model: modelName,
-              contents: prompt,
-              config: {
-                responseMimeType: 'application/json',
-              },
-            });
-          },
-          ['gemini-3.1-flash-lite', 'gemini-flash-latest']
-        );
+          const response = await callGeminiWithFallback(
+            ai,
+            async (modelName) => {
+              return await ai.models.generateContent({
+                model: modelName,
+                contents: prompt,
+                config: {
+                  responseMimeType: 'application/json',
+                },
+              });
+            },
+            ['gemini-3.1-flash-lite', 'gemini-flash-latest']
+          );
 
-        const text = response.text?.trim();
-        if (text) {
-          const parsed = JSON.parse(text);
-          if (
-            parsed.question &&
-            Array.isArray(parsed.options) &&
-            parsed.options.length === 4 &&
-            typeof parsed.correctAnswerIndex === 'number' &&
-            parsed.correctAnswerIndex >= 0 &&
-            parsed.correctAnswerIndex < 4
-          ) {
-            const validSubjects = ['math', 'science', 'nature', 'wordplay', 'logic', 'riddle'];
-            const subject = validSubjects.includes(parsed.subject) ? parsed.subject : 'science';
+          const text = response.text?.trim();
+          if (text) {
+            const parsed = JSON.parse(text);
+            if (
+              parsed.question &&
+              Array.isArray(parsed.options) &&
+              parsed.options.length === 4 &&
+              typeof parsed.correctAnswerIndex === 'number' &&
+              parsed.correctAnswerIndex >= 0 &&
+              parsed.correctAnswerIndex < 4
+            ) {
+              // Anti-repetition gate: verify candidate question & answer against both history and catalog
+              const isDuplicateHistory = isBrainTeaserDuplicateServer(parsed, sanitizedRecent, sanitizedAnswers);
+              const isDuplicateCatalog = BRAIN_TEASERS_CATALOG.some(
+                (c) => isQuestionTooSimilarServer(parsed.question, c.question)
+              );
 
-            const teaser: BrainTeaser = {
-              id: `ai-teaser-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-              gradeLevel: validGrade as GradeLevel,
-              subject: subject as any,
-              subjectLabel: parsed.subjectLabel || 'Curriculum Challenge',
-              subjectIcon: parsed.subjectIcon || '💡',
-              question: parsed.question,
-              options: parsed.options,
-              correctAnswerIndex: parsed.correctAnswerIndex,
-              hint: parsed.hint || 'Take a moment to reason through each option!',
-              thinkingAngle: parsed.thinkingAngle || 'Look for key clues hidden inside the question details.',
-              funFactExplanation: parsed.funFactExplanation || "Great job! That's the correct answer.",
-              isAiGenerated: true,
-              conceptTag: parsed.subjectLabel,
-            };
+              if (!isDuplicateHistory && !isDuplicateCatalog) {
+                const validSubjects = ['math', 'science', 'nature', 'wordplay', 'logic', 'riddle'];
+                const subject = validSubjects.includes(parsed.subject) ? parsed.subject : 'science';
 
-            res.json({
-              success: true,
-              source: 'gemini',
-              teaser,
-            });
-            return;
+                const teaser: BrainTeaser = {
+                  id: `ai-teaser-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  gradeLevel: validGrade as GradeLevel,
+                  subject: subject as any,
+                  subjectLabel: parsed.subjectLabel || 'Curriculum Challenge',
+                  subjectIcon: parsed.subjectIcon || '💡',
+                  question: parsed.question,
+                  options: parsed.options,
+                  correctAnswerIndex: parsed.correctAnswerIndex,
+                  hint: parsed.hint || 'Take a moment to reason through each option!',
+                  thinkingAngle: parsed.thinkingAngle || 'Look for key clues hidden inside the question details.',
+                  funFactExplanation: parsed.funFactExplanation || "Great job! That's the correct answer.",
+                  isAiGenerated: true,
+                  conceptTag: parsed.subjectLabel,
+                };
+
+                res.json({
+                  success: true,
+                  source: 'gemini',
+                  teaser,
+                });
+                return;
+              } else {
+                console.info(`[Server] Gemini candidate (attempt ${attempt}/${maxAttempts}) flagged as duplicate/similar, regenerating with alternate seed...`);
+              }
+            }
           }
+        } catch (attemptErr: any) {
+          const errStr = String(attemptErr?.message || attemptErr || '');
+          if (
+            errStr.includes('429') ||
+            errStr.includes('RESOURCE_EXHAUSTED') ||
+            errStr.includes('quota') ||
+            errStr.includes('Quota')
+          ) {
+            triggerGeminiQuotaCooldown(60);
+            console.info('[Server] Gemini rate limit/quota reached; seamlessly serving from verified catalog.');
+            break; // Stop immediately to avoid hammering rate-limited quota
+          }
+          console.info(`[Server] Gemini generation attempt ${attempt} unavailable, seamlessly falling back.`);
         }
-      } catch (geminiErr) {
-        console.info('[Server] Gemini Brain Teaser generation unavailable, serving catalog question seamlessly.');
       }
     }
 
-    // Fallback to static catalog question with subject focus support
-    const fallback = getFallbackCatalogTeaser(validGrade, excludeQuestionIds, preferredSubject);
+    // Fallback to static catalog question with anti-similarity verification
+    const fallback = getFallbackCatalogTeaser(validGrade, excludeQuestionIds, preferredSubject, sanitizedRecent, sanitizedAnswers);
     res.json({
       success: true,
       source: 'catalog',
@@ -1547,7 +1903,7 @@ app.post('/api/retail-lookup', async (req, res) => {
 
     // 5. Call Gemini AI model with multi-model fallback cascade to identify product
     const ai = getGenAI();
-    if (ai) {
+    if (ai && !isGeminiQuotaExhausted()) {
       try {
         const prompt = `You are a precision retail product identification expert and AI product database engine.
 Look up this product identifier from major retailers (Best Buy, Target, Amazon, Walmart, Micro Center, Apple, LEGO):

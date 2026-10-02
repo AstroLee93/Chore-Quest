@@ -891,7 +891,9 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                   </div>
                                   <div className="flex items-center gap-2 text-[10px] font-bold text-white/70 flex-wrap mt-0.5">
                                     <span className="text-amber-300 font-extrabold">
-                                      +{chore.stars + (chore.bountyBonusStars || 0)} pts
+                                      {(chore.stars + (chore.bountyBonusStars || 0)) > 0
+                                        ? `+${chore.stars + (chore.bountyBonusStars || 0)} pts`
+                                        : '0 pts (routine)'}
                                     </span>
                                     {chore.timerMinutes && (
                                       <span className="text-sky-300 flex items-center gap-0.5">

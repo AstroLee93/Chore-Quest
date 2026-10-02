@@ -553,7 +553,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
     sound.playTap();
     if (!chore.title?.trim() || !chore.categoryId) return;
 
-    const sanitizedStars = Math.max(1, Math.min(100, Math.round(Number(chore.stars) || 3)));
+    const rawStars = Number(chore.stars);
+    const sanitizedStars = isNaN(rawStars) ? 3 : Math.max(0, Math.min(100, Math.round(rawStars)));
     const sanitizedBountyStars = chore.isBounty
       ? Math.max(1, Math.min(50, Math.round(Number(chore.bountyBonusStars) || 5)))
       : 0;
@@ -2510,8 +2511,12 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                           <span className="font-black text-slate-800 text-xs sm:text-sm truncate max-w-[180px] sm:max-w-none">
                             {chore.title}
                           </span>
-                          <span className="inline-flex items-center gap-0.5 px-2 py-0.2 rounded-full text-[10px] sm:text-xs font-black bg-yellow-400 text-slate-900 border border-yellow-300">
-                            ⭐ {chore.stars}
+                          <span className={`inline-flex items-center gap-0.5 px-2 py-0.2 rounded-full text-[10px] sm:text-xs font-black border ${
+                            chore.stars === 0
+                              ? 'bg-slate-100 text-slate-700 border-slate-300'
+                              : 'bg-yellow-400 text-slate-900 border-yellow-300'
+                          }`}>
+                            ⭐ {chore.stars} {chore.stars === 0 ? '(Routine)' : 'pts'}
                           </span>
                           <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-700">
                             {category?.name || 'Uncategorized'}
@@ -5218,29 +5223,43 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                     </span>
                   </div>
 
-                  {/* "+1 -1" Clickable System */}
+                  {/* "+1 -1" Clickable & Number Input System */}
                   <div className="flex items-center justify-between bg-white border-2 border-amber-300 rounded-xl sm:rounded-2xl p-0.5 sm:p-1 shadow-2xs">
                     <button
                       type="button"
                       id="btn-chore-dec-star"
                       onClick={() => {
                         sound.playTap();
-                        const current = Number(editingChore.stars) || 3;
+                        const current = editingChore.stars !== undefined ? Number(editingChore.stars) : 3;
                         setEditingChore({
                           ...editingChore,
-                          stars: Math.max(1, current - 1),
+                          stars: Math.max(0, current - 1),
                         });
                       }}
-                      disabled={(Number(editingChore.stars) || 3) <= 1}
+                      disabled={(editingChore.stars !== undefined ? Number(editingChore.stars) : 3) <= 0}
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-100 hover:bg-amber-200 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-amber-950 font-black text-xs sm:text-sm flex items-center justify-center transition-all cursor-pointer select-none"
-                      title="Decrease star reward (-1)"
+                      title="Decrease star reward (-1, minimum 0)"
                     >
                       -1
                     </button>
 
-                    <div className="flex items-center justify-center gap-1 font-black text-xs sm:text-sm text-slate-900 px-1 select-none">
+                    <div className="flex items-center justify-center gap-0.5 font-black text-xs sm:text-sm text-slate-900 px-1 select-none">
                       <span className="text-amber-500">⭐</span>
-                      <span>{Number(editingChore.stars) || 3}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={editingChore.stars !== undefined ? editingChore.stars : 3}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? 0 : Number(e.target.value);
+                          setEditingChore({
+                            ...editingChore,
+                            stars: Math.max(0, Math.min(100, Math.round(val))),
+                          });
+                        }}
+                        className="w-9 text-center font-black text-xs sm:text-sm text-slate-900 bg-transparent focus:outline-hidden"
+                        title="Star reward amount (can be 0 for routine tasks)"
+                      />
                     </div>
 
                     <button
@@ -5248,13 +5267,13 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       id="btn-chore-inc-star"
                       onClick={() => {
                         sound.playTap();
-                        const current = Number(editingChore.stars) || 3;
+                        const current = editingChore.stars !== undefined ? Number(editingChore.stars) : 3;
                         setEditingChore({
                           ...editingChore,
                           stars: Math.min(100, current + 1),
                         });
                       }}
-                      disabled={(Number(editingChore.stars) || 3) >= 100}
+                      disabled={(editingChore.stars !== undefined ? Number(editingChore.stars) : 3) >= 100}
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-400 hover:bg-amber-500 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center transition-all cursor-pointer select-none shadow-2xs"
                       title="Increase star reward (+1)"
                     >
@@ -5263,8 +5282,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   </div>
 
                   {/* Quick Preset clickers */}
-                  <div className="flex items-center justify-center gap-1 mt-1">
-                    {[1, 2, 3, 5, 10].map((preset) => (
+                  <div className="flex items-center justify-center gap-1 mt-1 flex-wrap">
+                    {[0, 1, 2, 3, 5, 10].map((preset) => (
                       <button
                         key={preset}
                         type="button"
@@ -5273,16 +5292,21 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                           setEditingChore({ ...editingChore, stars: preset });
                         }}
                         className={`px-1.5 py-0.5 rounded text-[10px] font-black transition-all cursor-pointer ${
-                          (Number(editingChore.stars) || 3) === preset
-                            ? 'bg-amber-400 text-slate-950 shadow-2xs'
+                          (editingChore.stars !== undefined ? Number(editingChore.stars) : 3) === preset
+                            ? 'bg-amber-400 text-slate-950 shadow-2xs font-extrabold'
                             : 'bg-white hover:bg-amber-50 text-slate-600 border border-slate-200'
                         }`}
-                        title={`Set to ${preset} stars`}
+                        title={preset === 0 ? '0 stars (Routine duty - no points awarded)' : `Set to ${preset} stars`}
                       >
-                        {preset}
+                        {preset === 0 ? '0 ⭐' : preset}
                       </button>
                     ))}
                   </div>
+                  {(editingChore.stars !== undefined ? Number(editingChore.stars) : 3) === 0 && (
+                    <div className="text-[10px] text-amber-900 font-bold mt-1 text-center bg-amber-100/70 border border-amber-300 rounded px-1 py-0.5">
+                      0 Stars: Routine chore (no points)
+                    </div>
+                  )}
                 </div>
 
                 <div>

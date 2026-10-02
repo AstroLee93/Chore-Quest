@@ -287,7 +287,7 @@ export const ChoreTimerModal: React.FC<ChoreTimerModalProps> = ({
             className="w-full py-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-extrabold text-sm border-2 border-emerald-300 flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <Check className="w-5 h-5 stroke-[3]" />
-            <span>Complete Chore Now (+{chore.stars} Points)</span>
+            <span>Complete Chore Now {chore.stars > 0 ? `(+${chore.stars} Points)` : '(0 Points)'}</span>
           </button>
         </div>
       </div>

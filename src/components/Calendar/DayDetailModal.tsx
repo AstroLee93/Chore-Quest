@@ -335,7 +335,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                       <span className="truncate">{chore.title}</span>
                     </div>
                     <span className="shrink-0 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 font-black text-[10px] border border-yellow-300">
-                      +{chore.stars} ⭐
+                      {chore.stars > 0 ? `+${chore.stars} ⭐` : '0 ⭐'}
                     </span>
                   </div>
                 ))}

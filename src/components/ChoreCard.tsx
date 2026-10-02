@@ -246,10 +246,17 @@ export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
               )}
 
               {/* Star reward badge */}
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                +{(Number(chore?.stars) || 0) + (Number(chore?.bountyBonusStars) || 0)} Points
-              </span>
+              {((Number(chore?.stars) || 0) + (Number(chore?.bountyBonusStars) || 0)) === 0 ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  <Star className="w-3 h-3 text-slate-400" />
+                  0 Points (Routine)
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                  +{(Number(chore?.stars) || 0) + (Number(chore?.bountyBonusStars) || 0)} Points
+                </span>
+              )}
 
               {/* Focus timer badge shortcut */}
               {onStartTimer && !isCompleted && !isSkipped && (
@@ -350,7 +357,12 @@ export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
             {isCompleted && log?.completedAt && (
               <div className="mt-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>Finished today! +{chore.stars + (chore.bountyBonusStars || 0)} points added</span>
+                <span>
+                  Finished today!{' '}
+                  {(chore.stars + (chore.bountyBonusStars || 0)) > 0
+                    ? `+${chore.stars + (chore.bountyBonusStars || 0)} points added`
+                    : 'Done! (Routine chore)'}
+                </span>
               </div>
             )}
 

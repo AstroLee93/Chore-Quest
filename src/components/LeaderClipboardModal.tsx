@@ -166,8 +166,9 @@ export const LeaderClipboardModal: React.FC<LeaderClipboardModalProps> = ({
     });
 
     onUpdateDatabase(updatedDatabase);
+    const displayStars = starsAwarded !== undefined ? starsAwarded : activeInspectionItem.chore.stars;
     showToast(
-      `Signed off ${activeInspectionItem.chore.title} for ${activeInspectionItem.targetKid.name}! (+${starsAwarded || activeInspectionItem.chore.stars} Stars) 🎖️`
+      `Signed off ${activeInspectionItem.chore.title} for ${activeInspectionItem.targetKid.name}! (${displayStars > 0 ? `+${displayStars} Stars` : '0 Stars - Routine'} 🎖️)`
     );
     setActiveInspectionItem(null);
   };
@@ -587,7 +588,7 @@ export const LeaderClipboardModal: React.FC<LeaderClipboardModalProps> = ({
                               <div className="flex items-center gap-2 mt-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                                 <span className="text-amber-600 dark:text-amber-400 font-black flex items-center gap-0.5">
                                   <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                                  +{item.chore.stars} Stars
+                                  {item.chore.stars > 0 ? `+${item.chore.stars} Stars` : '0 Stars (Routine)'}
                                 </span>
                                 {item.totalSubtasksCount > 0 && (
                                   <span>
@@ -881,7 +882,7 @@ export const LeaderClipboardModal: React.FC<LeaderClipboardModalProps> = ({
                             : 'Today'}
                         </span>
                         <span className="text-xs font-black text-amber-500">
-                          +{item.chore.stars} Stars
+                          {item.chore.stars > 0 ? `+${item.chore.stars} Stars` : '0 Stars'}
                         </span>
                       </div>
                     </div>
@@ -957,7 +958,9 @@ export const LeaderClipboardModal: React.FC<LeaderClipboardModalProps> = ({
                   <div className="text-xs text-slate-600 dark:text-slate-300 font-bold flex items-center gap-2">
                     <span>Sibling: {activeInspectionItem.targetKid.name}</span>
                     <span>•</span>
-                    <span className="text-amber-600 font-black">+{activeInspectionItem.chore.stars} Stars</span>
+                    <span className="text-amber-600 font-black">
+                      {activeInspectionItem.chore.stars > 0 ? `+${activeInspectionItem.chore.stars} Stars` : '0 Stars (Routine)'}
+                    </span>
                   </div>
                 </div>
               </div>

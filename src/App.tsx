@@ -273,7 +273,7 @@ export default function App() {
 
     const isKidCoinEnabled = database.settings.kidCoinEnabled !== false;
     const coinRatio = database.settings.kidCoinRatio ?? 0.10;
-    const earnedCoins = isKidCoinEnabled ? Number(((chore.stars || 1) * coinRatio).toFixed(2)) : 0;
+    const earnedCoins = isKidCoinEnabled ? Number(((chore.stars ?? 0) * coinRatio).toFixed(2)) : 0;
     let playedFanfare = false;
 
     const updatedKids = database.kids.map((k) => {

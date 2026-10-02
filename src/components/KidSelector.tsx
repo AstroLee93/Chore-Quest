@@ -121,10 +121,16 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center justify-between gap-1.5 flex-wrap">
                     <h2 className={`text-base sm:text-lg font-black ${theme.kidCardNameColor} group-hover:opacity-85 transition-opacity truncate`}>
                       {kid.name}
                     </h2>
+                    {(kid.isLeader || (database?.settings?.leaderRole?.enabled && database?.settings?.leaderRole?.leaderKidId === kid.id)) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-400 text-amber-950 font-black text-[10px] shadow-2xs border border-amber-400 shrink-0">
+                        <span>{database?.settings?.leaderRole?.badgeIcon || '🎖️'}</span>
+                        <span>{database?.settings?.leaderRole?.title || 'Leader'}</span>
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1.5 mt-0.5">

@@ -40,6 +40,8 @@ import {
   BookOpen,
   Target,
   BarChart3,
+  ClipboardList,
+  FileText,
 } from 'lucide-react';
 import {
   FamilyDatabase,
@@ -94,6 +96,16 @@ import { getHouseholdBrainTeaserAnalytics } from '../utils/brainTeaserStats';
 import { GRADE_LEVEL_LIST, getGradeLevelInfo, BRAIN_TEASER_SUBJECTS, getSubjectInfo } from '../utils/brainTeasers';
 import { RewardsManagementSection } from './RewardsManagementSection';
 import { StarValueInput } from './StarValueInput';
+import { LeaderRoleSettingsModal } from './LeaderRoleSettingsModal';
+import { LeaderClipboardModal } from './LeaderClipboardModal';
+import {
+  getLeaderConfig,
+  getLeaderKid,
+  assignKidAsLeader,
+  unassignLeader,
+  updateLeaderRoleConfig,
+  PRESET_LEADER_DUTIES,
+} from '../utils/leaderRole';
 
 interface ParentDashboardProps {
   database: FamilyDatabase;
@@ -103,6 +115,8 @@ interface ParentDashboardProps {
   onOpenCalendar?: () => void;
   onOpenSnackRequest?: (kid?: KidProfile) => void;
   onOpenHouseRules?: () => void;
+  onOpenLeaderSettings?: () => void;
+  onOpenLeaderClipboard?: (kid?: KidProfile | null) => void;
 }
 
 export const ParentDashboard: React.FC<ParentDashboardProps> = ({
@@ -113,9 +127,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   onOpenCalendar,
   onOpenSnackRequest,
   onOpenHouseRules,
+  onOpenLeaderSettings,
+  onOpenLeaderClipboard,
 }) => {
   const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'menu' | 'chores' | 'rewards' | 'kids' | 'reading' | 'savings' | 'settings'>('activity');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
+  const [isLeaderSettingsModalOpen, setIsLeaderSettingsModalOpen] = useState<boolean>(false);
+  const [isLeaderClipboardPreviewOpen, setIsLeaderClipboardPreviewOpen] = useState<boolean>(false);
+  const [leaderPreviewKid, setLeaderPreviewKid] = useState<KidProfile | null>(null);
   const todayStr = getTodayDateString();
 
   // Inactivity Auto-Lock Timeout
@@ -2584,6 +2603,128 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* TAB 4: KIDS PROFILES */}
       {activeTab === 'kids' && (
         <div className="space-y-1 sm:space-y-4 animate-fade-in">
+          {/* Family Chore Leader & Manager Role Assignment Card */}
+          {(() => {
+            const currentLeaderConfig = getLeaderConfig(database);
+            const currentLeaderKid = getLeaderKid(database);
+            return (
+              <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 p-0.5 sm:p-1 rounded-none sm:rounded-2xl shadow-xs border-y sm:border-none border-amber-500">
+                <div className="bg-white dark:bg-slate-900 p-3 sm:p-5 rounded-none sm:rounded-xl space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white flex items-center justify-center text-2xl shadow-xs border border-amber-300 shrink-0">
+                        {currentLeaderConfig.badgeIcon || '🎖️'}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+                            LEADERSHIP & TEAM RESPONSIBILITY
+                          </span>
+                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                            {currentLeaderKid ? `Active Manager: ${currentLeaderKid.name}` : 'No Leader Assigned'}
+                          </span>
+                        </div>
+                        <h3 className="font-black text-sm sm:text-base text-slate-900 dark:text-white mt-0.5">
+                          {currentLeaderConfig.title || 'Family Chore Leader & Manager'}
+                        </h3>
+                      </div>
+                    </div>
+
+                    {/* Quick Leadership Action Buttons */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        id="btn-inspect-clipboard-admin"
+                        onClick={() => {
+                          sound.playTap();
+                          setLeaderPreviewKid(currentLeaderKid || database.kids[0] || null);
+                          setIsLeaderClipboardPreviewOpen(true);
+                        }}
+                        className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/70 dark:hover:bg-amber-900 text-amber-900 dark:text-amber-200 font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-amber-300 dark:border-amber-700"
+                      >
+                        <ClipboardList className="w-3.5 h-3.5" />
+                        <span>Inspect Clipboard 📋</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        id="btn-configure-leader-role"
+                        onClick={() => {
+                          sound.playTap();
+                          setIsLeaderSettingsModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                        <span>Configure Role & Duties ⚙️</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Assignment Dropdown & Responsibilities Clarity Box */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-1">
+                    {/* Left: Quick Assign Child */}
+                    <div className="md:col-span-5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                      <label className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-300 block">
+                        Appoint Leader Child:
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <select
+                          id="select-appointed-leader-kid"
+                          value={currentLeaderConfig.leaderKidId || ''}
+                          onChange={(e) => {
+                            const newId = e.target.value;
+                            sound.playRewardRedeemed();
+                            if (newId) {
+                              const updated = assignKidAsLeader(database, newId);
+                              onUpdateDatabase(updated);
+                            } else {
+                              const updated = unassignLeader(database);
+                              onUpdateDatabase(updated);
+                            }
+                          }}
+                          className="flex-1 px-3 py-2 text-xs font-black rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
+                        >
+                          <option value="">-- No Leader Assigned (Paused) --</option>
+                          {database.kids.map((k) => (
+                            <option key={k.id} value={k.id}>
+                              {k.avatar} {k.name} ({k.gradeLevel || 'Kid'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                        The assigned leader is solely responsible for verifying chore completion on their clipboard and delegating tasks to foster responsibility and team-building.
+                      </p>
+                    </div>
+
+                    {/* Right: Description of Responsibilities Preview */}
+                    <div className="md:col-span-7 p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 flex flex-col justify-between gap-1.5">
+                      <div>
+                        <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                          <span className="flex items-center gap-1">
+                            <FileText className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Role Responsibilities for Leader:</span>
+                          </span>
+                          <span className="text-[10px] text-amber-700 dark:text-amber-300 font-extrabold">
+                            +{currentLeaderConfig.bonusLeaderStars || 5} Stars Leader Bonus
+                          </span>
+                        </div>
+                        <p className="text-xs text-amber-950 dark:text-amber-100 font-semibold italic mt-1 line-clamp-2 leading-relaxed">
+                          "{currentLeaderConfig.description || 'Guide your team, assign daily chore duties fairly, verify that tasks are done thoroughly, and encourage everyone with high-fives and positive feedback!'}"
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] font-bold text-amber-800 dark:text-amber-300 pt-1 border-t border-amber-200/60 dark:border-amber-800/40">
+                        <span>{currentLeaderConfig.checklistGuidelines?.length || 0} Daily Guidelines</span>
+                        <span>Permissions: {currentLeaderConfig.canAssignChores ? 'Can Assign Chores ✓' : ''} {currentLeaderConfig.canSignOffChores ? '• Can Sign Off ✓' : ''}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="bg-white p-2 sm:p-5 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-indigo-400 shadow-none sm:shadow-2xs space-y-1.5 sm:space-y-3">
             <div className="flex items-center justify-between gap-1.5">
               <div>
@@ -2628,12 +2769,37 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-black text-sm sm:text-base text-slate-800 truncate">{kid.name}</h4>
+                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <h4 className="font-black text-sm sm:text-base text-slate-800 truncate">{kid.name}</h4>
+                            {(kid.isLeader || getLeaderConfig(database).leaderKidId === kid.id) && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-200 text-[10px] font-black border border-amber-300 dark:border-amber-700 shadow-2xs">
+                                <span>{getLeaderConfig(database).badgeIcon || '🎖️'}</span>
+                                <span>Leader & Manager</span>
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1">
                             <ActionMenu
                               id={`menu-kid-${kid.id}`}
                               label="Menu"
                               items={[
+                                {
+                                  id: 'leader-action',
+                                  label: (kid.isLeader || getLeaderConfig(database).leaderKidId === kid.id)
+                                    ? '📋 Inspect Leader Clipboard'
+                                    : '🎖️ Appoint as Leader & Manager',
+                                  icon: <Award className="w-3.5 h-3.5 text-amber-600" />,
+                                  onClick: () => {
+                                    sound.playRewardRedeemed();
+                                    if (kid.isLeader || getLeaderConfig(database).leaderKidId === kid.id) {
+                                      setLeaderPreviewKid(kid);
+                                      setIsLeaderClipboardPreviewOpen(true);
+                                    } else {
+                                      const updated = assignKidAsLeader(database, kid.id);
+                                      onUpdateDatabase(updated);
+                                    }
+                                  },
+                                },
                                 {
                                   id: 'edit',
                                   label: 'Edit Profile',
@@ -4542,6 +4708,196 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
             </div>
 
+            {/* Leadership Role & Manager Configuration (Admin Appointed) */}
+            <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-slate-800/90 dark:to-amber-950/40 border-2 border-amber-300 dark:border-amber-700/80 space-y-3.5 shadow-2xs">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xl shadow-xs shrink-0">
+                    {settingsForm.leaderRole?.badgeIcon || '🎖️'}
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-amber-950 dark:text-amber-100 flex items-center gap-1.5">
+                      <span>Family Chore Leader & Manager Role</span>
+                      <span className="text-[10px] font-black px-2 py-0.2 rounded-md bg-amber-200 dark:bg-amber-900/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+                        ADMIN APPOINTED
+                      </span>
+                    </h4>
+                    <p className="text-[10px] sm:text-xs text-amber-900/80 dark:text-amber-300/80 font-bold mt-0.5">
+                      Appoint one child as Manager to foster leadership, delegate tasks, and sign off chores on their Leader Clipboard.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playTap();
+                      setLeaderPreviewKid(database.kids.find((k) => k.id === settingsForm.leaderRole?.leaderKidId) || database.kids[0] || null);
+                      setIsLeaderClipboardPreviewOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-amber-900 dark:text-amber-200 hover:bg-amber-100 border border-amber-300 dark:border-amber-700 text-xs font-black shadow-2xs flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                  >
+                    <ClipboardList className="w-3.5 h-3.5" />
+                    <span>Preview Clipboard 📋</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playTap();
+                      setIsLeaderSettingsModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Full Setup Modal ⚙️</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Grid: Appointed Child, Title & Badge, Description of Responsibilities */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                {/* 1. Appointed Leader Child & Title */}
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-slate-700 space-y-2">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
+                      Appointed Leader Child:
+                    </label>
+                    <select
+                      value={settingsForm.leaderRole?.leaderKidId || ''}
+                      onChange={(e) => {
+                        const newId = e.target.value;
+                        const updatedLeader = {
+                          ...(settingsForm.leaderRole || getLeaderConfig(database)),
+                          leaderKidId: newId || undefined,
+                          enabled: !!newId,
+                        };
+                        setSettingsForm({
+                          ...settingsForm,
+                          leaderRole: updatedLeader,
+                        });
+                        // Sync with kids list in database as well
+                        const updatedKids = database.kids.map((k) => ({
+                          ...k,
+                          isLeader: k.id === newId,
+                        }));
+                        onUpdateDatabase({
+                          ...database,
+                          kids: updatedKids,
+                          settings: {
+                            ...database.settings,
+                            leaderRole: updatedLeader,
+                          },
+                        });
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 text-xs font-black bg-white dark:bg-slate-800 text-slate-800 dark:text-white cursor-pointer"
+                    >
+                      <option value="">-- No Leader Assigned (Paused) --</option>
+                      {database.kids.map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.avatar} {k.name} ({k.gradeLevel || 'Kid'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
+                      Leader Title:
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsForm.leaderRole?.title || 'Chore Quest Leader'}
+                      onChange={(e) => {
+                        setSettingsForm({
+                          ...settingsForm,
+                          leaderRole: {
+                            ...(settingsForm.leaderRole || getLeaderConfig(database)),
+                            title: e.target.value,
+                          },
+                        });
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 text-xs font-black bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-slate-700 dark:text-slate-300 mb-1">
+                      Leader Bonus Stars:
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      {[3, 5, 8, 10].map((pts) => (
+                        <button
+                          key={pts}
+                          type="button"
+                          onClick={() => {
+                            setSettingsForm({
+                              ...settingsForm,
+                              leaderRole: {
+                                ...(settingsForm.leaderRole || getLeaderConfig(database)),
+                                bonusLeaderStars: pts,
+                              },
+                            });
+                          }}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer transition-all ${
+                            (settingsForm.leaderRole?.bonusLeaderStars ?? 5) === pts
+                              ? 'bg-amber-600 text-white font-black'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-100'
+                          }`}
+                        >
+                          +{pts} ⭐
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Admin Description of Responsibilities */}
+                <div className="md:col-span-2 p-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-slate-700 space-y-2 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Description of Responsibilities (For Full Clarity to Leader):</span>
+                      </label>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        Displayed on child's Clipboard
+                      </span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={settingsForm.leaderRole?.description || ''}
+                      onChange={(e) => {
+                        setSettingsForm({
+                          ...settingsForm,
+                          leaderRole: {
+                            ...(settingsForm.leaderRole || getLeaderConfig(database)),
+                            description: e.target.value,
+                          },
+                        });
+                      }}
+                      placeholder="Give a clear description of what the Leader needs to do (e.g. check on siblings, inspect rooms before dinner, verify pet food, give high-fives and encouragement)..."
+                      className="w-full mt-1.5 p-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-xs leading-relaxed font-medium"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-bold border-t border-slate-100 dark:border-slate-800 pt-1.5">
+                    <span>
+                      Guidelines count: {settingsForm.leaderRole?.checklistGuidelines?.length || 5} duties
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsLeaderSettingsModalOpen(true)}
+                      className="text-amber-700 dark:text-amber-400 hover:underline cursor-pointer font-black"
+                    >
+                      Edit Daily Checklist Guidelines &rarr;
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between pt-2 border-t border-slate-100">
               {settingsSaved ? (
                 <span className="text-[11px] sm:text-xs font-black text-emerald-600 flex items-center gap-1">
@@ -5852,6 +6208,36 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           onUpdateKidFocusSubject={(kidId, subject) => {
             handleQuickUpdateBrainTeaserSubject(kidId, subject);
           }}
+        />
+      )}
+
+      {/* Leadership Role Settings Modal */}
+      {isLeaderSettingsModalOpen && (
+        <LeaderRoleSettingsModal
+          isOpen={isLeaderSettingsModalOpen}
+          onClose={() => setIsLeaderSettingsModalOpen(false)}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          onOpenClipboardPreview={() => {
+            setIsLeaderSettingsModalOpen(false);
+            setLeaderPreviewKid(getLeaderKid(database) || database.kids[0] || null);
+            setIsLeaderClipboardPreviewOpen(true);
+          }}
+        />
+      )}
+
+      {/* Leader Clipboard Modal (Preview & Inspection by Admin) */}
+      {isLeaderClipboardPreviewOpen && (
+        <LeaderClipboardModal
+          isOpen={isLeaderClipboardPreviewOpen}
+          onClose={() => {
+            setIsLeaderClipboardPreviewOpen(false);
+            setLeaderPreviewKid(null);
+          }}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          actingKid={leaderPreviewKid || getLeaderKid(database) || database.kids[0] || null}
+          isAdminPreview={true}
         />
       )}
     </div>

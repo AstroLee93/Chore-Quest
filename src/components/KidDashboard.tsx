@@ -1,9 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home, Sun, Brain, BookOpen } from 'lucide-react';
+import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home, Sun, Brain, BookOpen, ClipboardList, Users, Shield, CheckSquare } from 'lucide-react';
 import { KidProfile, ChoreItem, ChoreCategory, ChoreLog, AppSettings, RewardItem, CalendarEvent, FamilyDatabase } from '../types';
 import { ChoreCard } from './ChoreCard';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
+import {
+  getLeaderConfig,
+  getLeaderKid,
+  isKidLeader,
+  getHouseholdChoresForLeader,
+} from '../utils/leaderRole';
 
 // Code-split auxiliary modals for instant dashboard loading & minimized memory
 const SkipReasonModal = React.lazy(() => import('./SkipReasonModal').then((m) => ({ default: m.SkipReasonModal })));
@@ -13,6 +19,7 @@ const BadgeModal = React.lazy(() => import('./BadgeModal').then((m) => ({ defaul
 const BountyBoardModal = React.lazy(() => import('./BountyBoardModal').then((m) => ({ default: m.BountyBoardModal })));
 const BrainTeaserModal = React.lazy(() => import('./BrainTeaserModal').then((m) => ({ default: m.BrainTeaserModal })));
 const ReadingLogModal = React.lazy(() => import('./ReadingLogModal').then((m) => ({ default: m.ReadingLogModal })));
+const LeaderClipboardModal = React.lazy(() => import('./LeaderClipboardModal').then((m) => ({ default: m.LeaderClipboardModal })));
 import {
   isReadingCompletedToday,
   findReadingChore,
@@ -47,6 +54,7 @@ interface KidDashboardProps {
   onOpenCalendar?: () => void;
   onOpenGoalManager?: () => void;
   onOpenSnackRequest?: (kid: KidProfile) => void;
+  onOpenLeaderClipboard?: (kid?: KidProfile) => void;
 }
 
 export const KidDashboard: React.FC<KidDashboardProps> = ({
@@ -69,6 +77,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   onOpenCalendar,
   onOpenGoalManager,
   onOpenSnackRequest,
+  onOpenLeaderClipboard,
 }) => {
   const safeSettings = settings || database?.settings || ({} as AppSettings);
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
@@ -84,6 +93,57 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const [isBadgeModalOpen, setIsBadgeModalOpen] = useState<boolean>(false);
   const [isBrainTeaserOpen, setIsBrainTeaserOpen] = useState<boolean>(false);
   const [isReadingLogOpen, setIsReadingLogOpen] = useState<boolean>(false);
+  const [isLeaderClipboardLocalOpen, setIsLeaderClipboardLocalOpen] = useState<boolean>(false);
+
+  // Leader / Manager role calculation
+  const isThisKidLeader = useMemo(() => {
+    if (!kid) return false;
+    if (database) return isKidLeader(kid, database);
+    return !!kid.isLeader || (safeSettings?.leaderRole?.enabled && safeSettings?.leaderRole?.leaderKidId === kid.id);
+  }, [kid, database, safeSettings?.leaderRole]);
+
+  const leaderConfig = useMemo(() => {
+    if (database) return getLeaderConfig(database);
+    return safeSettings?.leaderRole || {
+      enabled: true,
+      leaderKidId: kid?.id,
+      title: 'Chore Quest Leader',
+      badgeIcon: '🎖️',
+      description:
+        'As our Family Chore Leader and Manager, your mission is to guide your team, assign daily chore duties fairly, verify that tasks are done thoroughly (checking corners, under beds, and counters!), and encourage everyone with high-fives and positive feedback.',
+      checklistGuidelines: [],
+      canAssignChores: true,
+      canSignOffChores: true,
+      bonusLeaderStars: 5,
+    };
+  }, [database, safeSettings?.leaderRole, kid?.id]);
+
+  const otherLeaderKid = useMemo(() => {
+    if (isThisKidLeader || !database) return null;
+    return getLeaderKid(database);
+  }, [isThisKidLeader, database]);
+
+  const leaderHouseholdItems = useMemo(() => {
+    if (!isThisKidLeader || !database) return [];
+    return getHouseholdChoresForLeader(database, todayStr);
+  }, [isThisKidLeader, database, todayStr]);
+
+  const leaderNeedsSignOffCount = useMemo(() => {
+    return leaderHouseholdItems.filter((i) => i.isCompleted && !i.isVerifiedByLeader).length;
+  }, [leaderHouseholdItems]);
+
+  const leaderVerifiedCount = useMemo(() => {
+    return leaderHouseholdItems.filter((i) => i.isVerifiedByLeader).length;
+  }, [leaderHouseholdItems]);
+
+  const handleOpenLeaderClipboardModal = () => {
+    sound.playTap();
+    if (onOpenLeaderClipboard) {
+      onOpenLeaderClipboard(kid);
+    } else {
+      setIsLeaderClipboardLocalOpen(true);
+    }
+  };
 
   // Dynamic badges progress calculation
   const kidBadges = useMemo(() => {
@@ -264,8 +324,8 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             </div>
           </div>
 
-          {/* Bottom Row: 3 Action Cards (Snacks, Brain Teaser, Reading Log) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-1 sm:pt-2">
+          {/* Bottom Row: Action Cards (Snacks, Brain Teaser, Reading Log, and Leader Clipboard) */}
+          <div className={`grid grid-cols-1 ${isThisKidLeader ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'} gap-3 sm:gap-4 pt-1 sm:pt-2`}>
             {/* Card 1: Snacks */}
             {onOpenSnackRequest && (
               <button
@@ -399,8 +459,151 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 </button>
               );
             })()}
+
+            {/* Card 4: Leader Clipboard (Manager on Duty) */}
+            {isThisKidLeader && (
+              <button
+                id="btn-kid-leader-clipboard"
+                onClick={handleOpenLeaderClipboardModal}
+                className="p-3 sm:p-3.5 rounded-2xl sm:rounded-[22px] bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/30 hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-950/60 dark:hover:to-yellow-950/50 border-2 border-amber-400 dark:border-amber-600/80 flex items-center gap-3 transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.98] text-left group relative overflow-hidden"
+                title="Open your detailed Leader Clipboard to inspect and sign off team chores!"
+              >
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-500 text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform text-xl">
+                  {leaderConfig.badgeIcon || '🎖️'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-black text-sm sm:text-base text-amber-950 dark:text-amber-100 leading-tight flex items-center justify-between gap-1">
+                    <span>Leader Clipboard</span>
+                    {leaderNeedsSignOffCount > 0 && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
+                    )}
+                  </div>
+                  <div className="font-extrabold text-xs sm:text-sm text-amber-800 dark:text-amber-300 flex items-center gap-1 mt-0.5">
+                    {leaderNeedsSignOffCount > 0 ? (
+                      <span className="text-rose-600 dark:text-rose-400 font-black">
+                        {leaderNeedsSignOffCount} Need Sign-Off!
+                      </span>
+                    ) : (
+                      <span>Inspect & Verify Chores</span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            )}
           </div>
         </div>
+
+      {/* Family Chore Leader & Manager Command Center */}
+      {isThisKidLeader && (
+        <div
+          id="leader-command-center"
+          className="bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 dark:from-amber-900/90 dark:via-amber-800/90 dark:to-yellow-900/80 p-0.5 sm:p-1 rounded-[28px] sm:rounded-[34px] shadow-xl text-white relative overflow-hidden"
+        >
+          <div className="bg-white/95 dark:bg-slate-900/95 rounded-[26px] sm:rounded-[32px] p-4 sm:p-6 backdrop-blur-md space-y-4">
+            {/* Top Banner Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-900/60 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white flex items-center justify-center text-2xl sm:text-3xl shadow-md border-2 border-white shrink-0">
+                  {leaderConfig.badgeIcon || '🎖️'}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+                      OFFICIAL FAMILY CHORE LEADER & MANAGER
+                    </span>
+                    <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                      Manager on Duty: {kid.name}
+                    </span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+                    {leaderConfig.title || 'Chore Quest Leader'}
+                  </h2>
+                </div>
+              </div>
+
+              {/* Quick CTA to open clipboard */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <button
+                  onClick={handleOpenLeaderClipboardModal}
+                  className="px-4 py-2.5 sm:px-5 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs sm:text-sm shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+                >
+                  <ClipboardList className="w-4 h-4 stroke-[3]" />
+                  <span>Open Leader Clipboard</span>
+                  {leaderNeedsSignOffCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black animate-pulse">
+                      {leaderNeedsSignOffCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Description of Responsibilities Box - Set by Parent for Full Clarity */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border-2 border-amber-300/80 dark:border-amber-800/80 text-amber-950 dark:text-amber-100 space-y-1.5 shadow-2xs">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                  <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span>Parent Instructions & Leader Responsibilities:</span>
+                </div>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900 text-amber-950 dark:text-amber-100">
+                  +{leaderConfig.bonusLeaderStars || 5} Stars Leader Bonus
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm font-semibold italic leading-relaxed text-amber-900 dark:text-amber-100">
+                "{leaderConfig.description || 'Guide your team, assign daily chore duties fairly, verify that tasks are done thoroughly (checking corners, under beds, and counters!), and encourage everyone with high-fives and positive feedback.'}"
+              </p>
+            </div>
+
+            {/* Progress & Quick Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs">
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 flex flex-col">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Team Missions</span>
+                <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                  {leaderHouseholdItems.length} Today
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex flex-col">
+                <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase">Awaiting Sign-Off</span>
+                <span className="text-base sm:text-lg font-black text-rose-700 dark:text-rose-300">
+                  {leaderNeedsSignOffCount} Pending
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 flex flex-col">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Verified Today</span>
+                <span className="text-base sm:text-lg font-black text-emerald-700 dark:text-emerald-300">
+                  {leaderVerifiedCount} Signed
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 flex flex-col">
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase">Manager Powers</span>
+                <span className="text-xs font-black text-amber-900 dark:text-amber-200 truncate">
+                  {leaderConfig.canAssignChores ? 'Assign & Sign-Off ✓' : 'Sign-Off Only ✓'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* If another sibling is leader, show team encouragement note */}
+      {!isThisKidLeader && otherLeaderKid && (
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20 border border-amber-200 dark:border-amber-800/50 flex items-center justify-between gap-3 text-xs shadow-2xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-xl sm:text-2xl">{otherLeaderKid.avatar}</span>
+            <div className="min-w-0">
+              <span className="font-black text-slate-800 dark:text-white">
+                Family Leader on Duty: {otherLeaderKid.name} 🎖️
+              </span>
+              <p className="text-slate-600 dark:text-slate-400 text-[11px] truncate">
+                When you finish your missions, ask {otherLeaderKid.name} to inspect them so they can sign off your chores on the Leader Clipboard!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Level, Badges & Rewards Hub (Balanced 2-Card Layout - Zero Dead Space) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
@@ -963,6 +1166,17 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
               setIsBountyBoardOpen(false);
               setActiveTimerChore(chore);
             }}
+          />
+        )}
+
+        {/* Official Leader Clipboard Modal */}
+        {isLeaderClipboardLocalOpen && database && onUpdateDatabase && (
+          <LeaderClipboardModal
+            isOpen={isLeaderClipboardLocalOpen}
+            onClose={() => setIsLeaderClipboardLocalOpen(false)}
+            database={database}
+            onUpdateDatabase={onUpdateDatabase}
+            actingKid={kid}
           />
         )}
       </React.Suspense>

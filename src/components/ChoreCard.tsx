@@ -354,6 +354,29 @@ export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
               </div>
             )}
 
+            {/* Leader Verification Badge & Inspection Note */}
+            {isCompleted && log?.verifiedByLeader && (
+              <div className="mt-1.5 p-2 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/30 border border-amber-300 dark:border-amber-700/60 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between gap-2 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-black">
+                  <span className="text-base">🎖️</span>
+                  <span>Verified by Leader on Clipboard</span>
+                </div>
+                {log.leaderNotes && (
+                  <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 italic truncate max-w-[220px]">
+                    "{log.leaderNotes}"
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Leader Assigned Chore Badge */}
+            {chore.assignedByLeaderKidId && !isCompleted && (
+              <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 text-[10px] font-black border border-amber-300/60 dark:border-amber-800">
+                <span>📋</span>
+                <span>Assigned by Family Leader</span>
+              </div>
+            )}
+
             {/* Book Logged Details for Reading Chore */}
             {isReadingChore && isCompleted && log?.completedSubtasks && log.completedSubtasks.length > 0 && (
               <div className="mt-2.5 p-2.5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-200">

@@ -4,6 +4,7 @@ import { DEFAULT_WEEKLY_MENU } from './menu';
 import { DEFAULT_WEEKLY_GROCERY_LIST } from './grocery';
 import { createDefaultGoalsForKid, createDefaultTransactionsForKid } from './kidCoin';
 import { DEFAULT_HOUSE_RULES, getHouseRules, getRuleInfractions } from './houseRules';
+import { DEFAULT_LEADER_CONFIG } from './leaderRole';
 
 const STORAGE_KEY = 'chorequest_family_db_v1';
 
@@ -125,6 +126,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     brainTeaserEnabled: true,
     readingRewardStars: 5,
     readingDailyClaimLimit: 1,
+    leaderRole: DEFAULT_LEADER_CONFIG,
   },
   kids: [
     {
@@ -142,6 +144,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       totalSaved: 100.50,
       weeklyAllowance: 5.00,
       savingsStreakDays: 4,
+      isLeader: false,
       goals: createDefaultGoalsForKid('kid-1', 'Leo'),
       transactions: createDefaultTransactionsForKid('kid-1'),
     },
@@ -160,6 +163,7 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       totalSaved: 147.50,
       weeklyAllowance: 7.00,
       savingsStreakDays: 6,
+      isLeader: true,
       goals: createDefaultGoalsForKid('kid-2', 'Maya'),
       transactions: createDefaultTransactionsForKid('kid-2'),
     },
@@ -931,6 +935,9 @@ export const loadDatabase = (): FamilyDatabase => {
       if (parsed.settings.readingDailyClaimLimit === undefined) {
         parsed.settings.readingDailyClaimLimit = 1;
       }
+      if (!parsed.settings.leaderRole) {
+        parsed.settings.leaderRole = DEFAULT_LEADER_CONFIG;
+      }
     }
 
     if (!parsed.readingLogs) {
@@ -938,8 +945,10 @@ export const loadDatabase = (): FamilyDatabase => {
     }
 
     if (parsed.kids && parsed.kids.length > 0) {
+      const currentLeaderId = parsed.settings?.leaderRole?.leaderKidId;
       parsed.kids = parsed.kids.map((k) => ({
         ...k,
+        isLeader: k.isLeader !== undefined ? k.isLeader : (currentLeaderId ? k.id === currentLeaderId : false),
         readingShelf: k.readingShelf || [],
       }));
     }

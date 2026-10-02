@@ -45,6 +45,12 @@ const KidCoinVaultModal = React.lazy(() =>
 const HouseRulesModal = React.lazy(() =>
   import('./components/HouseRulesModal').then((m) => ({ default: m.HouseRulesModal }))
 );
+const LeaderClipboardModal = React.lazy(() =>
+  import('./components/LeaderClipboardModal').then((m) => ({ default: m.LeaderClipboardModal }))
+);
+const LeaderRoleSettingsModal = React.lazy(() =>
+  import('./components/LeaderRoleSettingsModal').then((m) => ({ default: m.LeaderRoleSettingsModal }))
+);
 
 export default function App() {
   const [database, setDatabase] = useState<FamilyDatabase>(() => loadDatabase());
@@ -63,8 +69,21 @@ export default function App() {
   const [snackRequestKid, setSnackRequestKid] = useState<KidProfile | null>(null);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [isHouseRulesOpen, setIsHouseRulesOpen] = useState<boolean>(false);
+  const [isLeaderClipboardOpen, setIsLeaderClipboardOpen] = useState<boolean>(false);
+  const [isLeaderSettingsOpen, setIsLeaderSettingsOpen] = useState<boolean>(false);
+  const [leaderClipboardKid, setLeaderClipboardKid] = useState<KidProfile | null>(null);
   const [isSyncConnected, setIsSyncConnected] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<AppThemeId>(() => getSavedThemeId());
+
+  const handleOpenLeaderClipboard = useCallback((kid?: KidProfile | null) => {
+    if (kid) setLeaderClipboardKid(kid);
+    else setLeaderClipboardKid(null);
+    setIsLeaderClipboardOpen(true);
+  }, []);
+
+  const handleOpenLeaderSettings = useCallback(() => {
+    setIsLeaderSettingsOpen(true);
+  }, []);
 
   // Synchronize theme persistence
   useEffect(() => {
@@ -143,6 +162,9 @@ export default function App() {
           setIsGoalModalOpen(false);
           setIsPiGuideOpen(false);
           setIsPinModalOpen(false);
+          setIsLeaderClipboardOpen(false);
+          setIsLeaderSettingsOpen(false);
+          setLeaderClipboardKid(null);
         } else {
           // In standard mode, only deselect kid if idle, but NEVER force into kiosk mode!
           setActiveKidId(null);
@@ -741,6 +763,8 @@ export default function App() {
                 setIsSnackRequestOpen(true);
               }}
               onOpenHouseRules={() => setIsHouseRulesOpen(true)}
+              onOpenLeaderSettings={handleOpenLeaderSettings}
+              onOpenLeaderClipboard={handleOpenLeaderClipboard}
             />
           </React.Suspense>
         ) : activeKid ? (
@@ -771,6 +795,7 @@ export default function App() {
                 setSnackRequestKid(k);
                 setIsSnackRequestOpen(true);
               }}
+              onOpenLeaderClipboard={handleOpenLeaderClipboard}
             />
           </ErrorBoundary>
         ) : (
@@ -939,6 +964,35 @@ export default function App() {
             database={database}
             onUpdateDatabase={handleUpdateDatabase}
             isParentMode={isParentMode}
+          />
+        )}
+
+        {/* Global Leader Clipboard Modal */}
+        {isLeaderClipboardOpen && (
+          <LeaderClipboardModal
+            isOpen={isLeaderClipboardOpen}
+            onClose={() => {
+              setIsLeaderClipboardOpen(false);
+              setLeaderClipboardKid(null);
+            }}
+            database={database}
+            onUpdateDatabase={handleUpdateDatabase}
+            actingKid={leaderClipboardKid || activeKid}
+            isAdminPreview={isParentMode}
+          />
+        )}
+
+        {/* Global Leader Role Settings Modal */}
+        {isLeaderSettingsOpen && (
+          <LeaderRoleSettingsModal
+            isOpen={isLeaderSettingsOpen}
+            onClose={() => setIsLeaderSettingsOpen(false)}
+            database={database}
+            onUpdateDatabase={handleUpdateDatabase}
+            onOpenClipboardPreview={() => {
+              setIsLeaderSettingsOpen(false);
+              handleOpenLeaderClipboard(null);
+            }}
           />
         )}
       </React.Suspense>

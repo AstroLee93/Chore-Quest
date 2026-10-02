@@ -26,6 +26,7 @@ const BrainTeaserModal = React.lazy(() => import('./BrainTeaserModal').then((m) 
 const ReadingLogModal = React.lazy(() => import('./ReadingLogModal').then((m) => ({ default: m.ReadingLogModal })));
 const AqaraCameraModal = React.lazy(() => import('./AqaraCameraModal').then((m) => ({ default: m.AqaraCameraModal })));
 const HouseRulesModal = React.lazy(() => import('./HouseRulesModal').then((m) => ({ default: m.HouseRulesModal })));
+const LeaderClipboardModal = React.lazy(() => import('./LeaderClipboardModal').then((m) => ({ default: m.LeaderClipboardModal })));
 import { getGradeLevelInfo, getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
 import {
   isReadingCompletedToday,
@@ -75,6 +76,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [isReadingLogOpen, setIsReadingLogOpen] = useState<boolean>(false);
   const [isCameraModalOpen, setIsCameraModalOpen] = useState<boolean>(false);
   const [isHouseRulesModalOpen, setIsHouseRulesModalOpen] = useState<boolean>(false);
+  const [leaderClipboardKid, setLeaderClipboardKid] = useState<KidProfile | null>(null);
+  const [isLeaderClipboardOpen, setIsLeaderClipboardOpen] = useState<boolean>(false);
 
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = useMemo(() => getTodayDateString(), []);
@@ -586,6 +589,11 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                       </h2>
                       <div className="flex items-center gap-2 text-xs font-bold text-white/80 mt-0.5 flex-wrap">
                         <span className="truncate">{level.icon} {level.title}</span>
+                        {(kid.isLeader || (database.settings.leaderRole?.enabled && database.settings.leaderRole?.leaderKidId === kid.id)) && (
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 shadow-xs border border-amber-300 shrink-0">
+                            {database.settings.leaderRole?.badgeIcon || '🎖️'} Leader
+                          </span>
+                        )}
                         <span className="text-[10px] font-extrabold text-amber-200 bg-white/15 px-1.5 py-0.5 rounded-md shrink-0">
                           {getGradeLevelInfo(kid.gradeLevel).icon} {getGradeLevelInfo(kid.gradeLevel).shortLabel}
                         </span>
@@ -618,6 +626,19 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                             setSelectedKidForPin(kid);
                           },
                         },
+                        ...(kid.isLeader || (database.settings.leaderRole?.enabled && database.settings.leaderRole?.leaderKidId === kid.id)
+                          ? [
+                              {
+                                id: 'leader_clipboard',
+                                label: '📋 Open Leader Clipboard',
+                                variant: 'primary' as const,
+                                onClick: () => {
+                                  setLeaderClipboardKid(kid);
+                                  setIsLeaderClipboardOpen(true);
+                                },
+                              },
+                            ]
+                          : []),
                         {
                           id: 'reading_log',
                           label: (() => {
@@ -1320,6 +1341,21 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           database={database}
           onUpdateDatabase={onUpdateDatabase}
           isParentMode={false}
+        />
+      )}
+
+      {/* Leader Clipboard Modal for Kiosk */}
+      {isLeaderClipboardOpen && (
+        <LeaderClipboardModal
+          isOpen={isLeaderClipboardOpen}
+          onClose={() => {
+            setIsLeaderClipboardOpen(false);
+            setLeaderClipboardKid(null);
+          }}
+          database={database}
+          onUpdateDatabase={onUpdateDatabase}
+          actingKid={leaderClipboardKid}
+          isAdminPreview={false}
         />
       )}
       </React.Suspense>

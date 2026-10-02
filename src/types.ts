@@ -164,6 +164,7 @@ export interface KidProfile {
   goals?: SavingsGoal[];
   transactions?: KidCoinTransaction[];
   readingShelf?: KidBookShelfItem[];
+  isLeader?: boolean; // Whether this child is currently designated as the Family Chore Leader & Manager
 }
 
 export interface CategoryTimeWindow {
@@ -200,6 +201,8 @@ export interface ChoreItem {
   timerMinutes?: number; // Optional focus countdown timer in minutes
   isBounty?: boolean; // Bonus bounty chore open to all kids
   bountyBonusStars?: number; // Additional bonus stars
+  assignedByLeaderKidId?: string; // Kid ID if assigned or delegated by the Chore Leader
+  leaderAssignedAt?: string; // ISO date timestamp when the leader assigned this chore
 }
 
 export type TaskStatus = 'pending' | 'completed' | 'skipped';
@@ -217,6 +220,10 @@ export interface ChoreLog {
   skippedReason?: string;
   skippedReasonCategory?: 'sick' | 'supplies' | 'time' | 'already_done' | 'need_help' | 'other';
   verifiedByParent?: boolean;
+  verifiedByLeader?: boolean; // Signed off & verified by the designated Chore Leader on their clipboard
+  verifiedByLeaderKidId?: string; // ID of the kid who signed off as leader
+  leaderSignedAt?: string; // ISO timestamp of leader verification
+  leaderNotes?: string; // Encouraging inspection note from the leader (e.g. "Spotless work!", "Super clean!")
   starsAwarded: number;
   completedSubtasks?: string[]; // subtasks completed for this chore on this date
 }
@@ -369,6 +376,20 @@ export interface AppSettings {
   readingRewardStars?: number; // Admin-determined points awarded for Reading Adventure (default: 5)
   readingDailyClaimLimit?: number; // Admin-determined maximum times stars can be claimed per day (e.g. 1 = once daily [default], 2 = 2x/day, 3 = 3x/day, 0 = unlimited)
   aqaraCameraConfig?: AqaraCameraConfig; // Aqara G400 RTSP smart camera settings
+  leaderRole?: LeaderRoleConfig; // Family Chore Leader & Manager configuration
+}
+
+export interface LeaderRoleConfig {
+  enabled: boolean;
+  leaderKidId?: string; // which kid is the Leader (empty string or undefined if none)
+  title: string; // e.g. "Chore Quest Leader" or "Daily Team Manager"
+  badgeIcon: string; // emoji e.g. "🎖️" or "⭐" or "👑" or "📋"
+  description: string; // Description of responsibilities set by Admin for full clarity to the leader
+  checklistGuidelines: string[]; // Clear checklist of duties (e.g. "Morning check-in", "Inspect bedrooms", "Check pet food")
+  canAssignChores: boolean; // Can assign / reassign chores to other kids
+  canSignOffChores: boolean; // Can sign off chores on behalf of other kids on the clipboard
+  bonusLeaderStars?: number; // Daily or weekly star incentive for the leader (e.g. 5)
+  assignedDate?: string; // Date when appointed
 }
 
 export type DayOfWeekKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';

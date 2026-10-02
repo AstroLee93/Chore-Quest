@@ -173,6 +173,16 @@ function initDatabase() {
         if (!parsed.weatherForecasts) {
           parsed.weatherForecasts = {};
         }
+        if (!parsed.settings.leaderRole) {
+          parsed.settings.leaderRole = DEFAULT_SEED_DATA.settings.leaderRole;
+        }
+        if (parsed.kids && parsed.kids.length > 0) {
+          const currentLeaderId = parsed.settings?.leaderRole?.leaderKidId;
+          parsed.kids = parsed.kids.map((k: any) => ({
+            ...k,
+            isLeader: k.isLeader !== undefined ? k.isLeader : (currentLeaderId ? k.id === currentLeaderId : false),
+          }));
+        }
         currentDatabaseRev = (parsed as any)._rev || Date.now();
         currentDatabaseUpdatedAt = (parsed as any)._updatedAt || Date.now();
         (parsed as any)._rev = currentDatabaseRev;

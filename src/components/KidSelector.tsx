@@ -6,6 +6,8 @@ import { KidPinModal } from './KidPinModal';
 import { KidAvatarModal } from './KidAvatarModal';
 import { sound } from '../utils/sound';
 import { AppThemeId, APP_THEMES } from '../utils/theme';
+import { isBirthdayToday, getDaysUntilBirthday } from '../utils/birthday';
+import { getTodayDateString } from '../utils/storage';
 
 interface KidSelectorProps {
   kids: KidProfile[];
@@ -34,6 +36,7 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
   const [selectedKidForPin, setSelectedKidForPin] = useState<KidProfile | null>(null);
   const [editingAvatarKid, setEditingAvatarKid] = useState<KidProfile | null>(null);
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
+  const todayStr = getTodayDateString();
 
   return (
     <div className="max-w-5xl mx-auto px-1 sm:px-4 py-1 sm:py-3 w-full flex flex-col gap-1.5 sm:gap-2.5">
@@ -95,27 +98,34 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
               {/* Header: Avatar / Profile Picture, Name, Level info & Menu Drop Down */}
               <div className="flex items-center gap-2.5 mb-2">
                 {/* Profile Picture / Avatar */}
-                <div
-                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black shadow-xs border-2 ${theme.kidCardAvatarBorder} shrink-0 text-white transition-transform duration-150 group-hover:scale-105 overflow-hidden select-none`}
-                  style={{ backgroundColor: kid.color || '#3b82f6' }}
-                  onClick={(e) => {
-                    if (database && onUpdateDatabase) {
-                      e.stopPropagation();
-                      sound.playTap();
-                      setEditingAvatarKid(kid);
-                    }
-                  }}
-                  title="Click to customize avatar"
-                >
-                  {isCustomPhoto ? (
-                    <img
-                      src={kid.avatar}
-                      alt={kid.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xl sm:text-3xl leading-none filter drop-shadow-xs select-none">
-                      {kid.avatar || '🦁'}
+                <div className="relative">
+                  <div
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black shadow-xs border-2 ${theme.kidCardAvatarBorder} shrink-0 text-white transition-transform duration-150 group-hover:scale-105 overflow-hidden select-none`}
+                    style={{ backgroundColor: kid.color || '#3b82f6' }}
+                    onClick={(e) => {
+                      if (database && onUpdateDatabase) {
+                        e.stopPropagation();
+                        sound.playTap();
+                        setEditingAvatarKid(kid);
+                      }
+                    }}
+                    title="Click to customize avatar"
+                  >
+                    {isCustomPhoto ? (
+                      <img
+                        src={kid.avatar}
+                        alt={kid.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-2xl sm:text-3xl leading-none filter drop-shadow-xs select-none">
+                        {kid.avatar || '🦁'}
+                      </span>
+                    )}
+                  </div>
+                  {kid.birthdate && isBirthdayToday(kid.birthdate, todayStr) && (
+                    <span className="absolute -top-2.5 -right-1 text-base select-none animate-bounce filter drop-shadow-xs" title="Birthday VIP!">
+                      👑
                     </span>
                   )}
                 </div>
@@ -125,6 +135,24 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
                     <h2 className={`text-base sm:text-lg font-black ${theme.kidCardNameColor} group-hover:opacity-85 transition-opacity truncate`}>
                       {kid.name}
                     </h2>
+                    {kid.birthdate && isBirthdayToday(kid.birthdate, todayStr) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-amber-500 text-white font-black text-[10px] shadow-2xs border border-pink-300 shrink-0 animate-pulse">
+                        <span>👑</span>
+                        <span>Birthday VIP!</span>
+                      </span>
+                    )}
+                    {kid.birthdate && !isBirthdayToday(kid.birthdate, todayStr) && (() => {
+                      const daysUntil = getDaysUntilBirthday(kid.birthdate, todayStr);
+                      if (daysUntil !== null && daysUntil <= 3) {
+                        return (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950 text-pink-900 dark:text-pink-200 text-[10px] font-extrabold border border-pink-200 dark:border-pink-800 shrink-0">
+                            <span>🎂</span>
+                            <span>in {daysUntil}d</span>
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                     {(kid.isLeader || (database?.settings?.leaderRole?.enabled && database?.settings?.leaderRole?.leaderKidId === kid.id)) && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-400 text-amber-950 font-black text-[10px] shadow-2xs border border-amber-400 shrink-0">
                         <span>{database?.settings?.leaderRole?.badgeIcon || '🎖️'}</span>

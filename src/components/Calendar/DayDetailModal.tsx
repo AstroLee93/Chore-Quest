@@ -35,6 +35,15 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   onEditWeather,
   onClose,
 }) => {
+  // Lock background page body scroll while open
+  React.useEffect(() => {
+    if (!isOpen) return;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen || !dateStr) return null;
 
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -59,11 +68,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           onClose();
         }
       }}
-      className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-yellow-50 rounded-[2.5rem] p-5 sm:p-7 max-w-xl w-full shadow-2xl border-4 border-yellow-300 max-h-[90vh] flex flex-col"
+        className="bg-yellow-50 rounded-[2.5rem] p-5 sm:p-7 max-w-xl w-full shadow-2xl border-4 border-yellow-300 max-h-[85vh] flex flex-col"
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-3 border-b-2 border-yellow-200/80 shrink-0">

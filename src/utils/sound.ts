@@ -570,6 +570,121 @@ class SoundEngine {
     osc.start(now);
     osc.stop(now + 0.13);
   }
+
+  // Celebratory procedural Happy Birthday chime melody
+  public playBirthdaySong() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // Classic Happy Birthday melody phrase
+    const notes: { f: number; t: number; d: number }[] = [
+      { f: 261.63, t: 0.00, d: 0.22 }, // C4
+      { f: 261.63, t: 0.25, d: 0.18 }, // C4
+      { f: 293.66, t: 0.45, d: 0.38 }, // D4
+      { f: 261.63, t: 0.85, d: 0.38 }, // C4
+      { f: 349.23, t: 1.25, d: 0.38 }, // F4
+      { f: 329.63, t: 1.65, d: 0.70 }, // E4
+
+      { f: 261.63, t: 2.45, d: 0.22 }, // C4
+      { f: 261.63, t: 2.70, d: 0.18 }, // C4
+      { f: 293.66, t: 2.90, d: 0.38 }, // D4
+      { f: 261.63, t: 3.30, d: 0.38 }, // C4
+      { f: 392.00, t: 3.70, d: 0.38 }, // G4
+      { f: 349.23, t: 4.10, d: 0.70 }, // F4
+
+      { f: 261.63, t: 4.90, d: 0.22 }, // C4
+      { f: 261.63, t: 5.15, d: 0.18 }, // C4
+      { f: 523.25, t: 5.35, d: 0.38 }, // C5
+      { f: 440.00, t: 5.75, d: 0.38 }, // A4
+      { f: 349.23, t: 6.15, d: 0.38 }, // F4
+      { f: 329.63, t: 6.55, d: 0.38 }, // E4
+      { f: 293.66, t: 6.95, d: 0.60 }, // D4
+
+      { f: 466.16, t: 7.65, d: 0.22 }, // Bb4
+      { f: 466.16, t: 7.90, d: 0.18 }, // Bb4
+      { f: 440.00, t: 8.10, d: 0.38 }, // A4
+      { f: 349.23, t: 8.50, d: 0.38 }, // F4
+      { f: 392.00, t: 8.90, d: 0.38 }, // G4
+      { f: 349.23, t: 9.30, d: 0.85 }, // F4
+    ];
+
+    notes.forEach(({ f, t, d }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, now + t);
+
+      gain.gain.setValueAtTime(0.01, now + t);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + t + d);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + t);
+      osc.stop(now + t + d + 0.05);
+    });
+  }
+
+  // Puff of candle blow + sparkling wishing chime
+  public playCandleBlow() {
+    if (!this.isEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // Breath / puff sound via filtered noise
+    const bufferSize = ctx.sampleRate * 0.35;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(600, now);
+    filter.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.18, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+
+    noise.start(now);
+    noise.stop(now + 0.35);
+
+    // Magical chime burst right after candle blow
+    const sparkleNotes = [1046.5, 1318.51, 1567.98, 2093.0]; // C6, E6, G6, C7
+    sparkleNotes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const t = now + 0.25 + idx * 0.08;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+
+      gain.gain.setValueAtTime(0.01, t);
+      gain.gain.exponentialRampToValueAtTime(0.15, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(t);
+      osc.stop(t + 0.45);
+    });
+  }
 }
 
 export const sound = new SoundEngine();

@@ -46,6 +46,8 @@ export type KidCoinTransactionCategory =
   | 'snack'
   | 'reward'
   | 'deposit'
+  | 'bonus'
+  | 'birthday'
   | 'other';
 
 export interface KidCoinTransaction {
@@ -165,6 +167,11 @@ export interface KidProfile {
   transactions?: KidCoinTransaction[];
   readingShelf?: KidBookShelfItem[];
   isLeader?: boolean; // Whether this child is currently designated as the Family Chore Leader & Manager
+  birthdate?: string; // YYYY-MM-DD (e.g. 2017-10-15) or MM-DD
+  birthdayWish?: string; // Personal custom birthday greeting note from parents
+  customBirthdayStars?: number; // Optional custom star override for this kid's birthday
+  lastCelebratedBirthdayYear?: number; // Year last birthday gift was claimed (e.g. 2026) to prevent duplicate star grants
+  birthdayChorePassUsedDate?: string; // Date when 1-time birthday free chore skip pass was redeemed (YYYY-MM-DD)
 }
 
 export interface CategoryTimeWindow {
@@ -377,6 +384,15 @@ export interface AppSettings {
   readingDailyClaimLimit?: number; // Admin-determined maximum times stars can be claimed per day (e.g. 1 = once daily [default], 2 = 2x/day, 3 = 3x/day, 0 = unlimited)
   aqaraCameraConfig?: AqaraCameraConfig; // Aqara G400 RTSP smart camera settings
   leaderRole?: LeaderRoleConfig; // Family Chore Leader & Manager configuration
+  birthdayConfig?: BirthdayConfig; // Automated birthday star bonuses, perks & reminders
+}
+
+export interface BirthdayConfig {
+  enabled: boolean; // Automatic birthday celebration and stars enabled (default: true)
+  defaultRewardStars: number; // Star amount awarded on kid's birthday (default: 50)
+  reminderDaysAhead: number; // Days ahead to display upcoming birthday alert banner for parents (default: 7)
+  freeChorePassEnabled: boolean; // Gift 1-time free chore skip pass on their birthday (default: true)
+  doubleStarBonusDay: boolean; // Chores completed on birthday award 2x bonus stars (default: true)
 }
 
 export interface LeaderRoleConfig {

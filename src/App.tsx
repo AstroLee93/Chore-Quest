@@ -13,6 +13,8 @@ import { ParentPinModal } from './components/ParentPinModal';
 import { KioskDashboard } from './components/KioskDashboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Home } from 'lucide-react';
+import { processAutomaticBirthdayStarGrants, isBirthdayToday, getBirthdayConfig } from './utils/birthday';
+import { BirthdayCelebrationModal } from './components/BirthdayCelebrationModal';
 
 // Code-split heavy secondary dashboards and modals for lightning-fast page loading & lower memory usage
 const ParentDashboard = React.lazy(() =>
@@ -114,6 +116,18 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  const todayStr = useMemo(() => getTodayDateString(), []);
+
+  // Check and process automatic birthday star grants on app load & database sync
+  useEffect(() => {
+    if (!database || !database.kids || database.kids.length === 0) return;
+    const { updatedDatabase, grantedCelebrations } = processAutomaticBirthdayStarGrants(database, todayStr);
+    if (grantedCelebrations.length > 0) {
+      setDatabase(updatedDatabase);
+      pushServerDatabase(updatedDatabase);
+    }
+  }, [database.kids, database.settings?.birthdayConfig, todayStr]);
+
   // Gracefully handle if active kid was deleted
   useEffect(() => {
     if (activeKidId && !database.kids.some((k) => k.id === activeKidId)) {
@@ -214,7 +228,6 @@ export default function App() {
     () => database.kids.find((k) => k.id === activeKidId) || null,
     [database.kids, activeKidId]
   );
-  const todayStr = useMemo(() => getTodayDateString(), []);
   const themeConfig = useMemo(
     () => APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'],
     [currentTheme]
@@ -251,6 +264,16 @@ export default function App() {
 
     const categoryObj = database.categories.find((c) => c.id === chore.categoryId);
 
+    const bdayConfig = getBirthdayConfig(database);
+    const isBirthdayBoost =
+      bdayConfig.enabled &&
+      bdayConfig.doubleStarBonusDay !== false &&
+      !!activeKid.birthdate &&
+      isBirthdayToday(activeKid.birthdate, todayStr);
+
+    const baseStars = chore.stars ?? 0;
+    const finalStars = isBirthdayBoost && baseStars > 0 ? baseStars * 2 : baseStars;
+
     const newLog: ChoreLog = {
       id: existingLog?.id || `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       choreId: chore.id,
@@ -261,7 +284,7 @@ export default function App() {
       date: todayStr,
       status: 'completed',
       completedAt: new Date().toISOString(),
-      starsAwarded: chore.stars,
+      starsAwarded: finalStars,
       verifiedByParent: false,
       completedSubtasks: chore.subtasks,
     };
@@ -273,8 +296,8 @@ export default function App() {
 
     const isKidCoinEnabled = database.settings.kidCoinEnabled !== false;
     const coinRatio = database.settings.kidCoinRatio ?? 0.10;
-    const earnedCoins = isKidCoinEnabled ? Number(((chore.stars ?? 0) * coinRatio).toFixed(2)) : 0;
-    let playedFanfare = false;
+    const earnedCoins = isKidCoinEnabled ? Number((finalStars * coinRatio).toFixed(2)) : 0;
+    let playedFanfare = isBirthdayBoost && baseStars > 0;
 
     const updatedKids = database.kids.map((k) => {
       if (k.id === activeKid.id) {
@@ -322,7 +345,7 @@ export default function App() {
               type: 'deposit',
               amount: earnedCoins,
               category: 'chore',
-              description: `Chore Fuel Deposit: ${chore.title}`,
+              description: `Chore Fuel Deposit: ${chore.title}${isBirthdayBoost ? ' (🎂 2x Birthday Star Boost!)' : ''}`,
               date: todayStr,
               goalContribution: primaryGoal.id,
             };
@@ -335,7 +358,7 @@ export default function App() {
               type: 'deposit',
               amount: earnedCoins,
               category: 'chore',
-              description: `Chore Mission: ${chore.title}`,
+              description: `Chore Mission: ${chore.title}${isBirthdayBoost ? ' (🎂 2x Birthday Star Boost!)' : ''}`,
               date: todayStr,
             };
             transactions = [tx, ...transactions];
@@ -344,8 +367,8 @@ export default function App() {
 
         return {
           ...k,
-          stars: k.stars + chore.stars,
-          lifetimeStars: k.lifetimeStars + chore.stars,
+          stars: k.stars + finalStars,
+          lifetimeStars: k.lifetimeStars + finalStars,
           streakDays: newStreak,
           lastActiveDate: todayStr,
           kidCoinBalance,

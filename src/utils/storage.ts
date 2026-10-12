@@ -125,8 +125,14 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
     brainTeaserDailyLimit: 1,
     brainTeaserEnabled: true,
     readingRewardStars: 5,
-    readingDailyClaimLimit: 1,
     leaderRole: DEFAULT_LEADER_CONFIG,
+    birthdayConfig: {
+      enabled: true,
+      defaultRewardStars: 50,
+      reminderDaysAhead: 7,
+      freeChorePassEnabled: true,
+      doubleStarBonusDay: true,
+    },
   },
   kids: [
     {
@@ -145,6 +151,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       weeklyAllowance: 5.00,
       savingsStreakDays: 4,
       isLeader: false,
+      birthdate: '2019-06-20',
+      birthdayWish: 'Happy Birthday Leo! Keep exploring and having great adventures! Love, Mom & Dad 🦁',
       goals: createDefaultGoalsForKid('kid-1', 'Leo'),
       transactions: createDefaultTransactionsForKid('kid-1'),
     },
@@ -164,6 +172,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       weeklyAllowance: 7.00,
       savingsStreakDays: 6,
       isLeader: true,
+      birthdate: '2017-10-15',
+      birthdayWish: 'Happy 9th Birthday Maya! We are so proud of your leadership and creativity! Love, Mom & Dad 🦄',
       goals: createDefaultGoalsForKid('kid-2', 'Maya'),
       transactions: createDefaultTransactionsForKid('kid-2'),
     },
@@ -182,6 +192,8 @@ export const DEFAULT_SEED_DATA: FamilyDatabase = {
       totalSaved: 47.50,
       weeklyAllowance: 4.00,
       savingsStreakDays: 2,
+      birthdate: '2015-10-12',
+      birthdayWish: 'Happy 11th Birthday Sam! Blast off into an awesome new year! Love, Mom & Dad 🚀',
       goals: createDefaultGoalsForKid('kid-3', 'Sam'),
       transactions: createDefaultTransactionsForKid('kid-3'),
     }

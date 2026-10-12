@@ -106,6 +106,16 @@ import {
   updateLeaderRoleConfig,
   PRESET_LEADER_DUTIES,
 } from '../utils/leaderRole';
+import {
+  getUpcomingBirthdays,
+  getBirthdayConfig,
+  formatBirthdateDisplay,
+  getTurningAge,
+  isBirthdayToday,
+  getDaysUntilBirthday,
+  DEFAULT_BIRTHDAY_CONFIG,
+} from '../utils/birthday';
+import { BirthdayCelebrationModal } from './BirthdayCelebrationModal';
 
 interface ParentDashboardProps {
   database: FamilyDatabase;
@@ -117,6 +127,7 @@ interface ParentDashboardProps {
   onOpenHouseRules?: () => void;
   onOpenLeaderSettings?: () => void;
   onOpenLeaderClipboard?: (kid?: KidProfile | null) => void;
+  onPreviewBirthdayCelebration?: (kid: KidProfile) => void;
 }
 
 export const ParentDashboard: React.FC<ParentDashboardProps> = ({
@@ -129,12 +140,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
   onOpenHouseRules,
   onOpenLeaderSettings,
   onOpenLeaderClipboard,
+  onPreviewBirthdayCelebration,
 }) => {
   const [activeTab, setActiveTab] = useState<'activity' | 'calendar' | 'menu' | 'chores' | 'rewards' | 'kids' | 'reading' | 'savings' | 'settings'>('activity');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
   const [isLeaderSettingsModalOpen, setIsLeaderSettingsModalOpen] = useState<boolean>(false);
   const [isLeaderClipboardPreviewOpen, setIsLeaderClipboardPreviewOpen] = useState<boolean>(false);
   const [leaderPreviewKid, setLeaderPreviewKid] = useState<KidProfile | null>(null);
+  const [internalBirthdayPreviewKid, setInternalBirthdayPreviewKid] = useState<KidProfile | null>(null);
   const todayStr = getTodayDateString();
 
   // Inactivity Auto-Lock Timeout
@@ -805,6 +818,9 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
         lifetimeStars: Number(kid.stars) || 0,
         streakDays: 0,
         lastActiveDate: todayStr,
+        birthdate: kid.birthdate || undefined,
+        birthdayWish: kid.birthdayWish?.trim() || undefined,
+        customBirthdayStars: kid.customBirthdayStars !== undefined ? kid.customBirthdayStars : undefined,
       };
       updatedKids = [...database.kids, newKid];
     }
@@ -1197,6 +1213,81 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           );
         })}
       </div>
+
+      {/* UPCOMING & TODAY BIRTHDAY REMINDER BANNER */}
+      {(() => {
+        const bdayConfig = getBirthdayConfig(database);
+        if (!bdayConfig.enabled) return null;
+        const upcoming = getUpcomingBirthdays(database.kids, bdayConfig.reminderDaysAhead, todayStr);
+        if (upcoming.length === 0) return null;
+
+        return (
+          <div className="bg-gradient-to-r from-pink-500 via-amber-500 to-indigo-600 rounded-none sm:rounded-2xl p-0.5 sm:p-1 text-white shadow-md animate-fade-in">
+            <div className="bg-white/95 dark:bg-slate-900/95 rounded-none sm:rounded-[14px] p-3 sm:p-4 backdrop-blur-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-pink-400 to-amber-400 text-white flex items-center justify-center text-xl sm:text-2xl shrink-0 shadow-xs">
+                    🎂
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-pink-100 text-pink-900 dark:bg-pink-950 dark:text-pink-200 border border-pink-300">
+                        {upcoming.some((u) => u.isToday) ? '🎉 BIRTHDAY CELEBRATION ACTIVE' : '🎈 UPCOMING FAMILY BIRTHDAYS'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                        Auto Star Gifts & VIP Perks
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap mt-1">
+                      {upcoming.map((item) => (
+                        <div key={item.kid.id} className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 dark:text-white">
+                          <span className="text-base">{item.kid.avatar}</span>
+                          <span>{item.kid.name}:</span>
+                          {item.isToday ? (
+                            <span className="text-pink-600 dark:text-pink-400 font-black flex items-center gap-1">
+                              <span>TODAY! (Turning {item.turningAge || 'VIP'}) 👑</span>
+                              <span className="text-[10px] bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded font-black">+{item.starsToAward} ⭐ Granted</span>
+                            </span>
+                          ) : (
+                            <span className="text-amber-700 dark:text-amber-300">
+                              in {item.daysUntil} {item.daysUntil === 1 ? 'day' : 'days'} ({item.formattedDate}{item.turningAge ? ` · turning ${item.turningAge}` : ''})
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              sound.playTap();
+                              if (onPreviewBirthdayCelebration) {
+                                onPreviewBirthdayCelebration(item.kid);
+                              } else {
+                                setInternalBirthdayPreviewKid(item.kid);
+                              }
+                            }}
+                            className="ml-1 text-[10px] font-black px-2 py-0.5 rounded-lg bg-pink-50 hover:bg-pink-100 dark:bg-pink-950/60 dark:hover:bg-pink-900/60 text-pink-700 dark:text-pink-300 border border-pink-300 dark:border-pink-700 transition-all cursor-pointer"
+                            title="Preview what this child will see on their birthday"
+                          >
+                            Preview 🎉
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('settings')}
+                    className="text-xs font-black text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Configure Rewards ⚙️</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* TAB 1: DAILY REVIEW & AUDIT LOG */}
       {activeTab === 'activity' && (
@@ -2782,12 +2873,52 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                                 <span>Leader & Manager</span>
                               </span>
                             )}
+                            {kid.birthdate && (() => {
+                              const isToday = isBirthdayToday(kid.birthdate, todayStr);
+                              const daysUntil = getDaysUntilBirthday(kid.birthdate, todayStr);
+                              const age = getTurningAge(kid.birthdate);
+                              if (isToday) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-100 text-pink-900 dark:bg-pink-950/80 dark:text-pink-200 text-[10px] font-black border border-pink-300 dark:border-pink-700 animate-pulse">
+                                    <span>🎂</span>
+                                    <span>Birthday Today!{age ? ` (${age}th)` : ''}</span>
+                                  </span>
+                                );
+                              }
+                              if (daysUntil !== null && daysUntil <= 14) {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 dark:bg-amber-950/80 dark:text-amber-200 text-[10px] font-bold border border-amber-200 dark:border-amber-800">
+                                    <span>🎈</span>
+                                    <span>In {daysUntil} {daysUntil === 1 ? 'day' : 'days'} ({formatBirthdateDisplay(kid.birthdate)})</span>
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                  <span>🎂</span>
+                                  <span>{formatBirthdateDisplay(kid.birthdate)}</span>
+                                </span>
+                              );
+                            })()}
                           </div>
                           <div className="flex items-center gap-1">
                             <ActionMenu
                               id={`menu-kid-${kid.id}`}
                               label="Menu"
                               items={[
+                                {
+                                  id: 'preview-birthday',
+                                  label: '🎂 Preview Birthday Celebration',
+                                  icon: <Gift className="w-3.5 h-3.5 text-pink-500" />,
+                                  onClick: () => {
+                                    sound.playTap();
+                                    if (onPreviewBirthdayCelebration) {
+                                      onPreviewBirthdayCelebration(kid);
+                                    } else {
+                                      setInternalBirthdayPreviewKid(kid);
+                                    }
+                                  },
+                                },
                                 {
                                   id: 'leader-action',
                                   label: (kid.isLeader || getLeaderConfig(database).leaderKidId === kid.id)
@@ -4713,6 +4844,205 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
               </div>
             </div>
 
+            {/* Birthday Celebrations, Automated Star Grants & VIP Perks Section */}
+            <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-pink-50 via-amber-50 to-yellow-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-850 border-2 border-pink-300 dark:border-pink-800 space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-amber-500 text-white flex items-center justify-center text-lg shadow-xs shrink-0">
+                    🎂
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-pink-950 dark:text-pink-200 flex items-center gap-1.5">
+                      <span>Birthday Reminders, Star Gifts & VIP Perks</span>
+                      <span className="text-[10px] font-black px-2 py-0.2 rounded-md bg-pink-200 dark:bg-pink-900/60 text-pink-950 dark:text-pink-200 border border-pink-300 dark:border-pink-700">
+                        AUTOMATED CELEBRATION
+                      </span>
+                    </h4>
+                    <p className="text-[10px] sm:text-xs text-pink-900/80 dark:text-pink-300/80 font-bold mt-0.5">
+                      Automatically award kids stars on their birthday, display reminders for parents, and grant celebratory privileges.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer select-none bg-white/70 dark:bg-slate-900/70 px-3 py-1.5 rounded-xl border border-pink-200 dark:border-slate-700">
+                  <span className="text-xs font-black text-pink-950 dark:text-pink-200">
+                    {settingsForm.birthdayConfig?.enabled !== false ? 'Enabled ✓' : 'Disabled'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={settingsForm.birthdayConfig?.enabled !== false}
+                    onChange={(e) =>
+                      setSettingsForm({
+                        ...settingsForm,
+                        birthdayConfig: {
+                          ...DEFAULT_BIRTHDAY_CONFIG,
+                          ...(settingsForm.birthdayConfig || {}),
+                          enabled: e.target.checked,
+                        },
+                      })
+                    }
+                    className="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 cursor-pointer"
+                  />
+                </label>
+              </div>
+
+              {settingsForm.birthdayConfig?.enabled !== false && (
+                <div className="space-y-3 pt-1 border-t border-pink-200 dark:border-pink-900/60">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                    {/* Default Birthday Star Gift Amount */}
+                    <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-xl border border-pink-200 dark:border-slate-700">
+                      <label className="block text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase mb-1">
+                        ⭐ Default Birthday Star Gift:
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          max={500}
+                          value={settingsForm.birthdayConfig?.defaultRewardStars ?? 50}
+                          onChange={(e) =>
+                            setSettingsForm({
+                              ...settingsForm,
+                              birthdayConfig: {
+                                ...DEFAULT_BIRTHDAY_CONFIG,
+                                ...(settingsForm.birthdayConfig || {}),
+                                defaultRewardStars: Math.max(0, parseInt(e.target.value, 10) || 0),
+                              },
+                            })
+                          }
+                          className="w-24 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-black text-sm text-slate-900 dark:text-white"
+                        />
+                        <span className="text-xs font-extrabold text-amber-700 dark:text-amber-400">
+                          Stars per kid
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-1">
+                        Automatically deposited to their vault on their birthday.
+                      </p>
+                    </div>
+
+                    {/* Reminder Days in Advance */}
+                    <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-xl border border-pink-200 dark:border-slate-700">
+                      <label className="block text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase mb-1">
+                        🎈 Reminder Alert Days:
+                      </label>
+                      <select
+                        value={settingsForm.birthdayConfig?.reminderDaysAhead ?? 7}
+                        onChange={(e) =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            birthdayConfig: {
+                              ...DEFAULT_BIRTHDAY_CONFIG,
+                              ...(settingsForm.birthdayConfig || {}),
+                              reminderDaysAhead: parseInt(e.target.value, 10),
+                            },
+                          })
+                        }
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-xs sm:text-sm text-slate-900 dark:text-white cursor-pointer"
+                      >
+                        <option value={1}>1 Day Before</option>
+                        <option value={3}>3 Days Before</option>
+                        <option value={7}>7 Days Before (1 Week)</option>
+                        <option value={14}>14 Days Before (2 Weeks)</option>
+                        <option value={30}>30 Days Before (1 Month)</option>
+                      </select>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-1">
+                        Days ahead the parent banner notifies you.
+                      </p>
+                    </div>
+
+                    {/* VIP Birthday Perks Toggles */}
+                    <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-xl border border-pink-200 dark:border-slate-700 space-y-1.5">
+                      <label className="block text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase">
+                        👑 Birthday Special Perks:
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsForm.birthdayConfig?.doubleStarBonusDay !== false}
+                          onChange={(e) =>
+                            setSettingsForm({
+                              ...settingsForm,
+                              birthdayConfig: {
+                                ...DEFAULT_BIRTHDAY_CONFIG,
+                                ...(settingsForm.birthdayConfig || {}),
+                                doubleStarBonusDay: e.target.checked,
+                              },
+                            })
+                          }
+                          className="rounded text-pink-600"
+                        />
+                        <span>⚡ 2x Double Star Missions</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsForm.birthdayConfig?.freeChorePassEnabled !== false}
+                          onChange={(e) =>
+                            setSettingsForm({
+                              ...settingsForm,
+                              birthdayConfig: {
+                                ...DEFAULT_BIRTHDAY_CONFIG,
+                                ...(settingsForm.birthdayConfig || {}),
+                                freeChorePassEnabled: e.target.checked,
+                              },
+                            })
+                          }
+                          className="rounded text-pink-600"
+                        />
+                        <span>🎟️ 1 Free Birthday Chore Skip Pass</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Family Birthdays Preview Grid */}
+                  <div className="bg-white/90 dark:bg-slate-900/90 p-3 rounded-xl border border-pink-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase">
+                        Family Kid Birthdays & Test Celebration:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('kids')}
+                        className="text-[11px] font-bold text-pink-600 hover:underline cursor-pointer"
+                      >
+                        Edit in Kids Tab →
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {database.kids.map((kid) => (
+                        <div key={kid.id} className="p-2 rounded-lg bg-pink-50/60 dark:bg-slate-800 border border-pink-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1 truncate">
+                              <span>{kid.avatar}</span>
+                              <span className="truncate">{kid.name}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-bold">
+                              {kid.birthdate ? formatBirthdateDisplay(kid.birthdate) : 'No birthday set'}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              sound.playTap();
+                              if (onPreviewBirthdayCelebration) {
+                                onPreviewBirthdayCelebration(kid);
+                              } else {
+                                setInternalBirthdayPreviewKid(kid);
+                              }
+                            }}
+                            className="px-2 py-1 rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-black text-[10px] shrink-0 cursor-pointer transition-all active:scale-95"
+                          >
+                            Preview 🎉
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Leadership Role & Manager Configuration (Admin Appointed) */}
             <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-slate-800/90 dark:to-amber-950/40 border-2 border-amber-300 dark:border-amber-700/80 space-y-3.5 shadow-2xs">
               <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -6013,6 +6343,71 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   Directly adjust their current spendable star points.
                 </p>
               </div>
+
+              {/* Birthday and Special Notes */}
+              <div className="p-3 rounded-xl bg-pink-50/70 dark:bg-slate-800/80 border border-pink-200 dark:border-pink-900/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] sm:text-xs font-black text-pink-950 dark:text-pink-200 uppercase flex items-center gap-1">
+                    <span>🎂</span>
+                    <span>Birthday & Celebrations:</span>
+                  </label>
+                  {editingKid.birthdate && (
+                    <span className="text-[10px] font-bold text-pink-700 dark:text-pink-300">
+                      {formatBirthdateDisplay(editingKid.birthdate)}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-0.5">
+                      Birth Date (YYYY-MM-DD):
+                    </label>
+                    <input
+                      type="date"
+                      value={editingKid.birthdate || ''}
+                      onChange={(e) => setEditingKid({ ...editingKid, birthdate: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold text-xs text-slate-800 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-0.5">
+                      Custom Star Gift (optional):
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={500}
+                      placeholder="Default (50 ⭐)"
+                      value={editingKid.customBirthdayStars ?? ''}
+                      onChange={(e) =>
+                        setEditingKid({
+                          ...editingKid,
+                          customBirthdayStars: e.target.value === '' ? undefined : parseInt(e.target.value, 10),
+                        })
+                      }
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold text-xs text-slate-800 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase mb-0.5">
+                    💌 Special Birthday Card Note from Mom & Dad:
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Happy 9th Birthday Maya! We are so proud of your hard work and big heart! Love, Mom & Dad"
+                    value={editingKid.birthdayWish || ''}
+                    onChange={(e) => setEditingKid({ ...editingKid, birthdayWish: e.target.value })}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium text-xs text-slate-800 dark:text-white resize-none"
+                  />
+                  <p className="text-[9px] text-slate-400 font-bold mt-0.5">
+                    Displayed inside their interactive birthday celebration card when they blow out the candles!
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-2 sm:gap-3 mt-5">
@@ -6262,6 +6657,21 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           onUpdateDatabase={onUpdateDatabase}
           actingKid={leaderPreviewKid || getLeaderKid(database) || database.kids[0] || null}
           isAdminPreview={true}
+        />
+      )}
+      {/* Birthday Celebration Preview Modal */}
+      {internalBirthdayPreviewKid && (
+        <BirthdayCelebrationModal
+          isOpen={!!internalBirthdayPreviewKid}
+          onClose={() => setInternalBirthdayPreviewKid(null)}
+          kid={internalBirthdayPreviewKid}
+          starsAwarded={
+            internalBirthdayPreviewKid.customBirthdayStars ??
+            database.settings?.birthdayConfig?.defaultRewardStars ??
+            50
+          }
+          config={getBirthdayConfig(database)}
+          isPreview={true}
         />
       )}
     </div>

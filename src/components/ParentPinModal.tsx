@@ -26,6 +26,10 @@ export const ParentPinModal: React.FC<ParentPinModalProps> = ({
       setPinInput('');
       setError(false);
       setShake(false);
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
     }
   }, [isOpen]);
 

@@ -42,6 +42,7 @@ import {
   getEventCategoryMeta,
 } from '../../utils/calendar';
 import { isChoreScheduledForDate, getTodayDateString } from '../../utils/storage';
+import { parseBirthdate, getTurningAge } from '../../utils/birthday';
 import { sound } from '../../utils/sound';
 import { CalendarEventModal } from './CalendarEventModal';
 import { DayDetailModal } from './DayDetailModal';
@@ -118,7 +119,49 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     });
   };
 
-  const events = database.events || [];
+  const events = useMemo(() => {
+    const rawEvents = database.events || [];
+    const bdayEvents: CalendarEvent[] = [];
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear - 1, currentYear, currentYear + 1];
+
+    for (const kid of database.kids || []) {
+      if (!kid.birthdate) continue;
+      const parsed = parseBirthdate(kid.birthdate);
+      if (!parsed) continue;
+
+      for (const y of years) {
+        const monthStr = String(parsed.month).padStart(2, '0');
+        const dayStr = String(parsed.day).padStart(2, '0');
+        const dateStr = `${y}-${monthStr}-${dayStr}`;
+        const turningAge = getTurningAge(kid.birthdate, y);
+
+        // Don't duplicate if already manually added
+        const exists = rawEvents.some(
+          (e) =>
+            e.date === dateStr &&
+            (e.id === `bday-${kid.id}-${y}` || (e.title.includes(kid.name) && e.category === 'birthday'))
+        );
+        if (!exists) {
+          bdayEvents.push({
+            id: `bday-${kid.id}-${y}`,
+            title: `🎂 ${kid.name}'s ${turningAge ? `${turningAge}th ` : ''}Birthday!`,
+            description: kid.birthdayWish
+              ? `"${kid.birthdayWish}"`
+              : `Happy Birthday ${kid.name}! Auto star gift & VIP celebration perks active!`,
+            date: dateStr,
+            category: 'birthday',
+            assignedKidIds: [kid.id],
+            color: '#ec4899',
+            icon: '🎂',
+            isImportant: true,
+          });
+        }
+      }
+    }
+
+    return [...rawEvents, ...bdayEvents];
+  }, [database.events, database.kids]);
   const weatherMap = database.weatherForecasts || {};
   const tempUnit = database.settings.tempUnit || 'F';
 

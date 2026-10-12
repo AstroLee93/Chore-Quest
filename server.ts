@@ -176,12 +176,21 @@ function initDatabase() {
         if (!parsed.settings.leaderRole) {
           parsed.settings.leaderRole = DEFAULT_SEED_DATA.settings.leaderRole;
         }
+        if (!parsed.settings.birthdayConfig) {
+          parsed.settings.birthdayConfig = DEFAULT_SEED_DATA.settings.birthdayConfig;
+        }
         if (parsed.kids && parsed.kids.length > 0) {
           const currentLeaderId = parsed.settings?.leaderRole?.leaderKidId;
-          parsed.kids = parsed.kids.map((k: any) => ({
-            ...k,
-            isLeader: k.isLeader !== undefined ? k.isLeader : (currentLeaderId ? k.id === currentLeaderId : false),
-          }));
+          const seedMap = new Map((DEFAULT_SEED_DATA.kids || []).map((sk: any) => [sk.id, sk]));
+          parsed.kids = parsed.kids.map((k: any) => {
+            const seedKid = seedMap.get(k.id) as any;
+            return {
+              ...k,
+              birthdate: k.birthdate !== undefined ? k.birthdate : seedKid?.birthdate,
+              birthdayWish: k.birthdayWish !== undefined ? k.birthdayWish : seedKid?.birthdayWish,
+              isLeader: k.isLeader !== undefined ? k.isLeader : (currentLeaderId ? k.id === currentLeaderId : false),
+            };
+          });
         }
         currentDatabaseRev = (parsed as any)._rev || Date.now();
         currentDatabaseUpdatedAt = (parsed as any)._updatedAt || Date.now();

@@ -28,6 +28,8 @@ const AqaraCameraModal = React.lazy(() => import('./AqaraCameraModal').then((m) 
 const HouseRulesModal = React.lazy(() => import('./HouseRulesModal').then((m) => ({ default: m.HouseRulesModal })));
 const LeaderClipboardModal = React.lazy(() => import('./LeaderClipboardModal').then((m) => ({ default: m.LeaderClipboardModal })));
 import { getGradeLevelInfo, getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
+import { isBirthdayToday, getBirthdayConfig } from '../utils/birthday';
+import { BirthdayCelebrationModal } from './BirthdayCelebrationModal';
 import {
   isReadingCompletedToday,
   findReadingChore,
@@ -78,6 +80,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [isHouseRulesModalOpen, setIsHouseRulesModalOpen] = useState<boolean>(false);
   const [leaderClipboardKid, setLeaderClipboardKid] = useState<KidProfile | null>(null);
   const [isLeaderClipboardOpen, setIsLeaderClipboardOpen] = useState<boolean>(false);
+  const [selectedBirthdayKid, setSelectedBirthdayKid] = useState<KidProfile | null>(null);
 
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
   const todayStr = useMemo(() => getTodayDateString(), []);
@@ -522,6 +525,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               return checkChoreTimeWindow(chore, category, currentMinuteTime).isUrgentExpiration;
             });
 
+            const isBirthday = !!kid.birthdate && isBirthdayToday(kid.birthdate, todayStr);
+
             return (
             <div
               key={kid.id}
@@ -546,18 +551,18 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     title={`Tap to unlock ${kid.name}'s Profile Dashboard (PIN required)`}
                   >
                     <div className="relative shrink-0">
-                      {isMvp && (
+                      {(isBirthday || isMvp) && (
                         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 text-2xl filter drop-shadow-[0_3px_6px_rgba(245,158,11,0.9)] animate-bounce select-none pointer-events-none">
                           👑
                         </div>
                       )}
                       <div
                         style={{
-                          backgroundColor: isMvp ? `${kid.color || '#3b82f6'}40` : `${kid.color || '#3b82f6'}25`,
-                          borderColor: isMvp ? '#fbbf24' : (kid.color || '#3b82f6'),
+                          backgroundColor: isBirthday ? '#ec489930' : isMvp ? `${kid.color || '#3b82f6'}40` : `${kid.color || '#3b82f6'}25`,
+                          borderColor: isBirthday ? '#f43f5e' : isMvp ? '#fbbf24' : (kid.color || '#3b82f6'),
                         }}
                         className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border-2 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-inner group-hover/header:scale-105 transition-transform ${
-                          isMvp ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-900' : ''
+                          isBirthday ? 'ring-2 ring-pink-400 ring-offset-2 ring-offset-slate-900' : isMvp ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-900' : ''
                         }`}
                       >
                         {kid.avatar}
@@ -568,6 +573,21 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                       <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-1.5 flex-wrap group-hover/header:text-amber-200 transition-colors">
                         <span className="truncate">{kid.name}</span>
                         <Lock className="w-3.5 h-3.5 text-white/50 shrink-0 group-hover/header:text-amber-300" />
+                        {isBirthday && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              sound.playTap();
+                              setSelectedBirthdayKid(kid);
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-amber-500 text-white font-black text-[10px] shadow-sm border border-pink-300 shrink-0 cursor-pointer hover:scale-105 transition-transform animate-pulse"
+                            title="Open Birthday Celebration!"
+                          >
+                            <span>👑</span>
+                            <span>Birthday VIP! 🎂</span>
+                          </button>
+                        )}
                         {isAllDone && (
                           <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500 text-white font-extrabold animate-bounce shrink-0">
                             Done! 🎉
@@ -1358,6 +1378,22 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           onUpdateDatabase={onUpdateDatabase}
           actingKid={leaderClipboardKid}
           isAdminPreview={false}
+        />
+      )}
+
+      {/* Birthday Celebration Modal for Kiosk */}
+      {selectedBirthdayKid && (
+        <BirthdayCelebrationModal
+          isOpen={!!selectedBirthdayKid}
+          onClose={() => setSelectedBirthdayKid(null)}
+          kid={selectedBirthdayKid}
+          starsAwarded={
+            selectedBirthdayKid.customBirthdayStars ??
+            database.settings?.birthdayConfig?.defaultRewardStars ??
+            50
+          }
+          config={getBirthdayConfig(database)}
+          isPreview={false}
         />
       )}
       </React.Suspense>

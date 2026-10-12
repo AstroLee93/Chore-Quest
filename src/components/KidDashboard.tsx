@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home, Sun, Brain, BookOpen, ClipboardList, Users, Shield, CheckSquare } from 'lucide-react';
 import { KidProfile, ChoreItem, ChoreCategory, ChoreLog, AppSettings, RewardItem, CalendarEvent, FamilyDatabase } from '../types';
 import { ChoreCard } from './ChoreCard';
@@ -33,6 +33,8 @@ import { calculateKidBadges } from '../utils/badges';
 import { getSeasonalWeatherForDate, EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../utils/calendar';
 import { sound } from '../utils/sound';
 import { AppThemeId, APP_THEMES } from '../utils/theme';
+import { isBirthdayToday, getBirthdayConfig } from '../utils/birthday';
+import { BirthdayCelebrationModal } from './BirthdayCelebrationModal';
 
 interface KidDashboardProps {
   kid: KidProfile;
@@ -55,6 +57,7 @@ interface KidDashboardProps {
   onOpenGoalManager?: () => void;
   onOpenSnackRequest?: (kid: KidProfile) => void;
   onOpenLeaderClipboard?: (kid?: KidProfile) => void;
+  onOpenBirthdayCelebration?: () => void;
 }
 
 export const KidDashboard: React.FC<KidDashboardProps> = ({
@@ -78,6 +81,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   onOpenGoalManager,
   onOpenSnackRequest,
   onOpenLeaderClipboard,
+  onOpenBirthdayCelebration,
 }) => {
   const safeSettings = settings || database?.settings || ({} as AppSettings);
   const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
@@ -94,6 +98,44 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const [isBrainTeaserOpen, setIsBrainTeaserOpen] = useState<boolean>(false);
   const [isReadingLogOpen, setIsReadingLogOpen] = useState<boolean>(false);
   const [isLeaderClipboardLocalOpen, setIsLeaderClipboardLocalOpen] = useState<boolean>(false);
+  const [isInternalBirthdayModalOpen, setIsInternalBirthdayModalOpen] = useState<boolean>(false);
+
+  const bdayConfig = useMemo(() => {
+    return database ? getBirthdayConfig(database) : {
+      enabled: true,
+      defaultRewardStars: 50,
+      reminderDaysAhead: 7,
+      freeChorePassEnabled: true,
+      doubleStarBonusDay: true,
+    };
+  }, [database]);
+
+  const isBirthday = useMemo(() => {
+    return !!kid?.birthdate && isBirthdayToday(kid.birthdate, todayStr);
+  }, [kid?.birthdate, todayStr]);
+
+  const starsAwarded = useMemo(() => {
+    return kid?.customBirthdayStars ?? bdayConfig.defaultRewardStars ?? 50;
+  }, [kid?.customBirthdayStars, bdayConfig.defaultRewardStars]);
+
+  // Automatically open the celebration modal once per session on the child's birthday
+  useEffect(() => {
+    if (!kid || !isBirthday || !bdayConfig.enabled) return;
+    const sessionKey = `bday_celebrated_${kid.id}_${todayStr}`;
+    if (!sessionStorage.getItem(sessionKey)) {
+      sessionStorage.setItem(sessionKey, '1');
+      setIsInternalBirthdayModalOpen(true);
+    }
+  }, [kid?.id, isBirthday, bdayConfig.enabled, todayStr]);
+
+  const handleOpenBirthdayCelebrationModal = () => {
+    sound.playTap();
+    if (onOpenBirthdayCelebration) {
+      onOpenBirthdayCelebration();
+    } else {
+      setIsInternalBirthdayModalOpen(true);
+    }
+  };
 
   // Leader / Manager role calculation
   const isThisKidLeader = useMemo(() => {
@@ -254,6 +296,39 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
         />
       )}
 
+      {/* Festive Birthday Banner */}
+      {isBirthday && bdayConfig.enabled && (
+        <div className="bg-gradient-to-r from-pink-500 via-amber-400 to-indigo-600 rounded-2xl sm:rounded-3xl p-1 text-white shadow-lg animate-fade-in">
+          <div className="bg-white/95 dark:bg-slate-900/95 rounded-xl sm:rounded-[22px] p-3.5 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-900 dark:text-white backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-400 to-amber-400 text-white flex items-center justify-center text-2xl shrink-0 shadow-md">
+                🎂
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950 text-pink-900 dark:text-pink-200 border border-pink-300">
+                    🎉 HAPPY BIRTHDAY, {kid.name.toUpperCase()}!
+                  </span>
+                  <span className="text-xs font-black text-amber-600 dark:text-amber-400">
+                    +{starsAwarded} Birthday Stars Credited!
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 mt-0.5">
+                  Today is your special day! Enjoy 2x stars on completed chores, a free chore skip pass, and blow out your candles!
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenBirthdayCelebrationModal}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 active:scale-95 text-white font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer shrink-0 inline-flex items-center gap-1.5"
+            >
+              <span>Open Celebration 🎂</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Kid Greeting & Live Progress Header (Redesigned Profile Card) */}
       <div
         id="kid-profile-card"
@@ -289,20 +364,39 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           {/* Middle Row: Circular Avatar + Greeting & Live Stats */}
           <div className="flex items-center gap-4 sm:gap-6 pt-0.5 sm:pt-1">
             {/* Circular Avatar */}
-            <div
-              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#fce7f3] dark:bg-pink-950/40 border-2 border-[#fbcfe8] dark:border-pink-900/50 flex items-center justify-center text-4xl sm:text-5xl shrink-0 shadow-inner overflow-hidden"
-            >
-              {typeof kid.avatar === 'string' && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
-                <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
-              ) : (
-                <span className="leading-none select-none">{typeof kid.avatar === 'string' ? kid.avatar : '⭐'}</span>
+            <div className="relative shrink-0">
+              {isBirthday && bdayConfig.enabled && (
+                <div className="absolute -top-3.5 -right-1 text-2xl sm:text-3xl filter drop-shadow-md animate-bounce select-none z-10" title="Birthday VIP!">
+                  👑
+                </div>
               )}
+              <div
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#fce7f3] dark:bg-pink-950/40 border-2 border-[#fbcfe8] dark:border-pink-900/50 flex items-center justify-center text-4xl sm:text-5xl shrink-0 shadow-inner overflow-hidden"
+              >
+                {typeof kid.avatar === 'string' && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
+                  <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="leading-none select-none">{typeof kid.avatar === 'string' ? kid.avatar : '⭐'}</span>
+                )}
+              </div>
             </div>
 
             {/* Greeting & Subtitle */}
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                Hey, {kid.name}! <span className="inline-block">👋</span>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 flex-wrap">
+                <span>Hey, {kid.name}!</span> <span className="inline-block">👋</span>
+                {isBirthday && bdayConfig.enabled && (
+                  <button
+                    type="button"
+                    onClick={handleOpenBirthdayCelebrationModal}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-pink-500 via-amber-400 to-indigo-500 text-white font-black text-xs sm:text-sm shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer animate-pulse"
+                    title="Tap to open your Birthday Celebration!"
+                  >
+                    <span>👑</span>
+                    <span>BIRTHDAY VIP!</span>
+                    <span>🎂</span>
+                  </button>
+                )}
               </h1>
               <div className="flex items-center gap-2 mt-1 sm:mt-1.5 text-sm sm:text-base flex-wrap">
                 <span className="font-extrabold text-[#f43f5e] tracking-tight">
@@ -1146,6 +1240,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           <SkipReasonModal
             isOpen={!!skipModalChore}
             chore={skipModalChore}
+            isBirthdayPassAvailable={isBirthday && bdayConfig.enabled && bdayConfig.freeChorePassEnabled}
             onConfirmSkip={(choreId, reasonCat, note) => {
               onSkipChoreWithReason(choreId, reasonCat, note);
               setSkipModalChore(null);
@@ -1177,6 +1272,18 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             database={database}
             onUpdateDatabase={onUpdateDatabase}
             actingKid={kid}
+          />
+        )}
+
+        {/* Birthday Celebration Modal */}
+        {isInternalBirthdayModalOpen && (
+          <BirthdayCelebrationModal
+            isOpen={isInternalBirthdayModalOpen}
+            onClose={() => setIsInternalBirthdayModalOpen(false)}
+            kid={kid}
+            starsAwarded={starsAwarded}
+            config={bdayConfig}
+            isPreview={false}
           />
         )}
       </React.Suspense>

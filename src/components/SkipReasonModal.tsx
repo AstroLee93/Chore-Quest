@@ -6,6 +6,7 @@ import { sound } from '../utils/sound';
 interface SkipReasonModalProps {
   isOpen: boolean;
   chore: ChoreItem | null;
+  isBirthdayPassAvailable?: boolean;
   onConfirmSkip: (choreId: string, category: 'sick' | 'supplies' | 'time' | 'already_done' | 'need_help' | 'other', note: string) => void;
   onClose: () => void;
 }
@@ -52,6 +53,7 @@ const REASON_OPTIONS = [
 export const SkipReasonModal: React.FC<SkipReasonModalProps> = ({
   isOpen,
   chore,
+  isBirthdayPassAvailable = false,
   onConfirmSkip,
   onClose,
 }) => {
@@ -99,6 +101,39 @@ export const SkipReasonModal: React.FC<SkipReasonModalProps> = ({
             <X className="w-5 h-5 stroke-[2.5]" />
           </button>
         </div>
+
+        {/* Birthday VIP Pass Option */}
+        {isBirthdayPassAvailable && (
+          <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 rounded-2xl p-0.5 text-white shadow-md mb-4 animate-pulse">
+            <button
+              type="button"
+              onClick={() => {
+                sound.playMilestoneFanfare();
+                onConfirmSkip(chore.id, 'other', '🎂 Birthday VIP Pass: Free chore skip pass with parent blessing! 🎉');
+              }}
+              className="w-full bg-white dark:bg-slate-900 rounded-[14px] p-3 text-left flex items-center justify-between gap-3 cursor-pointer hover:bg-pink-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-3xl">🎟️</span>
+                <div>
+                  <div className="text-[11px] font-black text-pink-600 dark:text-pink-400 uppercase tracking-wider flex items-center gap-1">
+                    <span>👑 Birthday VIP Perk</span>
+                    <span className="bg-amber-100 text-amber-900 text-[10px] px-1.5 py-0.2 rounded font-black">1 Free Skip</span>
+                  </div>
+                  <div className="text-sm font-black text-slate-800 dark:text-white">
+                    Redeem Birthday Chore Pass!
+                  </div>
+                  <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                    Skip this chore today guilt-free with parent birthday blessing.
+                  </div>
+                </div>
+              </div>
+              <span className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-amber-500 text-white font-black text-xs shrink-0 shadow-xs">
+                Use Pass ✨
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Explanation */}
         <div className="bg-yellow-100 border-2 border-yellow-300 rounded-2xl p-3.5 mb-5 flex items-start gap-2.5">

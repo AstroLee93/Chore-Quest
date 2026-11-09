@@ -1106,6 +1106,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                   chore={chore}
                   category={category}
                   log={log}
+                  isBirthdayPassAvailable={isBirthday && bdayConfig.enabled && bdayConfig.freeChorePassEnabled}
                   onToggleComplete={onToggleCompleteChore}
                   onOpenSkipModal={(c) => setSkipModalChore(c)}
                   onUndo={onUndoChoreStatus}
@@ -1170,6 +1171,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                     chore={bounty}
                     category={category}
                     log={log}
+                    isBirthdayPassAvailable={isBirthday && bdayConfig.enabled && bdayConfig.freeChorePassEnabled}
                     onToggleComplete={onToggleCompleteChore}
                     onOpenSkipModal={(c) => setSkipModalChore(c)}
                     onUndo={onUndoChoreStatus}

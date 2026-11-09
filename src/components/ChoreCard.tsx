@@ -10,6 +10,7 @@ interface ChoreCardProps {
   chore: ChoreItem;
   category?: ChoreCategory;
   log?: ChoreLog;
+  isBirthdayPassAvailable?: boolean;
   onToggleComplete: (chore: ChoreItem) => void;
   onOpenSkipModal: (chore: ChoreItem) => void;
   onUndo: (choreId: string) => void;
@@ -22,6 +23,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
   chore,
   category,
   log,
+  isBirthdayPassAvailable = false,
   onToggleComplete,
   onOpenSkipModal,
   onUndo,
@@ -274,6 +276,23 @@ export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
                   <span>{chore.timerMinutes ? `${chore.timerMinutes}m Timer` : 'Timer'}</span>
                 </button>
               )}
+
+              {/* Birthday Free Chore Skip Pass Quick Badge */}
+              {isBirthdayPassAvailable && !isCompleted && !isSkipped && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    sound.playTap();
+                    onOpenSkipModal(chore);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 text-white shadow-xs border border-pink-300 hover:scale-105 active:scale-95 transition-all cursor-pointer animate-pulse"
+                  title="Use your 1-Time Free Birthday Chore Skip Pass!"
+                >
+                  <span>🎟️</span>
+                  <span>Use Birthday Skip Pass</span>
+                </button>
+              )}
             </div>
 
             <h3
@@ -514,6 +533,16 @@ export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
                           label: chore.timerMinutes ? `Start ${chore.timerMinutes}m Focus Timer` : 'Start Focus Timer',
                           icon: <Timer className="w-3.5 h-3.5 text-sky-500" />,
                           onClick: () => onStartTimer(chore),
+                        },
+                      ]
+                    : []),
+                  ...(isBirthdayPassAvailable
+                    ? [
+                        {
+                          id: 'birthday-pass',
+                          label: '🎟️ Redeem Birthday Skip Pass',
+                          icon: <Sparkles className="w-3.5 h-3.5 text-pink-500" />,
+                          onClick: () => onOpenSkipModal(chore),
                         },
                       ]
                     : []),

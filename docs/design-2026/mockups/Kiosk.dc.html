@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Family wall display</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7FA6FF}a:hover{color:#A9C3FF}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; background: #08090C; color: #F2F3F5; font-family: Inter, system-ui, sans-serif; display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 28px; padding: 44px 48px; font-feature-settings: 'tnum' 1, 'cv11' 1; position: relative;">
+
+  <div style="position: absolute; right: 48px; bottom: 14px; display: flex; align-items: center; gap: 10px;">
+    <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #7C8290;">
+      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      Locked to wall mode
+    </span>
+    <button type="button" style="min-height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: transparent; color: #9BA1AD; font: 500 13px Inter, system-ui, sans-serif; cursor: pointer;">Exit · parent PIN</button>
+  </div>
+
+  <aside style="display: flex; flex-direction: column; gap: 28px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 120px; font-weight: 200; letter-spacing: -0.05em; line-height: 0.95;">4:31</span>
+      <span style="font-size: 22px; color: #9BA1AD;">Friday, November 13</span>
+      <span style="display: flex; align-items: center; gap: 8px; font-size: 20px; color: #C9CDD5; margin-top: 6px;">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"/><path d="M16 14v6M8 14v6M12 16v6"/></svg>
+        64° · Light rain
+      </span>
+    </div>
+
+    <section aria-labelledby="next-h" style="display: flex; flex-direction: column; gap: 12px;">
+      <h2 id="next-h" style="margin: 0; font-size: 14px; font-weight: 600; color: #9BA1AD; text-transform: uppercase; letter-spacing: 0.08em;">Coming up</h2>
+      <sc-for list="{{events}}" as="e" hint-placeholder-count="3">
+        <div style="display: flex; gap: 14px; align-items: center;">
+          <span style="width: 4px; align-self: stretch; border-radius: 2px; background: {{e.color}};"></span>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 19px; font-weight: 500;">{{e.title}}</span>
+            <span style="font-size: 15px; color: #9BA1AD;">{{e.when}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+
+    <section aria-label="Family goal" style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 22px; background: #12141A; border: 1px solid rgba(255,255,255,0.06);">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <span style="font-size: 18px; font-weight: 600;">Pizza &amp; movie night</span>
+        <span style="font-size: 16px; color: #9BA1AD;">32 to go</span>
+      </div>
+      <div style="height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden;">
+        <div style="width: 9%; height: 100%; border-radius: 4px; background: #5B8CFF;"></div>
+      </div>
+    </section>
+  </aside>
+
+  <main style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+    <sc-for list="{{kids}}" as="k" hint-placeholder-count="3">
+      <a href="KidToday.dc.html" style="display: flex; flex-direction: column; gap: 20px; padding: 26px 22px; border-radius: 28px; background: #12141A; border: 1px solid rgba(255,255,255,0.06); text-decoration: none; color: inherit;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
+          <div style="position: relative; width: 150px; height: 150px;">
+            <svg aria-hidden="true" width="150" height="150" viewBox="0 0 150 150" style="position: absolute; inset: 0; transform: rotate(-90deg);">
+              <circle cx="75" cy="75" r="66" fill="none" stroke="{{k.track}}" stroke-width="12"></circle>
+              <circle cx="75" cy="75" r="66" fill="none" stroke="{{k.color}}" stroke-width="12" stroke-linecap="round" stroke-dasharray="{{k.dash}}"></circle>
+            </svg>
+            <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <span style="font-size: 40px; font-weight: 300; letter-spacing: -0.03em;">{{k.done}}<span style="color: #6E7482;">/{{k.total}}</span></span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+            <span style="font-size: 26px; font-weight: 600;">{{k.name}}</span>
+            <span style="font-size: 15px; color: #9BA1AD;">{{k.points}} pts · {{k.streak}}-day streak</span>
+          </div>
+        </div>
+        <div style="height: 1px; background: rgba(255,255,255,0.06);"></div>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-size: 13px; font-weight: 600; color: #9BA1AD; text-transform: uppercase; letter-spacing: 0.08em;">Up next</span>
+          <sc-for list="{{k.next}}" as="t" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; gap: 12px; min-height: 32px;">
+              <span style="width: 22px; height: 22px; border-radius: 11px; border: 2px solid #4A505D; flex-shrink: 0;"></span>
+              <span style="flex: 1; font-size: 17px;">{{t.title}}</span>
+              <span style="font-size: 14px; font-weight: 600; color: {{t.metaColor}};">{{t.meta}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </a>
+    </sc-for>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var C = 2 * Math.PI * 66;
+    function t(title, meta, urgent) { return { title: title, meta: meta, metaColor: urgent ? '#FFB547' : '#7C8290' }; }
+    var kids = [
+      { name: 'Leo', color: '#FFB547', track: 'rgba(255,181,71,0.14)', done: 4, total: 13, points: 45, streak: 4,
+        next: [t('Take out small trash', '59m', true), t('Pick up floor toys', '+4'), t('Read for 20 min', '+5')] },
+      { name: 'Maya', color: '#FF6FA5', track: 'rgba(255,111,165,0.14)', done: 9, total: 12, points: 62, streak: 6,
+        next: [t('Set the table', '1h 10m', true), t('Practice spelling', '+3'), t('Brush teeth', 'Routine')] },
+      { name: 'Sam', color: '#7FA6FF', track: 'rgba(91,140,255,0.14)', done: 2, total: 11, points: 28, streak: 2,
+        next: [t('Empty dishwasher', '59m', true), t('Vacuum the stairs', '+5'), t('Homework check-in', '+4')] }
+    ];
+    return {
+      kids: kids.map(function (k) {
+        return Object.assign({}, k, { dash: (C * k.done / k.total).toFixed(1) + ' ' + C.toFixed(1) });
+      }),
+      events: [
+        { title: 'Soccer practice · Sam', when: 'Today · 6:00 PM', color: '#7FA6FF' },
+        { title: 'Pizza delivery night', when: 'Tomorrow · 6:30 PM', color: '#FFB547' },
+        { title: 'Maya — dentist', when: 'Mon · 3:15 PM', color: '#FF6FA5' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

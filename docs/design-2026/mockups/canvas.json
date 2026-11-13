@@ -1,0 +1,31 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-13T16:45:00Z" },
+  "title": "ChoreQuest 2026 Redesign",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 390, "h": 844, "title": "Family · Today (Balanced, dark)", "radius": 44 },
+    "KidToday.dc.html": { "x": 470, "y": 0, "w": 390, "h": 844, "title": "Kid · Leo's day (Balanced, dark)", "radius": 44 },
+    "KidMinimal.dc.html": { "x": 940, "y": 0, "w": 390, "h": 844, "title": "Kid · Sam's day (Minimal, light)", "radius": 44 },
+    "Savings.dc.html": { "x": 1410, "y": 0, "w": 390, "h": 844, "title": "Kid · Savings goal", "radius": 44 },
+    "Rewards.dc.html": { "x": 1880, "y": 0, "w": 390, "h": 844, "title": "Kid · Rewards", "radius": 44 },
+    "Celebrate.dc.html": { "x": 2350, "y": 0, "w": 390, "h": 844, "title": "Moment · All done for today", "radius": 44 },
+    "Kiosk.dc.html": { "x": 0, "y": 1300, "w": 1280, "h": 800, "title": "Wall · Ambient (locked)", "radius": 20 },
+    "KioskKid.dc.html": { "x": 1360, "y": 1300, "w": 1280, "h": 800, "title": "Wall · Kid session (locked, auto-return)", "radius": 20 },
+    "Themes.dc.html": { "x": 0, "y": 2520, "w": 1640, "h": 900, "title": "Theme collection" },
+    "DinnerWeek.dc.html": { "x": 0, "y": 3900, "w": 390, "h": 844, "title": "Kitchen · This week's dinners", "radius": 44 },
+    "CookMode.dc.html": { "x": 470, "y": 3900, "w": 390, "h": 844, "title": "Kitchen · Recipe & cook mode", "radius": 44 },
+    "GroceryList.dc.html": { "x": 940, "y": 3900, "w": 390, "h": 844, "title": "Kitchen · Grocery list (store mode)", "radius": 44 },
+    "Pantry.dc.html": { "x": 1410, "y": 3900, "w": 390, "h": 844, "title": "Kitchen · Pantry & budget", "radius": 44 },
+    "KitchenWall.dc.html": { "x": 1880, "y": 3900, "w": 1280, "h": 800, "title": "Wall · Kitchen board", "radius": 20 }
+  },
+  "order": ["Main.dc.html", "KidToday.dc.html", "KidMinimal.dc.html", "Savings.dc.html", "Rewards.dc.html", "Celebrate.dc.html", "Kiosk.dc.html", "KioskKid.dc.html", "Themes.dc.html", "DinnerWeek.dc.html", "CookMode.dc.html", "GroceryList.dc.html", "Pantry.dc.html", "KitchenWall.dc.html"],
+  "notes": {
+    "rowTitle": { "x": 0, "y": -300, "text": "ChoreQuest 2026 — calm chrome, joyful moments", "kind": "title1", "maxW": 2740 },
+    "wallTitle": { "x": 0, "y": 1010, "text": "The wall — locked kiosk mode", "kind": "title1", "maxW": 2640 },
+    "themeTitle": { "x": 0, "y": 2230, "text": "Themes", "kind": "title1", "maxW": 1640 },
+    "kitchenTitle": { "x": 0, "y": 3610, "text": "Kitchen — dinners, groceries, pantry", "kind": "title1", "maxW": 3160 }
+  },
+  "designSystems": []
+}

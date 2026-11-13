@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Grocery list</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7FA6FF}a:hover{color:#A9C3FF}
+input::placeholder{color:#7C8290}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0C0E13; color: #F2F3F5; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px; padding: 60px 20px 24px; overflow: hidden; font-feature-settings: 'tnum' 1, 'cv11' 1; position: relative;">
+
+  <header style="display: flex; justify-content: space-between; align-items: flex-end;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <span style="font-size: 13px; font-weight: 500; color: #9BA1AD;">18 items · 5 done</span>
+      <h1 style="margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.02em;">Groceries</h1>
+    </div>
+    <a href="Pantry.dc.html" style="display: flex; flex-direction: column; align-items: flex-end; text-decoration: none; color: inherit;">
+      <span style="font-size: 20px; font-weight: 500;">$86 <span style="color: #7C8290; font-weight: 400;">/ $120</span></span>
+      <span style="font-size: 12px; color: #9BA1AD;">estimated</span>
+    </a>
+  </header>
+
+  <div style="display: flex; gap: 8px;">
+    <label for="quick-add" style="flex: 1; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 12px; background: #161922; border: 1px solid rgba(255,255,255,0.08);">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9BA1AD" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <input id="quick-add" type="text" placeholder="Add item — sorted by aisle" style="flex: 1; border: none; outline: none; background: transparent; color: #F2F3F5; font: 400 16px Inter, system-ui, sans-serif; min-width: 0;">
+    </label>
+    <button type="button" aria-label="Scan a receipt" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: #161922; color: #F2F3F5; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>
+    </button>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: rgba(255,111,165,0.08); border: 1px solid rgba(255,111,165,0.2);">
+    <span style="width: 28px; height: 28px; border-radius: 14px; background: rgba(255,111,165,0.16); color: #FF6FA5; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">MA</span>
+    <span style="flex: 1; font-size: 14px;">Maya asked for <span style="font-weight: 600;">strawberry yogurt</span></span>
+    <button type="button" style="min-height: 32px; padding: 0 12px; border-radius: 16px; border: none; background: #F2F3F5; color: #0C0E13; font: 600 13px Inter, system-ui, sans-serif; cursor: pointer;">Add</button>
+    <button type="button" aria-label="Decline request" style="width: 32px; height: 32px; border-radius: 16px; border: none; background: rgba(255,255,255,0.08); color: #9BA1AD; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+    <sc-for list="{{aisles}}" as="a" hint-placeholder-count="3">
+      <section style="display: flex; flex-direction: column; gap: 6px;">
+        <h2 style="margin: 0 4px; font-size: 13px; font-weight: 600; color: #9BA1AD; text-transform: uppercase; letter-spacing: 0.06em;">{{a.name}}</h2>
+        <div style="border-radius: 16px; background: #161922; border: 1px solid rgba(255,255,255,0.06); overflow: hidden;">
+          <sc-for list="{{a.items}}" as="i" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 14px; box-sizing: border-box; border-top: {{i.border}}; opacity: {{i.opacity}};">
+              <span style="width: 24px; height: 24px; border-radius: 12px; border: {{i.ring}}; background: {{i.fill}}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #0C0E13;">
+                <sc-if value="{{i.done}}" hint-placeholder-val="{{false}}">
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                </sc-if>
+              </span>
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+                <span style="font-size: 16px; text-decoration: {{i.strike}};">{{i.name}} <span style="color: #9BA1AD;">{{i.qty}}</span></span>
+                <span style="font-size: 12px; color: {{i.srcColor}};">{{i.src}}</span>
+              </div>
+              <span style="font-size: 14px; color: #9BA1AD;">{{i.price}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-for>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 120px; background: linear-gradient(180deg, rgba(12,14,19,0) 0%, #0C0E13 60%); pointer-events: none;"></div>
+  <button type="button" style="position: absolute; left: 20px; right: 20px; bottom: 24px; min-height: 52px; border-radius: 16px; border: none; background: #F2F3F5; color: #0C0E13; font: 600 16px Inter, system-ui, sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+    I'm at the store
+  </button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    function i(name, qty, src, kind, price, done, first) {
+      var colors = { dinner: '#7FA6FF', pantry: '#FFB547', kid: '#FF6FA5', you: '#9BA1AD' };
+      return { name: name, qty: qty, src: src, srcColor: colors[kind], price: price, done: done,
+        border: first ? 'none' : '1px solid rgba(255,255,255,0.06)', opacity: done ? 0.5 : 1,
+        strike: done ? 'line-through' : 'none', ring: done ? 'none' : '2px solid #5C6270', fill: done ? '#30D158' : 'transparent' };
+    }
+    return {
+      aisles: [
+        { name: 'Produce', items: [
+          i('Bell peppers', '× 3', 'For Fri · fajitas', 'dinner', '$3.60', false, true),
+          i('Avocados', '× 2', 'For Fri · fajitas', 'dinner', '$2.50', false, false),
+          i('Bananas', '', 'Added by Dad', 'you', '$1.40', true, false)
+        ] },
+        { name: 'Meat', items: [
+          i('Chicken thighs', '2 lb', 'For Fri · fajitas', 'dinner', '$9.40', false, true)
+        ] },
+        { name: 'Dairy', items: [
+          i('Milk', '1 gal', 'Running low in pantry', 'pantry', '$4.20', false, true),
+          i('Shredded cheese', '', 'For Sat · pizza', 'dinner', '$3.80', false, false)
+        ] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

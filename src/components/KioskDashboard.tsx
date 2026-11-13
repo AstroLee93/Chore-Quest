@@ -439,8 +439,38 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
       {/* Main Kiosk Content Area: MVP Spotlight + Kids Missions Grid */}
       <div className="flex-1 flex flex-col gap-4 mb-4">
+        {/* MVP — 2026 themes: one quiet line */}
+        {mvpKid && isCq2026 && (
+          <div
+            id="kiosk-mvp-spotlight-bar"
+            className="flex items-center gap-4 rounded-[22px] px-5 py-3.5 bg-[var(--cq-surface)] border border-[var(--cq-line)]"
+          >
+            <span
+              className="relative w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-bold shrink-0"
+              style={{ color: mvpKid.color || 'var(--cq-accent)', backgroundColor: `color-mix(in srgb, ${mvpKid.color || '#5B8CFF'} 16%, transparent)` }}
+              aria-hidden="true"
+            >
+              {initials(mvpKid.name)}
+              <Crown className="absolute -top-2 -right-1.5 w-4 h-4 text-amber-400 fill-amber-400" />
+            </span>
+            <p className="flex-1 min-w-0 text-[17px] text-[var(--cq-label)]">
+              <span className="font-semibold">{mvpKid.name} leads today</span>
+              <span className="text-[var(--cq-label-2)]"> · {mvpKid.stars} pts · {mvpKid.streakDays}-day streak</span>
+            </p>
+            <button
+              id="btn-cheer-mvp"
+              type="button"
+              onClick={handleCheerMvp}
+              className="min-h-[40px] px-4 rounded-full bg-[var(--cq-surface-2)] border border-[var(--cq-line)] text-[var(--cq-label)] text-[14px] font-semibold flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              Cheer
+            </button>
+          </div>
+        )}
+
         {/* MVP Spotlight Banner */}
-        {mvpKid && (
+        {mvpKid && !isCq2026 && (
           <div
             id="kiosk-mvp-spotlight-bar"
             className={`relative overflow-hidden rounded-3xl p-4 sm:p-5 ${theme.kioskMvpSpotlightBg} border-2 ${theme.kioskMvpSpotlightBorder} flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in`}
@@ -844,7 +874,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     return (
                       <>
                         {/* Priority Alert Banner for kid when tasks are expiring soon */}
-                        {expiringChoresCount > 0 && (
+                        {expiringChoresCount > 0 && !isCq2026 && (
                           <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/25 via-rose-500/20 to-amber-500/25 border border-amber-400/40 text-amber-200 text-xs font-black shadow-xs mb-2 animate-pulse">
                             <div className="flex items-center gap-1.5">
                               <Hourglass className="w-3.5 h-3.5 text-amber-300" />

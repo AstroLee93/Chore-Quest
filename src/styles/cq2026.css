@@ -263,3 +263,75 @@ html.cq2026 .cq-adapt :is(.text-slate-900, .text-slate-800, .text-slate-700, .te
 html.cq2026 .cq-adapt :is(.text-slate-600, .text-slate-500, .text-slate-400, .text-pink-600, .text-pink-700, .text-amber-700, .text-amber-800) { color: var(--cq-label-2); }
 html.cq2026 .cq-adapt :is([class*="border-slate-"], [class*="border-yellow-"], [class*="border-pink-"], [class*="border-amber-"], [class*="border-indigo-"], [class*="border-emerald-3"]) { border-color: var(--cq-line); }
 html.cq2026 .cq-adapt :is(input, textarea, select) { background: var(--cq-surface-2) !important; color: var(--cq-label) !important; -webkit-text-fill-color: var(--cq-label) !important; border-color: var(--cq-line) !important; color-scheme: inherit !important; }
+
+/* ── Reusable 2026 hooks for legacy components ─────────────────────────── */
+html.cq2026 .cq-hide-2026 { display: none !important; }
+
+/* Selectable chips (goal pickers etc.): neutral, accent when selected */
+html.cq2026 .cq-chip {
+  background: var(--cq-surface-2);
+  background-image: none;
+  color: var(--cq-label);
+  border: 1px solid var(--cq-line);
+  border-radius: 999px;
+  box-shadow: none;
+  font-weight: 500;
+  min-height: 36px;
+}
+html.cq2026 .cq-chip[data-selected="true"] { background: var(--cq-accent); color: var(--cq-on-accent); border-color: transparent; font-weight: 600; }
+html.cq2026 .cq-chip > span:last-child { background: rgb(127 127 127 / 0.16); color: inherit; border-radius: 999px; }
+
+/* Secondary buttons (New Goal, Set New Goal …) */
+html.cq2026 .cq-btn-secondary {
+  background: var(--cq-surface-2);
+  background-image: none;
+  color: var(--cq-label);
+  border: 1px solid var(--cq-line);
+  box-shadow: none;
+  font-weight: 600;
+  min-height: 36px;
+}
+html.cq2026 .cq-btn-secondary svg { color: var(--cq-accent-text); }
+
+/* Icon tiles */
+html.cq2026 .cq-icon-tile { background: var(--cq-accent-soft); background-image: none; color: var(--cq-accent-text); box-shadow: none; }
+html.cq2026 .cq-icon-tile svg { color: var(--cq-accent-text); }
+
+/* Badges: quiet medallions; unlocked ones get an accent ring */
+html.cq2026 .cq-badge {
+  background: var(--cq-surface-2);
+  background-image: none;
+  border: 1px solid var(--cq-line);
+  color: var(--cq-label);
+  box-shadow: none;
+  filter: none;
+}
+html.cq2026 .cq-badge[data-unlocked="true"] { border-color: var(--cq-accent); }
+html.cq2026 .cq-badge[data-unlocked="false"] { opacity: 0.55; }
+html.cq2026 .cq-badge[data-unlocked="false"] > span:first-child { filter: grayscale(1); }
+
+/* Leader command centre & sibling-leader note */
+html.cq2026 .cq-leader { background: var(--cq-surface); background-image: none; border: 1px solid var(--cq-line); padding: 0; box-shadow: none; color: var(--cq-label); }
+html.cq2026 .cq-leader > div { background: transparent; }
+html.cq2026 .cq-leader [class*="bg-gradient-to-br"] { background: var(--cq-accent-soft); background-image: none; box-shadow: none; border: none; }
+html.cq2026 .cq-leader [class*="border-amber"] { border-color: var(--cq-line); }
+html.cq2026 .cq-note { background: var(--cq-surface-2); background-image: none; border-color: var(--cq-line); color: var(--cq-label-2); }
+
+/* Gradient call-to-action buttons inside rebuilt areas → the accent */
+html.cq2026 :is(.cq-hub, .cq-leader) button:is([class*="bg-gradient"], [class*="from-amber"], [class*="from-yellow"]) {
+  background: var(--cq-accent);
+  background-image: none;
+  color: var(--cq-on-accent);
+  box-shadow: none;
+  border: none;
+}
+html.cq2026 :is(.cq-hub, .cq-leader) button:is([class*="bg-gradient"], [class*="from-amber"]) svg { color: var(--cq-on-accent); }
+html.cq2026 :is(.cq-hub, .cq-leader) :is([class*="text-yellow-"], [class*="text-amber-"], [class*="text-rose-"], [class*="text-emerald-"], [class*="text-pink-"]):not(button):not(button *) { color: var(--cq-label-2); }
+html.cq2026 .cq-hub button:is([class*="text-yellow-"], [class*="text-amber-"]):not([class*="bg-"]) { color: var(--cq-accent-text); }
+html.cq2026 .cq-leader :is([class*="bg-amber-"], [class*="bg-rose-"], [class*="bg-emerald-"], [class*="bg-indigo-"], [class*="bg-slate-"], [class*="from-amber"], [class*="from-rose"]):not(button) {
+  background: var(--cq-surface-2);
+  background-image: none;
+  border-color: var(--cq-line);
+}
+html.cq2026 .cq-leader .italic { font-style: normal; }
+html.cq2026 .cq-leader [class*="bg-rose-5"], html.cq2026 .cq-leader [class*="bg-red-5"] { background: var(--cq-due); color: #0C0E13; }

@@ -563,7 +563,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
       {isThisKidLeader && (
         <div
           id="leader-command-center"
-          className="bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 dark:from-amber-900/90 dark:via-amber-800/90 dark:to-yellow-900/80 p-0.5 sm:p-1 rounded-[28px] sm:rounded-[34px] shadow-xl text-white relative overflow-hidden"
+          className="cq-leader bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 dark:from-amber-900/90 dark:via-amber-800/90 dark:to-yellow-900/80 p-0.5 sm:p-1 rounded-[28px] sm:rounded-[34px] shadow-xl text-white relative overflow-hidden"
         >
           <div className="bg-white/95 dark:bg-slate-900/95 rounded-[26px] sm:rounded-[32px] p-4 sm:p-6 backdrop-blur-md space-y-4">
             {/* Top Banner Row */}
@@ -656,7 +656,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
 
       {/* If another sibling is leader, show team encouragement note */}
       {!isThisKidLeader && otherLeaderKid && (
-        <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20 border border-amber-200 dark:border-amber-800/50 flex items-center justify-between gap-3 text-xs shadow-2xs">
+        <div className="cq-note p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20 border border-amber-200 dark:border-amber-800/50 flex items-center justify-between gap-3 text-xs shadow-2xs">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="text-xl sm:text-2xl">{otherLeaderKid.avatar}</span>
             <div className="min-w-0">
@@ -788,7 +788,8 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                       setIsBrainTeaserOpen(false);
                       setIsReadingLogOpen(false);
                     }}
-                    className={`relative rounded-xl p-2 flex flex-col items-center justify-center transition-all cursor-pointer group active:scale-95 border-2 ${
+                    data-unlocked={isUnlocked ? 'true' : 'false'}
+                    className={`cq-badge relative rounded-xl p-2 flex flex-col items-center justify-center transition-all cursor-pointer group active:scale-95 border-2 ${
                       isUnlocked
                         ? `bg-gradient-to-br ${badge.bgGradient} border-amber-300 text-slate-950 shadow-md shadow-amber-500/20 hover:scale-105`
                         : 'bg-indigo-950/60 border-indigo-700/80 text-indigo-300 opacity-60 hover:opacity-90 grayscale hover:grayscale-0'
@@ -814,7 +815,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             </div>
 
             {/* Local Host Privacy Banner */}
-            <div className="mt-4 bg-emerald-600/90 rounded-2xl p-3 sm:p-3.5 text-white flex items-center gap-3 border border-emerald-400/40 shadow-xs">
+            <div className="cq-hide-2026 mt-4 bg-emerald-600/90 rounded-2xl p-3 sm:p-3.5 text-white flex items-center gap-3 border border-emerald-400/40 shadow-xs">
               <div className="text-2xl shrink-0">🛡️</div>
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-wider text-emerald-200 leading-tight">Privacy Mode Active</p>

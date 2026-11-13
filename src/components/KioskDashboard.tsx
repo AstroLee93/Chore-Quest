@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock, Hourglass, AlertTriangle, Crown } from 'lucide-react';
+import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock, Hourglass, AlertTriangle, Crown, MoreHorizontal, CloudRain, Snowflake, Cloud, Sun, ScrollText, Video } from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
 import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent, RewardItem, RewardRedemption, ChoreCategory } from '../types';
 import { ringDash, initials } from '../utils/progress';
 import { isCq2026Theme } from '../utils/themes2026';
-import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getMvpKid } from '../utils/storage';
+import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getMvpKid, getFamilyWeeklyGoalProgress } from '../utils/storage';
+
+const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar';
 import { getCurrentDayOfWeekKey, DEFAULT_WEEKLY_MENU } from '../utils/menu';
 import { sound } from '../utils/sound';
@@ -348,7 +350,188 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   }, []);
 
   return (
-    <div className={`min-h-screen ${theme.kioskBg} flex flex-col p-4 sm:p-6 select-none overflow-x-hidden font-sans transition-colors duration-300`}>
+    <div className={`min-h-screen ${theme.kioskBg} flex flex-col ${isCq2026 ? 'p-5 sm:p-10' : 'p-4 sm:p-6'} select-none overflow-x-hidden font-sans transition-colors duration-300`}>
+
+      {/* ═══ 2026 ambient wall (mockup "Wall · Ambient") ═══ */}
+      {isCq2026 && (() => {
+        const timeParts = currentMinuteTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).split(' ');
+        const cond = (todayWeather.condition || '').toLowerCase();
+        const WeatherIcon = cond.includes('rain') || cond.includes('storm') ? CloudRain : cond.includes('snow') ? Snowflake : cond.includes('cloud') || cond.includes('fog') ? Cloud : Sun;
+        const goalInfo = getFamilyWeeklyGoalProgress(database);
+        const upcoming = (database.events || [])
+          .filter((e) => e.date >= todayStr)
+          .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
+          .slice(0, 3);
+        const whenLabel = (e: CalendarEvent) => {
+          const d = new Date(e.date + 'T12:00:00');
+          const t0 = new Date(todayStr + 'T12:00:00');
+          const diff = Math.round((d.getTime() - t0.getTime()) / 86400000);
+          const day = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday: 'short' });
+          // 24-hour "16:00" → "4:00 PM"
+          const m = (e.time || '').match(/^(\d{1,2}):(\d{2})$/);
+          const t = m ? new Date(2000, 0, 1, Number(m[1]), Number(m[2])).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : e.time;
+          return t ? `${day} · ${t}` : day;
+        };
+        const eventColor = (e: CalendarEvent) => {
+          const kidId = (e.assignedKidIds || []).find((id) => id !== 'all');
+          return database.kids.find((k) => k.id === kidId)?.color || e.color || 'var(--cq-accent)';
+        };
+        const pill = 'min-h-[44px] px-4 rounded-full bg-[var(--cq-surface)] border border-[var(--cq-line)] text-[var(--cq-label)] text-[14px] font-medium flex items-center gap-2 cursor-pointer active:scale-95 transition-transform';
+
+        return (
+          <div className="flex-1 flex flex-col gap-5 text-[var(--cq-label)] font-sans">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)] gap-6 flex-1">
+              {/* Left: clock, weather, coming up, family goal */}
+              <aside className="flex flex-col gap-6 lg:pt-2">
+                <div className="flex flex-col gap-1">
+                  <span className="cq-num leading-[0.95] font-extralight tracking-[-0.05em] text-[88px] sm:text-[112px]">
+                    {timeParts[0]}<span className="text-[28px] tracking-normal font-light text-[var(--cq-label-2)] ml-2">{timeParts[1] || ''}</span>
+                  </span>
+                  <span className="text-[20px] text-[var(--cq-label-2)]">{currentMinuteTime.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                  <span className="flex items-center gap-2 text-[18px] text-[var(--cq-label-2)] mt-1">
+                    <WeatherIcon className="w-5 h-5" strokeWidth={1.8} />
+                    {todayWeather.tempHigh}°{database.settings.tempUnit || 'F'} · {cap1(String(todayWeather.condition || '').replace(/_/g, ' '))}
+                  </span>
+                </div>
+
+                <section aria-labelledby="kiosk-coming-up" className="flex flex-col gap-3">
+                  <h2 id="kiosk-coming-up" className="m-0 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--cq-label-2)]">Coming up</h2>
+                  {upcoming.length === 0 && <span className="text-[16px] text-[var(--cq-label-3)]">Nothing on the calendar.</span>}
+                  {upcoming.map((e) => (
+                    <div key={e.id} className="flex gap-3.5 items-stretch">
+                      <span className="w-1 rounded-full shrink-0" style={{ background: eventColor(e) }} />
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-[18px] font-medium truncate">{e.title}</span>
+                        <span className="text-[14px] text-[var(--cq-label-2)]">{whenLabel(e)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </section>
+
+                <button type="button" onClick={() => { sound.playTap(); setIsGoalModalOpen(true); }}
+                  className="lg:mt-auto text-left flex flex-col gap-2.5 p-5 rounded-[22px] bg-[var(--cq-surface)] border border-[var(--cq-line)] cursor-pointer">
+                  <span className="flex justify-between items-baseline gap-3">
+                    <span className="text-[17px] font-semibold truncate">{goalInfo.goal.title}</span>
+                    <span className="text-[15px] text-[var(--cq-label-2)] whitespace-nowrap">{goalInfo.isReached ? 'Unlocked!' : `${goalInfo.remaining} to go`}</span>
+                  </span>
+                  <span className="h-2 rounded-full bg-[var(--cq-line)] overflow-hidden">
+                    <span className="block h-full rounded-full bg-[var(--cq-accent)]" style={{ width: `${Math.max(2, goalInfo.percent)}%` }} />
+                  </span>
+                </button>
+              </aside>
+
+              {/* Kid columns */}
+              <main className="grid gap-4 sm:gap-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 210px), 1fr))' }}>
+                {kidStats.map(({ kid, kidChores, completedCount, totalChores, isMvp }) => {
+                  const color = kid.color || '#5B8CFF';
+                  const isBday = !!kid.birthdate && isBirthdayToday(kid.birthdate, todayStr);
+                  const isLeaderKid = !!(kid.isLeader || (database.settings.leaderRole?.enabled && database.settings.leaderRole?.leaderKidId === kid.id));
+                  const next = kidChores
+                    .filter((c) => !completedChoreSet.has(`${kid.id}:${c.id}`))
+                    .map((c) => ({ c, w: checkChoreTimeWindow(c, categoryMap.get(c.categoryId), currentMinuteTime) }))
+                    .sort((a, b) => {
+                      const rank = (x: typeof a) => (x.w.hasRestriction && x.w.isAllowed && x.w.isNearingExpiration ? 0 : x.w.hasRestriction && !x.w.isAllowed ? 2 : 1);
+                      return rank(a) - rank(b);
+                    });
+                  const shown = next.slice(0, 3);
+                  const menuItems = [
+                    { id: 'enter', label: 'Open my day', onClick: () => setSelectedKidForPin(kid) },
+                    { id: 'rewards', label: database.settings.pauseRewardStore ? 'Rewards (paused)' : 'Rewards', onClick: () => { setRewardStoreKid(kid); setIsRewardStoreOpen(true); } },
+                    { id: 'snacks', label: database.settings.pauseSnackRequests ? 'Ask for a snack (paused)' : 'Ask for a snack', onClick: () => { setSnackKid(kid); setIsSnackModalOpen(true); } },
+                    { id: 'reading', label: 'Reading log', onClick: () => { setReadingLogKid(kid); setIsReadingLogOpen(true); } },
+                    { id: 'teaser', label: 'Brain teaser', onClick: () => { setBrainTeaserKid(kid); setIsBrainTeaserOpen(true); } },
+                    ...(isLeaderKid ? [{ id: 'clip', label: 'Leader clipboard', onClick: () => { setLeaderClipboardKid(kid); setIsLeaderClipboardOpen(true); } }] : []),
+                    { id: 'avatar', label: 'Avatar & colour', onClick: () => setEditingAvatarKid(kid) },
+                  ];
+                  return (
+                    <section key={kid.id} aria-label={kid.name}
+                      className="relative flex flex-col gap-5 p-6 rounded-[28px] bg-[var(--cq-surface)] border border-[var(--cq-line)]"
+                      style={isMvp ? { borderColor: `color-mix(in srgb, ${color} 55%, transparent)` } : undefined}>
+                      <div className="absolute top-3 right-3">
+                        <ActionMenu id={`kiosk-kid-menu-${kid.id}`} label={`${kid.name} options`} icon={<MoreHorizontal className="w-4 h-4" />} items={menuItems} />
+                      </div>
+                      <button type="button" onClick={() => { sound.playTap(); setSelectedKidForPin(kid); }}
+                        className="flex flex-col items-center gap-3 cursor-pointer" aria-label={`${kid.name}: ${completedCount} of ${totalChores} done. Open with PIN`}>
+                        <span className="relative w-[150px] h-[150px]">
+                          <svg aria-hidden="true" viewBox="0 0 150 150" className="absolute inset-0 w-full h-full -rotate-90">
+                            <circle cx="75" cy="75" r="66" fill="none" stroke={color} strokeOpacity="0.16" strokeWidth="12" />
+                            <circle cx="75" cy="75" r="66" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
+                              strokeDasharray={ringDash(totalChores ? completedCount / totalChores : 1, 66)} style={{ transition: 'stroke-dasharray 0.7s cubic-bezier(0.16,1,0.3,1)' }} />
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center text-[40px] font-light cq-num tracking-[-0.03em]">
+                            {completedCount}<span className="text-[var(--cq-label-3)]">/{totalChores}</span>
+                          </span>
+                          {(isMvp || isBday) && <Crown className="absolute -top-1 right-2 w-7 h-7 text-amber-400 fill-amber-400" aria-hidden="true" />}
+                        </span>
+                        <span className="flex flex-col items-center gap-0.5">
+                          <span className="text-[26px] font-semibold tracking-[-0.01em]">{kid.name}</span>
+                          <span className="text-[15px] text-[var(--cq-label-2)]">{kid.stars} pts · {kid.streakDays || 0}-day streak</span>
+                        </span>
+                      </button>
+                      <div className="h-px bg-[var(--cq-line)]" />
+                      <div className="flex flex-col gap-2.5">
+                        <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--cq-label-2)]">{shown.length ? 'Up next' : 'All done for today'}</span>
+                        {shown.map(({ c, w }) => {
+                          const due = w.hasRestriction && w.isAllowed && w.isNearingExpiration;
+                          const locked = w.hasRestriction && !w.isAllowed;
+                          const pts = (Number(c.stars) || 0) + (Number(c.bountyBonusStars) || 0);
+                          return (
+                            <div key={c.id} className="flex items-center gap-3 min-h-[44px]">
+                              <button type="button" disabled={locked}
+                                onClick={() => handleQuickCompleteChore(c, kid)}
+                                aria-label={locked ? `${c.title} opens later` : `Mark ${c.title} done`}
+                                className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center cursor-pointer disabled:cursor-default"
+                                style={{ border: '2px solid var(--cq-label-3)', opacity: locked ? 0.5 : 1 }}>
+                                {locked && <Lock className="w-3 h-3 text-[var(--cq-label-3)]" />}
+                              </button>
+                              <span className={`flex-1 text-[17px] truncate ${locked ? 'text-[var(--cq-label-3)]' : ''}`}>{c.title}</span>
+                              <span className="text-[14px] font-semibold whitespace-nowrap cq-num" style={{ color: due ? 'var(--cq-due)' : 'var(--cq-label-3)' }}>
+                                {due ? w.expirationBadgeText : locked ? (w.formattedRange?.split('–')[0]?.split('-')[0]?.trim() || 'Later') : pts > 0 ? `+${pts}` : 'Routine'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {next.length > 3 && <span className="text-[14px] text-[var(--cq-label-3)]">+{next.length - 3} more</span>}
+                      </div>
+                    </section>
+                  );
+                })}
+              </main>
+            </div>
+
+            {/* Bottom bar: dinner, bounties, rules, camera, fullscreen, lock */}
+            <footer className="flex flex-wrap items-center gap-2.5">
+              <button type="button" className={pill} onClick={() => { sound.playTap(); if (onOpenMenu) onOpenMenu(); else setIsMenuModalOpen(true); }}>
+                <UtensilsCrossed className="w-4 h-4 text-[var(--cq-label-2)]" />
+                <span className="text-[var(--cq-label-2)]">Tonight</span> <span className="truncate max-w-[220px]">{todayMenuPlan?.mainDish || 'Not planned'}</span>
+              </button>
+              {bountyChores.length > 0 && (
+                <button type="button" className={pill} onClick={() => { sound.playTap(); setIsBountyBoardOpen(true); }}>
+                  <Target className="w-4 h-4 text-[var(--cq-label-2)]" /> Bounties <span className="text-[var(--cq-label-2)]">{bountyChores.length}</span>
+                </button>
+              )}
+              <button type="button" className={pill} onClick={() => { sound.playTap(); setIsHouseRulesModalOpen(true); }}>
+                <ScrollText className="w-4 h-4 text-[var(--cq-label-2)]" /> House rules
+              </button>
+              <button type="button" className={pill} onClick={() => { sound.playTap(); setIsCameraModalOpen(true); }} aria-label="Live camera">
+                <Video className="w-4 h-4 text-[var(--cq-label-2)]" /> Camera
+              </button>
+              <span className="flex-1" />
+              <button type="button" className={pill} onClick={handleToggleFullscreen} aria-label={isFullscreen ? 'Exit full screen' : 'Full screen'}>
+                {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              </button>
+              <span className="flex items-center gap-2 text-[13px] text-[var(--cq-label-3)]">
+                <Lock className="w-3.5 h-3.5" /> Locked to wall mode
+              </span>
+              <button type="button" className={pill} onClick={() => { sound.playTap(); setIsExitPinOpen(true); }}>
+                Exit · parent PIN
+              </button>
+            </footer>
+          </div>
+        );
+      })()}
+
+      {!isCq2026 && (<>
       {/* THEMED KIOSK HEADER: Clock, Weather, Family Name, Theme Switcher & Controls */}
       <header className={`relative z-40 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 sm:p-5 rounded-3xl ${theme.kioskHeaderBg} border ${theme.kioskHeaderBorder} shadow-xl mb-4`}>
         {/* Left: Branding & Family Title */}
@@ -1240,6 +1423,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
           </button>
         </div>
       </footer>
+      </>)}
 
       {/* Western Bounty Board Pop-up Modal */}
       {isBountyBoardOpen && (

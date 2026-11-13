@@ -392,3 +392,7 @@ html.cq2026.dark input.cq-bare-input.cq-bare-input:not([type="checkbox"]):not([t
   border: none !important;
   box-shadow: none !important;
 }
+
+/* Badges must not pick up the accent-button rule */
+html.cq2026 button.cq-badge.cq-badge { background: var(--cq-surface-2) !important; color: var(--cq-label) !important; }
+html.cq2026 button.cq-badge.cq-badge :is(span, svg) { color: inherit; }

@@ -8,6 +8,7 @@ import { checkCategoryTimeWindow } from './utils/timeWindow';
 import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID, getSavedThemeId, saveThemeId } from './utils/theme';
 import { isCq2026Theme } from './utils/themes2026';
 import { TabBar, TabId } from './components/TabBar';
+import { ChevronLeft as ChevronLeftIcon } from 'lucide-react';
 const KitchenSheet = React.lazy(() => import('./components/Kitchen/KitchenSheet'));
 const KitchenWall = React.lazy(() => import('./components/Kitchen/KitchenWall'));
 import { Navbar } from './components/Navbar';
@@ -586,6 +587,17 @@ export default function App() {
             </div>
 
             {/* Strict Kiosk Routing: The ONLY navigation exit path available */}
+            {isCq2026Theme(currentTheme) ? (
+              <button
+                type="button"
+                onClick={handleReturnToKiosk}
+                className="min-h-[52px] pl-3.5 pr-5 rounded-full bg-[var(--cq-surface)] border border-[var(--cq-line)] text-[var(--cq-label)] text-[17px] font-medium flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+                title="Return to the family wall"
+              >
+                <ChevronLeftIcon className="w-5 h-5" />
+                Done — back to the wall
+              </button>
+            ) : (
             <button
               id="btn-kiosk-kid-exit"
               onClick={handleReturnToKiosk}
@@ -595,6 +607,7 @@ export default function App() {
               <Home className="w-5 h-5 text-slate-950" />
               <span>Done / Return to Kiosk 🏠</span>
             </button>
+            )}
           </header>
 
           <main className="flex-1 p-3 sm:p-6 flex flex-col max-w-7xl mx-auto w-full">

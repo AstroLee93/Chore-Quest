@@ -1,10 +1,25 @@
-import React, { useState } from 'react';
-import { Check, Clock, AlertTriangle, Undo2, Star, HelpCircle, Sun, Moon, Sparkles, ChevronRight, Play, CheckSquare, Square, Target, Timer, Lock, Hourglass } from 'lucide-react';
+/**
+ * ChoreCard — iOS (Reminders-style) chore row.
+ *
+ * Glass card, circular completion check, one quiet metadata row instead of a
+ * wall of badges, and a single clear state: default / done / skipped /
+ * expiring / locked. Colors come from the adaptive tokens in
+ * src/styles/ios.css, so the card reads on light and dark themes alike.
+ * Behavior (time-window lock, bounty claims, reading log, skip passes,
+ * subtasks, confetti + sounds) is unchanged.
+ */
+
+import React, { useEffect, useState } from 'react';
+import {
+  Check, Clock, AlertTriangle, Undo2, Star, Lock,
+  Hourglass, Timer, Sparkles, MoreHorizontal,
+} from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
 import { ChoreItem, ChoreLog, ChoreCategory } from '../types';
 import { sound } from '../utils/sound';
+import { haptic } from '../utils/haptics';
 import { ActionMenu } from './ActionMenu';
-import { checkCategoryTimeWindow, checkChoreTimeWindow } from '../utils/timeWindow';
+import { checkChoreTimeWindow } from '../utils/timeWindow';
 
 interface ChoreCardProps {
   chore: ChoreItem;
@@ -18,6 +33,12 @@ interface ChoreCardProps {
   claimedByOtherKidName?: string;
   onOpenReadingLog?: () => void;
 }
+
+const TIME_OF_DAY_LABEL: Record<string, string> = {
+  morning: '🌅 Morning',
+  afternoon: '☀️ Afternoon',
+  evening: '🌙 Bedtime',
+};
 
 export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
   chore,
@@ -39,575 +60,371 @@ export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
     (chore?.title || '').toLowerCase().includes('reading') ||
     chore?.icon === '📖';
 
-  // Subtasks local state (synced or tracked per session)
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  const [showTimeLockAlert, setShowTimeLockAlert] = useState<boolean>(false);
+  const [showTimeLockAlert, setShowTimeLockAlert] = useState(false);
+
+  // Auto-dismiss the "locked" alert; cleared if the card unmounts first.
+  useEffect(() => {
+    if (!showTimeLockAlert) return;
+    const t = setTimeout(() => setShowTimeLockAlert(false), 5000);
+    return () => clearTimeout(t);
+  }, [showTimeLockAlert]);
 
   const timeWindowStatus = checkChoreTimeWindow(chore, category);
   const isTimeLocked = timeWindowStatus.hasRestriction && !timeWindowStatus.isAllowed;
-  const isExpiringSoon = !isCompleted && !isSkipped && !isTimeLocked && timeWindowStatus.hasRestriction && timeWindowStatus.isAllowed && timeWindowStatus.isNearingExpiration;
+  const isExpiringSoon = !isCompleted && !isSkipped && !isTimeLocked &&
+    timeWindowStatus.hasRestriction && timeWindowStatus.isAllowed && timeWindowStatus.isNearingExpiration;
   const isUrgent = isExpiringSoon && !!timeWindowStatus.isUrgentExpiration;
+  const isActionable = !isCompleted && !isSkipped;
+
+  const totalSubtasks = chore.subtasks?.length || 0;
+  const subtasksDone = isCompleted ? totalSubtasks : completedSteps.length;
+
+  const pts = (Number(chore?.stars) || 0) + (Number(chore?.bountyBonusStars) || 0);
 
   const handleToggleSubtask = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
     sound.playTap();
-    setCompletedSteps((prev) => {
-      const exists = prev.includes(index);
-      if (exists) {
-        return prev.filter((i) => i !== index);
-      } else {
-        const next = [...prev, index];
-        // If all subtasks completed, play small reward sound
-        if (chore.subtasks && next.length === chore.subtasks.length) {
-          sound.playStarEarned();
-        }
-        return next;
-      }
+    haptic('selection');
+    setCompletedSteps(prev => {
+      if (prev.includes(index)) return prev.filter(i => i !== index);
+      const next = [...prev, index];
+      if (chore.subtasks && next.length === chore.subtasks.length) sound.playStarEarned();
+      return next;
     });
   };
 
   const handleCompleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isCompleted) return;
-
-    if (claimedByOtherKidName) {
-      sound.playWarning();
-      return;
-    }
-
+    if (claimedByOtherKidName) { sound.playWarning(); haptic('warning'); return; }
     if (isTimeLocked) {
       sound.playWarning();
+      haptic('warning');
       setShowTimeLockAlert(true);
-      setTimeout(() => setShowTimeLockAlert(false), 5000);
       return;
     }
+    if (isReadingChore && onOpenReadingLog) { sound.playTap(); onOpenReadingLog(); return; }
 
-    // If this is the Reading chore and we have a specialized reading log modal, open it!
-    if (isReadingChore && onOpenReadingLog) {
-      sound.playTap();
-      onOpenReadingLog();
-      return;
-    }
-
-    // Confetti effect from target position
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = (rect.left + rect.width / 2) / window.innerWidth;
-    const y = (rect.top + rect.height / 2) / window.innerHeight;
-
     fireConfetti({
-      origin: { x, y },
-      spread: 50,
-      mode: 'snappy',
+      origin: { x: (rect.left + rect.width / 2) / window.innerWidth, y: (rect.top + rect.height / 2) / window.innerHeight },
+      spread: 50, mode: 'snappy',
     });
-
     sound.playChoreComplete();
     sound.playStarEarned();
+    haptic('success');
     onToggleComplete(chore);
   };
 
-  const getTimeBadge = (time: string) => {
-    switch (time) {
-      case 'morning':
-        return { label: 'Morning Routine', icon: '🌅', color: 'bg-amber-100 text-amber-900 border-amber-300' };
-      case 'afternoon':
-        return { label: 'Afternoon Mission', icon: '☀️', color: 'bg-sky-100 text-sky-900 border-sky-300' };
-      case 'evening':
-        return { label: 'Bedtime Routine', icon: '🌙', color: 'bg-indigo-100 text-indigo-900 border-indigo-300' };
-      default:
-        return { label: 'Daily Mission', icon: '⚡', color: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
-    }
-  };
+  const cardState = isCompleted
+    ? 'opacity-60'
+    : isUrgent
+    ? 'ring-1 ring-ios-red/50'
+    : isExpiringSoon
+    ? 'ring-1 ring-ios-orange/45'
+    : chore.isBounty
+    ? 'ring-1 ring-ios-orange/35'
+    : '';
 
-  // Assign border color from category or fallback vibrant rotation
-  const getBorderColorClass = () => {
-    if (isCompleted) return 'border-emerald-500';
-    if (isSkipped) return 'border-amber-400';
-    if (chore.isBounty) return 'border-amber-400 ring-2 ring-amber-300/60';
-    
-    // Choose vibrant color based on chore id / category
-    const catColor = category?.color?.toLowerCase();
-    if (catColor?.includes('blue') || catColor?.includes('3b82f6')) return 'border-blue-500';
-    if (catColor?.includes('purple') || catColor?.includes('8b5cf6') || catColor?.includes('a855f7')) return 'border-purple-500';
-    if (catColor?.includes('orange') || catColor?.includes('f97316') || catColor?.includes('amber')) return 'border-orange-400';
-    if (catColor?.includes('emerald') || catColor?.includes('green') || catColor?.includes('10b981')) return 'border-emerald-500';
-    if (catColor?.includes('pink') || catColor?.includes('rose') || catColor?.includes('ec4899')) return 'border-pink-500';
-
-    // Hash fallback
-    const colors = ['border-blue-500', 'border-orange-400', 'border-purple-500', 'border-emerald-500', 'border-pink-500'];
-    const index = Math.abs(chore.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % colors.length;
-    return colors[index];
-  };
-
-  const getIconBgClass = () => {
-    if (isCompleted) return 'bg-emerald-100 text-emerald-800';
-    if (isSkipped) return 'bg-amber-100 text-amber-800';
-    if (chore.isBounty) return 'bg-amber-100 text-amber-900';
-    const borderClass = getBorderColorClass();
-    if (borderClass.includes('blue')) return 'bg-blue-100 text-blue-900';
-    if (borderClass.includes('purple')) return 'bg-purple-100 text-purple-900';
-    if (borderClass.includes('orange')) return 'bg-orange-100 text-orange-900';
-    if (borderClass.includes('pink')) return 'bg-pink-100 text-pink-900';
-    return 'bg-emerald-100 text-emerald-900';
-  };
-
-  const timeBadge = getTimeBadge(chore.timeOfDay);
-  const borderClass = getBorderColorClass();
-  const iconBg = getIconBgClass();
-
-  const totalSubtasks = chore.subtasks?.length || 0;
-  const subtasksDone = isCompleted ? totalSubtasks : completedSteps.length;
-  const allSubtasksDone = totalSubtasks > 0 && subtasksDone === totalSubtasks;
+  // Overflow (…) menu — timer, birthday pass, skip.
+  const menuItems = [
+    ...(onStartTimer ? [{
+      id: 'timer',
+      label: chore.timerMinutes ? `Start ${chore.timerMinutes}m timer` : 'Start timer',
+      icon: <Timer className="w-3.5 h-3.5" />,
+      onClick: () => onStartTimer(chore),
+    }] : []),
+    ...(isBirthdayPassAvailable ? [{
+      id: 'birthday-pass',
+      label: '🎟️ Use birthday skip pass',
+      icon: <Sparkles className="w-3.5 h-3.5" />,
+      onClick: () => onOpenSkipModal(chore),
+    }] : []),
+    {
+      id: 'skip',
+      label: "Can't do it right now",
+      icon: <AlertTriangle className="w-3.5 h-3.5" />,
+      variant: 'warning' as const,
+      onClick: () => onOpenSkipModal(chore),
+    },
+  ];
 
   return (
     <div
       id={`chore-card-${chore.id}`}
-      className={`group relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-5 sm:p-6 rounded-3xl border transition-all duration-200 ${
-        isCompleted
-          ? 'opacity-70 dark:opacity-60 border-slate-200/80 dark:border-slate-800'
-          : isUrgent
-          ? 'border-rose-400 dark:border-rose-500 shadow-md shadow-rose-500/15 ring-2 ring-rose-400/50 dark:ring-rose-500/40'
-          : isExpiringSoon
-          ? 'border-amber-400 dark:border-amber-500 shadow-md shadow-amber-500/15 ring-2 ring-amber-400/40 dark:ring-amber-500/30'
-          : 'border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-lg'
-      }`}
+      className={`glass rounded-[20px] p-4 transition-[opacity,box-shadow] duration-300 ${cardState}`}
     >
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        {/* Left Side: Icon & Info */}
-        <div className="flex items-start gap-4 sm:gap-5 flex-1">
-          {/* Chore Icon Box */}
-          <div
-            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl shrink-0 transition-transform ${iconBg} shadow-2xs group-hover:scale-105`}
-          >
-            {chore.icon || '⭐'}
-          </div>
-
-          {/* Details */}
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              {chore.isBounty && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-400 text-amber-950 border border-amber-500 shadow-xs font-serif">
-                  <span>🤠</span>
-                  <span>BOUNTY BOARD</span>
-                </span>
-              )}
-
-              {claimedByOtherKidName && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
-                  <Lock className="w-3 h-3 text-amber-700" />
-                  <span>Claimed by {claimedByOtherKidName}</span>
-                </span>
-              )}
-
-              <span
-                className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${timeBadge.color}`}
-              >
-                <span>{timeBadge.icon}</span>
-                <span>{timeBadge.label}</span>
-              </span>
-
-              {category && (
-                <span className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
-                  {category.name}
-                </span>
-              )}
-
-              {/* Time Window Restriction Badge */}
-              {timeWindowStatus.hasRestriction && (
-                <span
-                  className={`inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs ${
-                    isTimeLocked
-                      ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700'
-                      : 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700'
-                  }`}
-                  title={timeWindowStatus.message || `Available: ${timeWindowStatus.formattedRange}`}
-                >
-                  {isTimeLocked ? (
-                    <Lock className="w-3 h-3 text-amber-700 dark:text-amber-400" />
-                  ) : (
-                    <Clock className="w-3 h-3 text-emerald-700 dark:text-emerald-400" />
-                  )}
-                  <span>
-                    {timeWindowStatus.formattedRange} {isTimeLocked ? '• Locked' : '• Open'}
-                  </span>
-                </span>
-              )}
-
-              {/* Nearing Expiration Priority Badge */}
-              {isExpiringSoon && (
-                <span
-                  className={`inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs ${
-                    isUrgent
-                      ? 'bg-rose-100 text-rose-900 border-rose-400 dark:bg-rose-950/80 dark:text-rose-200 dark:border-rose-600 animate-pulse'
-                      : 'bg-amber-100 text-amber-950 border-amber-400 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-600'
-                  }`}
-                  title={`Closes at ${timeWindowStatus.endTimeFormatted} (${timeWindowStatus.minutesRemaining}m remaining)`}
-                >
-                  <Hourglass className="w-3 h-3" />
-                  <span>{isUrgent ? 'Closing Soon' : 'Expiring Soon'} • {timeWindowStatus.expirationBadgeText}</span>
-                </span>
-              )}
-
-              {/* Star reward badge */}
-              {((Number(chore?.stars) || 0) + (Number(chore?.bountyBonusStars) || 0)) === 0 ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                  <Star className="w-3 h-3 text-slate-400" />
-                  0 Points (Routine)
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                  +{(Number(chore?.stars) || 0) + (Number(chore?.bountyBonusStars) || 0)} Points
-                </span>
-              )}
-
-              {/* Focus timer badge shortcut */}
-              {onStartTimer && !isCompleted && !isSkipped && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    sound.playTap();
-                    onStartTimer(chore);
-                  }}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-sky-50 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-slate-700 transition-colors cursor-pointer"
-                  title="Start Interactive Countdown Timer"
-                >
-                  <Timer className="w-3 h-3 text-sky-600 dark:text-sky-400" />
-                  <span>{chore.timerMinutes ? `${chore.timerMinutes}m Timer` : 'Timer'}</span>
-                </button>
-              )}
-
-              {/* Birthday Free Chore Skip Pass Quick Badge */}
-              {isBirthdayPassAvailable && !isCompleted && !isSkipped && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    sound.playTap();
-                    onOpenSkipModal(chore);
-                  }}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 text-white shadow-xs border border-pink-300 hover:scale-105 active:scale-95 transition-all cursor-pointer animate-pulse"
-                  title="Use your 1-Time Free Birthday Chore Skip Pass!"
-                >
-                  <span>🎟️</span>
-                  <span>Use Birthday Skip Pass</span>
-                </button>
-              )}
-            </div>
-
-            <h3
-              className={`text-lg sm:text-xl font-black tracking-tight ${
-                isCompleted
-                  ? 'text-slate-400 dark:text-slate-500 line-through decoration-slate-400/80'
-                  : 'text-slate-900 dark:text-white'
-              }`}
-            >
-              {chore.title}
-            </h3>
-
-            {chore.description && (
-              <p
-                className={`text-xs sm:text-sm mt-0.5 font-medium leading-relaxed ${
-                  isCompleted ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'
-                }`}
-              >
-                {chore.description}
-              </p>
-            )}
-
-            {/* Step-by-Step Checklist (Subtasks) */}
-            {chore.subtasks && chore.subtasks.length > 0 && (
-              <div className="mt-3 p-3 bg-slate-50/90 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700">
-                <div className="flex items-center justify-between text-[11px] font-black text-slate-600 dark:text-slate-400 mb-2">
-                  <span className="flex items-center gap-1">
-                    <span>📋 Step-by-Step Guide</span>
-                  </span>
-                  <span className={allSubtasksDone ? 'text-emerald-600 dark:text-emerald-400 font-extrabold' : 'text-slate-500 dark:text-slate-400'}>
-                    {subtasksDone} of {totalSubtasks} steps done
-                  </span>
-                </div>
-
-                <div className="space-y-1.5">
-                  {chore.subtasks.map((step, idx) => {
-                    const stepDone = isCompleted || completedSteps.includes(idx);
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={(e) => handleToggleSubtask(idx, e)}
-                        disabled={isCompleted}
-                        className={`w-full text-left flex items-start gap-2 p-1.5 rounded-xl transition-all text-xs font-medium cursor-pointer ${
-                          stepDone
-                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-semibold'
-                            : 'hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        <span className="mt-0.5 shrink-0">
-                          {stepDone ? (
-                            <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          ) : (
-                            <Square className="w-4 h-4 text-slate-400" />
-                          )}
-                        </span>
-                        <span className={stepDone ? 'line-through decoration-emerald-600/60' : ''}>
-                          {step}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Skipped Reason preview if applicable */}
-            {isSkipped && log?.skippedReasonCategory && (
-              <div className="mt-2.5 p-3 rounded-2xl bg-amber-100/90 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200">
-                <div className="font-extrabold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-700 dark:text-amber-400" />
-                  <span>Reason Logged: {log.skippedReasonCategory.replace('_', ' ').toUpperCase()}</span>
-                </div>
-                {log.skippedReason && (
-                  <p className="mt-1 text-amber-950 dark:text-amber-100 font-medium italic">"{log.skippedReason}"</p>
-                )}
-              </div>
-            )}
-
-            {/* Completed badge details */}
-            {isCompleted && log?.completedAt && (
-              <div className="mt-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
-                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>
-                  Finished today!{' '}
-                  {(chore.stars + (chore.bountyBonusStars || 0)) > 0
-                    ? `+${chore.stars + (chore.bountyBonusStars || 0)} points added`
-                    : 'Done! (Routine chore)'}
-                </span>
-              </div>
-            )}
-
-            {/* Leader Verification Badge & Inspection Note */}
-            {isCompleted && log?.verifiedByLeader && (
-              <div className="mt-1.5 p-2 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/30 border border-amber-300 dark:border-amber-700/60 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between gap-2 shadow-2xs">
-                <div className="flex items-center gap-1.5 font-black">
-                  <span className="text-base">🎖️</span>
-                  <span>Verified by Leader on Clipboard</span>
-                </div>
-                {log.leaderNotes && (
-                  <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 italic truncate max-w-[220px]">
-                    "{log.leaderNotes}"
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Leader Assigned Chore Badge */}
-            {chore.assignedByLeaderKidId && !isCompleted && (
-              <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 text-[10px] font-black border border-amber-300/60 dark:border-amber-800">
-                <span>📋</span>
-                <span>Assigned by Family Leader</span>
-              </div>
-            )}
-
-            {/* Book Logged Details for Reading Chore */}
-            {isReadingChore && isCompleted && log?.completedSubtasks && log.completedSubtasks.length > 0 && (
-              <div className="mt-2.5 p-2.5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-200">
-                <div className="font-black flex items-center justify-between">
-                  <span className="flex items-center gap-1">
-                    <span>📖 Reading Log Entry:</span>
-                  </span>
-                  {onOpenReadingLog && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenReadingLog();
-                      }}
-                      className="text-[11px] font-bold text-amber-700 dark:text-amber-300 underline cursor-pointer hover:text-amber-900"
-                    >
-                      View Journal &rarr;
-                    </button>
-                  )}
-                </div>
-                <div className="mt-1 space-y-0.5 text-xs font-semibold text-amber-900 dark:text-amber-300">
-                  {log.completedSubtasks.map((st, i) => (
-                    <p key={i}>{st}</p>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Time-Lock Info Notice or Alert if locked */}
-            {isTimeLocked && !isCompleted && (
-              <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/80 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
-                <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <span className="font-black">Scheduled Check-Off Window: {timeWindowStatus.formattedRange}</span>
-                  <p className="text-[11px] font-medium text-amber-800 dark:text-amber-300 mt-0.5">
-                    {timeWindowStatus.message || `Tasks in ${category?.name || 'this category'} can only be checked off during this time.`}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Tap Alert Feedback */}
-            {showTimeLockAlert && (
-              <div className="mt-2 p-2.5 rounded-xl bg-amber-400 text-slate-950 text-xs font-black shadow-md border-2 border-amber-300 flex items-center justify-between gap-2 animate-bounce">
-                <div className="flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-slate-950" />
-                  <span>⏰ Locked! Only available between {timeWindowStatus.formattedRange}.</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowTimeLockAlert(false)}
-                  className="px-2 py-0.5 rounded-md bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10px] font-extrabold cursor-pointer"
-                >
-                  OK
-                </button>
-              </div>
-            )}
-          </div>
+      <div className="flex items-start gap-3">
+        {/* Icon */}
+        <div
+          aria-hidden="true"
+          className={`w-11 h-11 rounded-[12px] flex items-center justify-center text-2xl shrink-0 ${
+            isCompleted ? 'bg-ios-green/12 grayscale-[40%]' : chore.isBounty ? 'bg-ios-orange/15' : 'bg-fill'
+          }`}
+        >
+          {chore.icon || '⭐'}
         </div>
 
-        {/* Right Side: Action Controls */}
-        <div className="w-full sm:w-auto flex items-center justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
-          {isCompleted ? (
-            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-              <span className="text-emerald-500 font-black text-lg sm:text-xl italic tracking-wide">
-                DONE!
-              </span>
-              <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs">
-                <Check className="w-7 h-7 stroke-[4]" />
-              </div>
-              <ActionMenu
-                id={`menu-completed-${chore.id}`}
-                label="Menu"
-                items={[
-                  {
-                    id: 'undo',
-                    label: 'Undo / Reset Task',
-                    icon: <Undo2 className="w-3.5 h-3.5" />,
-                    variant: 'warning',
-                    onClick: () => onUndo(chore.id),
-                  },
-                ]}
-              />
-            </div>
-          ) : isSkipped ? (
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <button
-                id={`btn-retry-${chore.id}`}
-                onClick={handleCompleteClick}
-                className={`px-4 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
-                  isTimeLocked
-                    ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
-                    : 'bg-orange-500 hover:bg-orange-600 text-white'
-                }`}
-                title={isTimeLocked ? timeWindowStatus.message : 'Complete task now'}
-              >
-                {isTimeLocked ? <Lock className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                <span>{isTimeLocked ? 'Locked' : 'Do it now!'}</span>
-              </button>
-              <ActionMenu
-                id={`menu-skipped-${chore.id}`}
-                label="Menu"
-                items={[
-                  {
-                    id: 'undo-skip',
-                    label: 'Clear Skipped Status',
-                    icon: <Undo2 className="w-3.5 h-3.5" />,
-                    onClick: () => onUndo(chore.id),
-                  },
-                ]}
-              />
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
-              <ActionMenu
-                id={`menu-active-${chore.id}`}
-                label="Menu"
-                items={[
-                  ...(onStartTimer
-                    ? [
-                        {
-                          id: 'timer',
-                          label: chore.timerMinutes ? `Start ${chore.timerMinutes}m Focus Timer` : 'Start Focus Timer',
-                          icon: <Timer className="w-3.5 h-3.5 text-sky-500" />,
-                          onClick: () => onStartTimer(chore),
-                        },
-                      ]
-                    : []),
-                  ...(isBirthdayPassAvailable
-                    ? [
-                        {
-                          id: 'birthday-pass',
-                          label: '🎟️ Redeem Birthday Skip Pass',
-                          icon: <Sparkles className="w-3.5 h-3.5 text-pink-500" />,
-                          onClick: () => onOpenSkipModal(chore),
-                        },
-                      ]
-                    : []),
-                  {
-                    id: 'skip',
-                    label: "Can't do it right now...",
-                    icon: <AlertTriangle className="w-3.5 h-3.5" />,
-                    variant: 'warning' as const,
-                    onClick: () => onOpenSkipModal(chore),
-                  },
-                ]}
-              />
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <p className={`text-[17px] font-semibold leading-[22px] tracking-[-0.41px] ${
+            isCompleted ? 'text-label-tertiary line-through decoration-label-tertiary' : 'text-label'
+          }`}>
+            {chore.title}
+          </p>
 
-              {/* Complete Big Vibrant Button (Or Locked Indicator) */}
-              {claimedByOtherKidName ? (
-                <div
-                  className="min-h-[44px] px-3.5 py-2 bg-amber-100/90 dark:bg-amber-950/80 rounded-2xl flex items-center gap-2 text-amber-950 dark:text-amber-200 border-2 border-amber-400 shadow-xs shrink-0"
-                  title={`This bounty was claimed by Deputy ${claimedByOtherKidName} on the Bounty Board!`}
-                >
-                  <Lock className="w-4 h-4 text-amber-800 dark:text-amber-400 shrink-0" />
-                  <div className="text-left leading-tight">
-                    <div className="text-xs font-black">Claimed by {claimedByOtherKidName}</div>
-                    <div className="text-[9px] font-bold text-amber-800 dark:text-amber-300 font-serif">Bounty Board Reserved</div>
-                  </div>
-                </div>
-              ) : isTimeLocked ? (
-                <button
-                  id={`btn-complete-${chore.id}`}
-                  onClick={handleCompleteClick}
-                  className="min-h-[48px] px-3.5 py-2 bg-amber-50 dark:bg-amber-950/80 hover:bg-amber-100 dark:hover:bg-amber-900/90 active:scale-95 rounded-2xl flex items-center gap-2 text-amber-900 dark:text-amber-200 border-2 border-amber-400 shadow-sm transition-all cursor-pointer shrink-0"
-                  title={timeWindowStatus.message || `Check-off window is ${timeWindowStatus.formattedRange}`}
-                >
-                  <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <div className="text-left leading-tight hidden sm:block">
-                    <div className="text-xs font-black">Locked</div>
-                    <div className="text-[9px] font-bold text-amber-700 dark:text-amber-300">
-                      {timeWindowStatus.startTimeFormatted}
-                    </div>
-                  </div>
-                </button>
-              ) : isReadingChore ? (
-                <button
-                  id={`btn-complete-${chore.id}`}
-                  onClick={handleCompleteClick}
-                  className="px-3.5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 rounded-2xl flex items-center gap-1.5 text-white font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer shrink-0 ring-2 ring-amber-300"
-                  title="Log Book & Chapter"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-200" />
-                  <span>Log Chapter 📖</span>
-                </button>
+          {chore.description && (
+            <p className={`text-[15px] leading-5 tracking-[-0.24px] mt-0.5 ${
+              isCompleted ? 'text-label-tertiary' : 'text-label-secondary'
+            }`}>
+              {chore.description}
+            </p>
+          )}
+
+          {/* Metadata row */}
+          {!isCompleted && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              {chore.isBounty && <span className="ios-tag ios-tag-bounty">🤠 Bounty</span>}
+              {pts > 0 ? (
+                <span className="ios-tag">
+                  <Star className="w-3 h-3 fill-ios-yellow text-ios-yellow" aria-hidden="true" />
+                  +{pts} pts
+                </span>
               ) : (
+                <span className="ios-tag">Routine · 0 pts</span>
+              )}
+              {chore.timeOfDay && TIME_OF_DAY_LABEL[chore.timeOfDay] && (
+                <span className="ios-tag">{TIME_OF_DAY_LABEL[chore.timeOfDay]}</span>
+              )}
+              {category?.name && <span className="ios-tag">{category.name}</span>}
+              {timeWindowStatus.hasRestriction && !isTimeLocked && !isExpiringSoon && (
+                <span className="ios-tag ios-tag-green" title={timeWindowStatus.message}>
+                  <Clock className="w-3 h-3" aria-hidden="true" />
+                  {timeWindowStatus.formattedRange}
+                </span>
+              )}
+              {onStartTimer && isActionable && (
                 <button
-                  id={`btn-complete-${chore.id}`}
-                  onClick={handleCompleteClick}
-                  className="w-12 h-12 bg-emerald-500 hover:bg-emerald-600 active:scale-95 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 transition-all cursor-pointer shrink-0"
-                  title="Complete Task"
+                  type="button"
+                  onClick={e => { e.stopPropagation(); sound.playTap(); onStartTimer(chore); }}
+                  className="ios-tag ios-tag-blue cursor-pointer hover:opacity-80 active:scale-95 transition"
+                  title="Start countdown timer"
                 >
-                  <Check className="w-7 h-7 stroke-[4]" />
+                  <Timer className="w-3 h-3" aria-hidden="true" />
+                  {chore.timerMinutes ? `${chore.timerMinutes}m` : 'Timer'}
+                </button>
+              )}
+              {isBirthdayPassAvailable && isActionable && (
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); sound.playTap(); onOpenSkipModal(chore); }}
+                  className="ios-tag ios-tag-birthday cursor-pointer active:scale-95 transition"
+                  title="Use your 1-time free birthday chore skip pass"
+                >
+                  🎟️ Birthday skip pass
                 </button>
               )}
             </div>
           )}
+
+          {isCompleted && (
+            <p className="text-[13px] text-ios-green mt-1 font-medium">
+              Done{pts > 0 ? ` · +${pts} pts` : ' · routine'}
+            </p>
+          )}
+
+          {isSkipped && log?.skippedReasonCategory && (
+            <div className="ios-callout ios-callout-yellow flex-col items-start gap-0.5">
+              <span>Skipped · {log.skippedReasonCategory.replace(/_/g, ' ')}</span>
+              {log.skippedReason && (
+                <span className="text-[12px] text-label-secondary italic font-normal">"{log.skippedReason}"</span>
+              )}
+            </div>
+          )}
+
+          {isTimeLocked && !isCompleted && !showTimeLockAlert && (
+            <div className="ios-callout ios-callout-orange">
+              <Lock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>Available {timeWindowStatus.formattedRange}</span>
+            </div>
+          )}
+
+          {isExpiringSoon && (
+            <div
+              className={`ios-callout ${isUrgent ? 'ios-callout-red' : 'ios-callout-orange'}`}
+              title={`Closes at ${timeWindowStatus.endTimeFormatted} (${timeWindowStatus.minutesRemaining}m remaining)`}
+            >
+              <Hourglass className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>{isUrgent ? 'Closing soon' : 'Expiring soon'} · {timeWindowStatus.expirationBadgeText}</span>
+            </div>
+          )}
+
+          {showTimeLockAlert && (
+            <div role="alert" className="ios-callout ios-callout-orange justify-between">
+              <span className="flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                Not yet! Available {timeWindowStatus.formattedRange}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setShowTimeLockAlert(false); }}
+                className="text-[13px] font-semibold px-2.5 py-1 rounded-full bg-ios-orange/15 cursor-pointer"
+              >
+                OK
+              </button>
+            </div>
+          )}
+
+          {claimedByOtherKidName && (
+            <div className="ios-callout ios-callout-orange">
+              <Lock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>Claimed by {claimedByOtherKidName}</span>
+            </div>
+          )}
+
+          {isCompleted && log?.verifiedByLeader && (
+            <div className="ios-callout ios-callout-yellow">
+              <span aria-hidden="true">🎖️</span>
+              <span>Verified by family leader</span>
+              {log.leaderNotes && (
+                <span className="text-[12px] text-label-secondary italic font-normal truncate ml-auto max-w-[160px]">"{log.leaderNotes}"</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Trailing actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          {isCompleted ? (
+            <>
+              <ActionMenu
+                id={`menu-done-${chore.id}`}
+                label="More"
+                icon={<MoreHorizontal className="w-4 h-4" />}
+                items={[{ id: 'undo', label: 'Undo', icon: <Undo2 className="w-3.5 h-3.5" />, variant: 'warning' as const, onClick: () => onUndo(chore.id) }]}
+              />
+              <div className="check-circle check-circle-done" role="img" aria-label="Completed">
+                <Check className="w-4 h-4 text-white stroke-[3]" />
+              </div>
+            </>
+          ) : (
+            <>
+              <ActionMenu
+                id={`menu-${chore.id}`}
+                label="More"
+                icon={<MoreHorizontal className="w-4 h-4" />}
+                items={menuItems}
+              />
+              {isSkipped ? (
+                <button
+                  type="button"
+                  onClick={handleCompleteClick}
+                  className={`btn-ios btn-ios-sm ${isTimeLocked ? 'bg-ios-orange/15 text-ios-orange' : 'btn-ios-tinted'}`}
+                >
+                  {isTimeLocked ? <Lock className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  <span>{isTimeLocked ? 'Locked' : 'Do it'}</span>
+                </button>
+              ) : claimedByOtherKidName ? (
+                <button
+                  type="button"
+                  onClick={handleCompleteClick}
+                  aria-label={`Claimed by ${claimedByOtherKidName}`}
+                  className="check-circle check-circle-empty opacity-40 cursor-not-allowed"
+                >
+                  <Lock className="w-3.5 h-3.5 text-label-secondary" />
+                </button>
+              ) : isTimeLocked ? (
+                <button
+                  type="button"
+                  onClick={handleCompleteClick}
+                  aria-label={`Locked — available ${timeWindowStatus.formattedRange}`}
+                  className="check-circle bg-ios-orange/15"
+                >
+                  <Lock className="w-3.5 h-3.5 text-ios-orange" />
+                </button>
+              ) : isReadingChore && onOpenReadingLog ? (
+                <button
+                  type="button"
+                  onClick={handleCompleteClick}
+                  className="btn-ios btn-ios-sm bg-ios-orange text-white"
+                >
+                  Log 📖
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  id={`btn-complete-${chore.id}`}
+                  onClick={handleCompleteClick}
+                  className="check-circle check-circle-empty"
+                  aria-label={`Mark "${chore.title}" complete`}
+                  title="Mark complete"
+                />
+              )}
+            </>
+          )}
         </div>
       </div>
+
+      {/* Subtasks */}
+      {totalSubtasks > 0 && (
+        <div className="mt-3 pt-3 border-t border-separator">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[13px] text-label-secondary uppercase tracking-[-0.08px]">Steps</span>
+            <span className={`text-[13px] font-semibold tabular-nums ${subtasksDone === totalSubtasks ? 'text-ios-green' : 'text-label-secondary'}`}>
+              {subtasksDone} of {totalSubtasks}
+            </span>
+          </div>
+          <ul className="space-y-0.5">
+            {chore.subtasks!.map((step, idx) => {
+              const done = isCompleted || completedSteps.includes(idx);
+              return (
+                <li key={idx}>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={done}
+                    onClick={e => handleToggleSubtask(idx, e)}
+                    disabled={isCompleted}
+                    className="w-full min-h-[44px] text-left flex items-center gap-3 px-2 py-2 rounded-[10px] transition-colors text-[15px] cursor-pointer hover:bg-fill disabled:cursor-default disabled:hover:bg-transparent"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                        done ? 'bg-ios-green' : 'border-[1.5px] border-label-tertiary'
+                      }`}
+                    >
+                      {done && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                    </span>
+                    <span className={done ? 'text-label-tertiary line-through' : 'text-label'}>{step}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {/* Reading log entries */}
+      {isReadingChore && isCompleted && log?.completedSubtasks && log.completedSubtasks.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-separator">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[13px] text-label-secondary uppercase">📖 Reading log</span>
+            {onOpenReadingLog && (
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); onOpenReadingLog(); }}
+                className="text-[15px] text-ios-blue font-medium cursor-pointer min-h-[44px] -my-3"
+              >
+                View journal
+              </button>
+            )}
+          </div>
+          {log.completedSubtasks.map((s, i) => (
+            <p key={i} className="text-[15px] text-label-secondary">{s}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 });
-

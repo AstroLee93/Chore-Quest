@@ -32,7 +32,7 @@ import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChore
 import { calculateKidBadges } from '../utils/badges';
 import { getSeasonalWeatherForDate, EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../utils/calendar';
 import { sound } from '../utils/sound';
-import { AppThemeId, APP_THEMES } from '../utils/theme';
+import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID } from '../utils/theme';
 import { isBirthdayToday, getBirthdayConfig } from '../utils/birthday';
 import { BirthdayCelebrationModal } from './BirthdayCelebrationModal';
 
@@ -70,7 +70,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   events = [],
   database,
   onUpdateDatabase,
-  currentTheme = 'coastal-horizon',
+  currentTheme = DEFAULT_THEME_ID,
   isKioskKidSession = false,
   onReturnToKiosk,
   onToggleCompleteChore,
@@ -84,7 +84,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   onOpenBirthdayCelebration,
 }) => {
   const safeSettings = settings || database?.settings || ({} as AppSettings);
-  const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
+  const theme = APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID];
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -985,75 +985,58 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
 
         {/* Filters: Categories and Time of Day */}
         <div className="flex flex-col gap-3">
-          {/* Category Pills & Chore Roulette */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {/* Category chips & Chore Roulette (horizontally scrolling, iOS filter-chip style) */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none snap-x">
             <button
               id="btn-chore-roulette-spin"
               onClick={() => {
                 sound.playTap();
                 setIsWheelOpen(true);
               }}
-              className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-400 to-pink-500 hover:from-amber-500 hover:to-pink-600 text-white font-black text-xs sm:text-sm shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+              className="min-h-[36px] px-3.5 py-1.5 rounded-full bg-gradient-to-r from-ios-orange to-ios-pink text-white font-semibold text-[15px] tracking-[-0.24px] shadow-sm transition-transform active:scale-95 flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 snap-start"
               title="Spin the Chore Wheel for a surprise mission!"
             >
-              <RotateCw className="w-3.5 h-3.5" />
-              <span>Chore Roulette 🎡</span>
+              <RotateCw className="w-4 h-4" />
+              <span>Roulette 🎡</span>
             </button>
 
-            <button
-              key="filter-cat-all"
-              id="filter-cat-all"
-              onClick={() => {
-                sound.playTap();
-                setSelectedCategory('all');
-              }}
-              className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-black whitespace-nowrap transition-all cursor-pointer ${
-                selectedCategory === 'all'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border-2 border-slate-200'
-              }`}
-            >
-              All Categories ({todaysChores.length})
-            </button>
-            {categories.map((cat) => {
-              const count = todaysChores.filter((c) => c.categoryId === cat.id).length;
-              if (count === 0) return null;
+            {[
+              { id: 'all', name: 'All', count: todaysChores.length },
+              ...categories
+                .map((cat) => ({ id: cat.id, name: cat.name, count: todaysChores.filter((c) => c.categoryId === cat.id).length }))
+                .filter((c) => c.count > 0),
+            ].map((cat) => {
               const isSelected = selectedCategory === cat.id;
-
               return (
                 <button
                   key={cat.id}
                   id={`filter-cat-${cat.id}`}
+                  aria-pressed={isSelected}
                   onClick={() => {
                     sound.playTap();
                     setSelectedCategory(cat.id);
                   }}
-                  className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-black whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-                    isSelected
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border-2 border-slate-200'
+                  className={`min-h-[36px] px-3.5 py-1.5 rounded-full text-[15px] tracking-[-0.24px] whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 snap-start ${
+                    isSelected ? 'bg-ios-blue text-white font-semibold shadow-sm' : 'glass text-label'
                   }`}
                 >
                   <span>{cat.name}</span>
                   <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-md font-black ${
-                      isSelected ? 'bg-indigo-800 text-white' : 'bg-slate-100 text-slate-600'
+                    className={`text-[12px] min-w-[20px] px-1.5 rounded-full font-semibold tabular-nums ${
+                      isSelected ? 'bg-white/25 text-white' : 'bg-fill text-label-secondary'
                     }`}
                   >
-                    {count}
+                    {cat.count}
                   </span>
                 </button>
               );
             })}
           </div>
 
-          {/* Time of Day Pills */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-400 font-bold uppercase tracking-wider pl-1 hidden sm:inline">
-              Time:
-            </span>
+          {/* Time of day — iOS segmented control */}
+          <div className="ios-segmented" role="radiogroup" aria-label="Time of day">
             {[
-              { id: 'all', label: 'All Times' },
+              { id: 'all', label: 'All' },
               { id: 'morning', label: '🌅 Morning' },
               { id: 'afternoon', label: '☀️ Afternoon' },
               { id: 'evening', label: '🌙 Bedtime' },
@@ -1061,15 +1044,13 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
               <button
                 key={t.id}
                 id={`filter-time-${t.id}`}
+                role="radio"
+                aria-checked={selectedTimeOfDay === t.id}
                 onClick={() => {
                   sound.playTap();
                   setSelectedTimeOfDay(t.id);
                 }}
-                className={`px-3.5 py-1.5 rounded-xl font-black transition-colors cursor-pointer ${
-                  selectedTimeOfDay === t.id
-                    ? 'bg-yellow-200 text-slate-900 border-2 border-yellow-400'
-                    : 'bg-white text-slate-600 hover:bg-slate-50 border-2 border-slate-100'
-                }`}
+                className="ios-segment"
               >
                 {t.label}
               </button>

@@ -23,7 +23,7 @@ import {
 import { KidProfile, AppSettings, CalendarEvent } from '../types';
 import { sound } from '../utils/sound';
 import { getTodayDateString } from '../utils/storage';
-import { AppThemeId, APP_THEMES } from '../utils/theme';
+import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID } from '../utils/theme';
 
 export interface AppNavMenuProps {
   isOpen: boolean;
@@ -62,7 +62,7 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
   isCalendarOpen = false,
   isMenuOpen = false,
   isGroceryOpen = false,
-  currentTheme = 'coastal-horizon',
+  currentTheme = DEFAULT_THEME_ID,
   onThemeChange,
   onOpenParentPin,
   onExitParentMode,
@@ -81,7 +81,7 @@ export const AppNavMenu: React.FC<AppNavMenuProps> = ({
   const [isThemeSectionExpanded, setIsThemeSectionExpanded] = useState<boolean>(false);
   const todayStr = getTodayDateString();
   const todayEventsCount = events.filter((e) => e.date === todayStr).length;
-  const activeTheme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
+  const activeTheme = APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID];
 
   // Lock background body scroll when open and handle Escape key
   useEffect(() => {

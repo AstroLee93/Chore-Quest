@@ -130,7 +130,7 @@ export const ChoreTimerModal: React.FC<ChoreTimerModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border-4 border-yellow-300 relative text-slate-800"
+        className="ios-sheet-detached ios-sheet-light bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border-4 border-yellow-300 relative text-slate-800"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}

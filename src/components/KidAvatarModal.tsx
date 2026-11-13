@@ -69,7 +69,7 @@ export const KidAvatarModal: React.FC<KidAvatarModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-fade-in">
-      <div className="bg-yellow-50 rounded-[2.5rem] p-6 max-w-lg w-full shadow-2xl border-4 border-yellow-300 flex flex-col max-h-[90vh] overflow-y-auto">
+      <div className="ios-sheet-detached ios-sheet-light bg-yellow-50 rounded-[2.5rem] p-6 max-w-lg w-full shadow-2xl border-4 border-yellow-300 flex flex-col max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b-2 border-yellow-200">
           <div className="flex items-center gap-2.5">

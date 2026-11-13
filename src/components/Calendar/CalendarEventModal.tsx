@@ -256,7 +256,7 @@ export const CalendarEventModal: React.FC<CalendarEventModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-yellow-50 rounded-[2.5rem] p-5 sm:p-7 max-w-2xl w-full shadow-2xl border-4 border-yellow-300 max-h-[92vh] overflow-y-auto"
+        className="ios-sheet-detached ios-sheet-light bg-yellow-50 rounded-[2.5rem] p-5 sm:p-7 max-w-2xl w-full shadow-2xl border-4 border-yellow-300 max-h-[92vh] overflow-y-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b-2 border-yellow-200/80 mb-4">

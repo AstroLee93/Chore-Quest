@@ -5,7 +5,7 @@ import { generateDefaultMilestones } from './utils/kidCoin';
 import { fetchServerDatabase, pushServerDatabase, subscribeToDatabaseSync } from './utils/api';
 import { sound } from './utils/sound';
 import { checkCategoryTimeWindow } from './utils/timeWindow';
-import { AppThemeId, APP_THEMES, getSavedThemeId, saveThemeId } from './utils/theme';
+import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID, getSavedThemeId, saveThemeId } from './utils/theme';
 import { Navbar } from './components/Navbar';
 import { KidSelector } from './components/KidSelector';
 import { KidDashboard } from './components/KidDashboard';
@@ -229,7 +229,7 @@ export default function App() {
     [database.kids, activeKidId]
   );
   const themeConfig = useMemo(
-    () => APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'],
+    () => APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID],
     [currentTheme]
   );
 
@@ -530,7 +530,7 @@ export default function App() {
         >
           {/* STRICT KIOSK KID SESSION HEADER: ONLY Return to Kiosk button, NO adult links */}
           <header
-            className={`sticky top-0 z-40 px-4 sm:px-6 py-3.5 backdrop-blur-md border-b flex items-center justify-between gap-3 shadow-md ${
+            className={`ios-navbar sticky top-0 z-40 pb-3.5 backdrop-blur-xl border-b flex items-center justify-between gap-3 ${
               themeConfig.isDark
                 ? 'bg-slate-900/90 border-slate-700 text-white'
                 : 'bg-white/95 border-slate-200 text-slate-900'
@@ -684,7 +684,7 @@ export default function App() {
     }
 
     return (
-      <div className={`min-h-screen ${themeConfig.kioskBg} font-sans`}>
+      <div className={`min-h-screen ${themeConfig.kioskBg} font-sans pt-safe px-safe`}>
         <KioskDashboard
           database={database}
           currentTheme={currentTheme}

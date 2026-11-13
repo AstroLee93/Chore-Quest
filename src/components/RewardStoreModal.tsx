@@ -85,7 +85,7 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-fade-in">
       <div
         id="reward-store-dialog"
-        className="bg-yellow-50 w-full max-w-2xl rounded-[2.5rem] p-6 sm:p-8 shadow-2xl border-4 border-yellow-300 max-h-[90vh] flex flex-col"
+        className="ios-sheet-detached ios-sheet-light bg-yellow-50 w-full max-w-2xl rounded-[2.5rem] p-6 sm:p-8 shadow-2xl border-4 border-yellow-300 max-h-[90vh] flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b-2 border-yellow-200">
@@ -371,7 +371,7 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
         {/* Confirmation Modal Overlay */}
         {redeemingReward && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xs animate-fade-in">
-            <div className="bg-yellow-50 rounded-[2.5rem] p-6 sm:p-8 max-w-sm w-full shadow-2xl border-4 border-yellow-300 text-center">
+            <div className="ios-sheet-detached ios-sheet-light bg-yellow-50 rounded-[2.5rem] p-6 sm:p-8 max-w-sm w-full shadow-2xl border-4 border-yellow-300 text-center">
               <div className="text-5xl mb-3">{redeemingReward.icon}</div>
               <h3 className="font-black text-xl text-slate-900 mb-1">
                 Redeem "{redeemingReward.title}"?

@@ -3798,7 +3798,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
             return (
               <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-                <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-4 border-amber-300 dark:border-amber-500 space-y-4">
+                <div className="ios-sheet-detached bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-4 border-amber-300 dark:border-amber-500 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">✏️</span>
@@ -3969,7 +3969,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           {/* Add Book Recommendation Modal */}
           {isAddBookModalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-              <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-4 border-amber-300 space-y-4">
+              <div className="ios-sheet-detached ios-sheet-light bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-4 border-amber-300 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">📖</span>
@@ -5473,7 +5473,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* Chore Edit Modal */}
       {editingChore && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-lg w-full shadow-2xl border-2 sm:border-4 border-yellow-300 max-h-[92vh] overflow-y-auto">
+          <div className="ios-sheet-detached ios-sheet-light bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-lg w-full shadow-2xl border-2 sm:border-4 border-yellow-300 max-h-[92vh] overflow-y-auto">
             <h3 className="font-black text-base sm:text-xl text-slate-800 mb-2.5 sm:mb-4 italic">
               {editingChore.id ? 'Edit Chore Task' : 'Create New Chore Mission'}
             </h3>
@@ -5880,7 +5880,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* Category Edit Modal */}
       {editingCategory && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300">
+          <div className="ios-sheet-detached ios-sheet-light bg-yellow-50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300">
             <h3 className="font-black text-base sm:text-xl text-slate-800 mb-3 italic">
               {editingCategory.id ? 'Edit Category' : 'New Category'}
             </h3>
@@ -6092,7 +6092,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* Reward Edit Modal */}
       {editingReward && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-slate-700">
+          <div className="ios-sheet-detached bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-slate-700">
             <h3 className="font-black text-base sm:text-xl text-slate-800 dark:text-white mb-3 italic">
               {editingReward.id ? 'Edit Reward Item' : 'New Reward Item'}
             </h3>
@@ -6172,7 +6172,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* Kid Edit Modal */}
       {editingKid && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-slate-700">
+          <div className="ios-sheet-detached bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-md w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-slate-700">
             <h3 className="font-black text-base sm:text-xl text-slate-800 dark:text-white mb-3 italic">
               {editingKid.id ? 'Edit Child Profile' : 'Add Child'}
             </h3>
@@ -6433,7 +6433,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
       {/* Bonus Star Award Modal */}
       {bonusStarModalKid && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-sm w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-slate-700 text-center">
+          <div className="ios-sheet-detached bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 max-w-sm w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-slate-700 text-center">
             <div className="text-3xl mb-1">⭐</div>
             <h3 className="font-black text-base sm:text-xl text-slate-800 dark:text-white mb-0.5 italic">
               Award Bonus Stars to {bonusStarModalKid.name}!

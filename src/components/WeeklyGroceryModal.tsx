@@ -3381,7 +3381,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       {/* Start New Week Confirmation Modal */}
       {showStartNewWeekConfirm && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-2xl border-4 border-teal-400 space-y-4">
+          <div className="ios-sheet-detached w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-2xl border-4 border-teal-400 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-teal-500 text-white flex items-center justify-center text-2xl font-black">
                 🔄
@@ -3435,7 +3435,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       {/* Print / Export Modal */}
       {showPrintModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-2xl border-4 border-slate-300 dark:border-slate-700 space-y-4 max-h-[85vh] flex flex-col">
+          <div className="ios-sheet-detached w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-2xl border-4 border-slate-300 dark:border-slate-700 space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center text-xl">
@@ -3509,7 +3509,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       {/* Past Receipts History Dialog */}
       {isReceiptHistoryOpen && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-teal-400 dark:border-teal-600 space-y-4 max-h-[85vh] flex flex-col">
+          <div className="ios-sheet-detached w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-teal-400 dark:border-teal-600 space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-teal-500 text-white flex items-center justify-center text-xl shadow-xs">
@@ -3609,7 +3609,7 @@ export const WeeklyGroceryModal: React.FC<WeeklyGroceryModalProps> = ({
       {/* Admin Edit Pantry Item Modal */}
       {editingPantryItem && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-amber-400 dark:border-amber-600 space-y-4 max-h-[90vh] flex flex-col">
+          <div className="ios-sheet-detached w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-amber-400 dark:border-amber-600 space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center text-xl shadow-xs shrink-0 font-black">

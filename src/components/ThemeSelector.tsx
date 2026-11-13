@@ -13,7 +13,7 @@ import {
   X,
   Type
 } from 'lucide-react';
-import { AppThemeId, APP_THEMES } from '../utils/theme';
+import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID } from '../utils/theme';
 import { sound } from '../utils/sound';
 
 interface ThemeSelectorProps {
@@ -34,7 +34,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   const [sandboxAmount, setSandboxAmount] = useState('15.00');
   const [sandboxSelect, setSandboxSelect] = useState('option-1');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const activeTheme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
+  const activeTheme = APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID];
 
   // Handle outside click & escape key
   useEffect(() => {

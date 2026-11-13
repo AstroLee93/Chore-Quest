@@ -572,7 +572,7 @@ export const KidSnackRequestModal: React.FC<KidSnackRequestModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 max-w-4xl w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-yellow-600 max-h-[96vh] flex flex-col my-auto text-slate-900 dark:text-slate-100"
+        className="ios-sheet-detached bg-yellow-50 dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 max-w-4xl w-full shadow-2xl border-2 sm:border-4 border-yellow-300 dark:border-yellow-600 max-h-[96vh] flex flex-col my-auto text-slate-900 dark:text-slate-100"
       >
         {/* MODAL HEADER */}
         <div className="flex items-center justify-between pb-3 border-b-2 border-yellow-200 dark:border-slate-800 shrink-0">

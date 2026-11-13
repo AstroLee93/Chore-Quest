@@ -211,7 +211,7 @@ export const MealRecipeModal: React.FC<MealRecipeModalProps> = ({
     >
       <div
         id="recipe-modal-container"
-        className="bg-white border-4 border-amber-400 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden relative"
+        className="ios-sheet-detached ios-sheet-light bg-white border-4 border-amber-400 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden relative"
       >
         {/* Top Header */}
         <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 p-4 sm:p-5 flex items-center justify-between shadow-md shrink-0">

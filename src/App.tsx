@@ -6,6 +6,7 @@ import { fetchServerDatabase, pushServerDatabase, subscribeToDatabaseSync } from
 import { sound } from './utils/sound';
 import { checkCategoryTimeWindow } from './utils/timeWindow';
 import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID, getSavedThemeId, saveThemeId } from './utils/theme';
+import { isCq2026Theme } from './utils/themes2026';
 import { Navbar } from './components/Navbar';
 import { KidSelector } from './components/KidSelector';
 import { KidDashboard } from './components/KidDashboard';
@@ -232,6 +233,12 @@ export default function App() {
     () => APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID],
     [currentTheme]
   );
+
+  // 2026 design: the active kid's Playful / Balanced / Minimal style (cq2026.css)
+  useEffect(() => {
+    const style = activeKid && !isParentMode ? activeKid.uiStyle || 'balanced' : 'balanced';
+    document.documentElement.setAttribute('data-cq-style', style);
+  }, [activeKid, isParentMode]);
 
   // Complete a chore
   const handleToggleCompleteChore = useCallback((chore: ChoreItem) => {
@@ -684,7 +691,7 @@ export default function App() {
     }
 
     return (
-      <div className={`min-h-screen ${themeConfig.kioskBg} font-sans pt-safe px-safe`}>
+      <div className={`min-h-screen ${themeConfig.kioskBg} font-sans pt-safe px-safe ${isCq2026Theme(currentTheme) && !themeConfig.isDark ? 'dark cq-kiosk-dark' : ''}`}>
         <KioskDashboard
           database={database}
           currentTheme={currentTheme}

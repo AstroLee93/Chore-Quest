@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock, Hourglass, AlertTriangle } from 'lucide-react';
+import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock, Hourglass, AlertTriangle, Crown } from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
 import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent, RewardItem, RewardRedemption, ChoreCategory } from '../types';
+import { ringDash, initials } from '../utils/progress';
+import { isCq2026Theme } from '../utils/themes2026';
 import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getMvpKid } from '../utils/storage';
 import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar';
 import { getCurrentDayOfWeekKey, DEFAULT_WEEKLY_MENU } from '../utils/menu';
@@ -83,6 +85,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [selectedBirthdayKid, setSelectedBirthdayKid] = useState<KidProfile | null>(null);
 
   const theme = APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID];
+  const isCq2026 = isCq2026Theme(currentTheme);
   const todayStr = useMemo(() => getTodayDateString(), []);
   const todayWeather = useMemo(() => getSeasonalWeatherForDate(todayStr), [todayStr]);
   const todayDayKey = useMemo(() => getCurrentDayOfWeekKey(), []);
@@ -550,6 +553,23 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group/header p-1 -m-1 rounded-2xl hover:bg-white/10 transition-colors min-w-0 flex-1"
                     title={`Tap to unlock ${kid.name}'s Profile Dashboard (PIN required)`}
                   >
+                    {isCq2026 ? (
+                      <div className="relative w-16 h-16 shrink-0" aria-hidden="true">
+                        <svg viewBox="0 0 64 64" className="absolute inset-0 w-full h-full -rotate-90">
+                          <circle cx="32" cy="32" r="28" fill="none" stroke={kid.color || 'var(--cq-accent)'} strokeOpacity="0.16" strokeWidth="5" />
+                          <circle cx="32" cy="32" r="28" fill="none" stroke={kid.color || 'var(--cq-accent)'} strokeWidth="5" strokeLinecap="round" strokeDasharray={ringDash(totalChores ? completedCount / totalChores : 1, 28)} style={{ transition: 'stroke-dasharray 0.7s cubic-bezier(0.16,1,0.3,1)' }} />
+                        </svg>
+                        <span
+                          className="absolute inset-[9px] rounded-full flex items-center justify-center text-[14px] font-bold"
+                          style={{ color: kid.color || 'var(--cq-accent)', backgroundColor: `color-mix(in srgb, ${kid.color || '#5B8CFF'} 16%, transparent)` }}
+                        >
+                          {initials(kid.name)}
+                        </span>
+                        {(isBirthday || isMvp) && (
+                          <Crown className="absolute -top-1.5 -right-1 w-5 h-5 text-amber-400 fill-amber-400" />
+                        )}
+                      </div>
+                    ) : (
                     <div className="relative shrink-0">
                       {(isBirthday || isMvp) && (
                         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 text-2xl filter drop-shadow-[0_3px_6px_rgba(245,158,11,0.9)] animate-bounce select-none pointer-events-none">
@@ -568,6 +588,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         {kid.avatar}
                       </div>
                     </div>
+                    )}
 
                     <div className="min-w-0 flex-1">
                       <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-1.5 flex-wrap group-hover/header:text-amber-200 transition-colors">

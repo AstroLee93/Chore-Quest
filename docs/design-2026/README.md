@@ -1,7 +1,7 @@
 # ChoreQuest 2026 redesign
 
-The approved visual direction for the next version of ChoreQuest. It is a
-design spec only: none of this is built into the app yet.
+The approved visual direction for the next version of ChoreQuest.
+Phase 1 is built (see *Building it, in order* below); the rest is the spec.
 
 `mockups/` holds the source of each screen from the design canvas
 (`*.dc.html`, with `canvas.json` as the layout index). They're for reference
@@ -84,8 +84,15 @@ the wall when idle. The redesign only makes that state visible.
 
 ## Building it, in order
 
-1. Tokens, type, icons and the per-kid Style setting (builds on `src/styles/ios.css`).
-2. Kid screens: home (`KidSelector`), `KidDashboard`, `ChoreCard`, the kiosk.
+1. ✅ Tokens, type, icons and the per-kid Style setting —
+   `src/utils/themes2026.ts`, `src/styles/cq2026.css` (incl. a compatibility
+   layer that restyles not-yet-rebuilt screens on 2026 themes), Inter bundled
+   locally, Look & feel picker in the kid avatar sheet.
+2. ✅ (first pass) Kid screens: family home with rings (`KidSelector`),
+   `KidDashboard` ring header + morning/afternoon/evening timeline +
+   "All done for today", `ChoreCard`, kiosk rings and ambient clock. Still to
+   do: the action tiles and badges/rewards hub on the kid dashboard, and the
+   kiosk's priority cards.
 3. Rewards, Savings, and the "all done" moment.
 4. Kitchen: split `WeeklyMenuModal` / `WeeklyGroceryModal` into the Dinners,
    Cook mode, Groceries and Pantry screens, then the kitchen wall board.

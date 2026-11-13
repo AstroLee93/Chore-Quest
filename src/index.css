@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/ios.css";
+@import "./styles/cq2026.css";
 
 /* `dark:` utilities follow the active ChoreQuest theme (applyThemeToDocument
    toggles .dark on <html>), not the OS setting. Tailwind v4 defaults to the

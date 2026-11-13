@@ -8,6 +8,8 @@ import { checkCategoryTimeWindow } from './utils/timeWindow';
 import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID, getSavedThemeId, saveThemeId } from './utils/theme';
 import { isCq2026Theme } from './utils/themes2026';
 import { TabBar, TabId } from './components/TabBar';
+const KitchenSheet = React.lazy(() => import('./components/Kitchen/KitchenSheet'));
+const KitchenWall = React.lazy(() => import('./components/Kitchen/KitchenWall'));
 import { Navbar } from './components/Navbar';
 import { KidSelector } from './components/KidSelector';
 import { KidDashboard } from './components/KidDashboard';
@@ -234,6 +236,12 @@ export default function App() {
     () => APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID],
     [currentTheme]
   );
+
+  // 2026 design: Kitchen sheet (Dinners / Groceries / Pantry). The original
+  // modals open from its "More tools" button (legacyKitchen).
+  const [kitchenTab, setKitchenTab] = useState<'dinners' | 'groceries' | 'pantry'>('dinners');
+  const [legacyKitchen, setLegacyKitchen] = useState<'menu' | 'grocery' | null>(null);
+  const showNewKitchen = isCq2026Theme(currentTheme);
 
   // 2026 design: floating tab bar on 2026 themes outside parent mode
   const showTabBar = isCq2026Theme(currentTheme) && !isParentMode;
@@ -720,7 +728,11 @@ export default function App() {
             />
           )}
 
-          {isMenuOpen && (
+          {isMenuOpen && isCq2026Theme(currentTheme) && (
+            <KitchenWall database={database} onUpdateDatabase={handleUpdateDatabase} onClose={() => setIsMenuOpen(false)} />
+          )}
+
+          {isMenuOpen && !isCq2026Theme(currentTheme) && (
             <WeeklyMenuModal
               isOpen={isMenuOpen}
               onClose={() => setIsMenuOpen(false)}
@@ -876,7 +888,7 @@ export default function App() {
             if (tab === 'today') window.scrollTo({ top: 0, behavior: 'smooth' });
             if (tab === 'calendar') setIsCalendarOpen(true);
             if (tab === 'dinners') setIsMenuOpen(true);
-            if (tab === 'groceries') setIsGroceryOpen(true);
+            if (tab === 'groceries') { setKitchenTab('groceries'); setIsGroceryOpen(true); }
             if (tab === 'rewards') setIsRewardStoreOpen(true);
             if (tab === 'savings') setIsKidCoinVaultOpen(true);
           }}
@@ -940,22 +952,53 @@ export default function App() {
           />
         )}
 
-        {isMenuOpen && (
+        {showNewKitchen && (isMenuOpen || isGroceryOpen) && !legacyKitchen && (
+          <React.Suspense fallback={null}>
+            <KitchenSheet
+              database={database}
+              onUpdateDatabase={handleUpdateDatabase}
+              activeKid={activeKid}
+              isParentMode={isParentMode}
+              tab={isMenuOpen ? 'dinners' : kitchenTab === 'pantry' ? 'pantry' : 'groceries'}
+              onTabChange={(t) => {
+                setKitchenTab(t);
+                setIsMenuOpen(t === 'dinners');
+                setIsGroceryOpen(t !== 'dinners');
+              }}
+              onClose={() => {
+                setIsMenuOpen(false);
+                setIsGroceryOpen(false);
+              }}
+              onOpenMoreTools={(which) => setLegacyKitchen(which)}
+            />
+          </React.Suspense>
+        )}
+
+        {((isMenuOpen && !showNewKitchen) || legacyKitchen === 'menu') && (
           <WeeklyMenuModal
-            isOpen={isMenuOpen}
-            onClose={() => setIsMenuOpen(false)}
+            isOpen
+            onClose={() => {
+              if (legacyKitchen) setLegacyKitchen(null);
+              else setIsMenuOpen(false);
+            }}
             database={database}
             onUpdateDatabase={handleUpdateDatabase}
             activeKid={activeKid}
             isParentMode={isParentMode}
-            onOpenGroceryList={() => setIsGroceryOpen(true)}
+            onOpenGroceryList={() => {
+              if (legacyKitchen) setLegacyKitchen('grocery');
+              else setIsGroceryOpen(true);
+            }}
           />
         )}
 
-        {isGroceryOpen && (
+        {((isGroceryOpen && !showNewKitchen) || legacyKitchen === 'grocery') && (
           <WeeklyGroceryModal
-            isOpen={isGroceryOpen}
-            onClose={() => setIsGroceryOpen(false)}
+            isOpen
+            onClose={() => {
+              if (legacyKitchen) setLegacyKitchen(null);
+              else setIsGroceryOpen(false);
+            }}
             database={database}
             onUpdateDatabase={handleUpdateDatabase}
             activeKid={activeKid}

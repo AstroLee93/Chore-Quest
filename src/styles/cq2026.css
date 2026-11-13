@@ -384,3 +384,11 @@ html.cq2026.dark :is(button, a):is([class*=" bg-indigo-8"], [class*=" bg-indigo-
   border-color: transparent;
 }
 html.cq2026.dark :is(button, a):is([class*=" bg-indigo-8"], [class*=" bg-indigo-9"], [class^="bg-indigo-9"]) :is(svg, span) { color: inherit; }
+
+/* Inputs that sit inside their own styled field (e.g. Kitchen quick add) */
+html.cq2026 input.cq-bare-input.cq-bare-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+html.cq2026.dark input.cq-bare-input.cq-bare-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}

@@ -82,18 +82,24 @@ Kiosk mode stays as it works today: it's saved on the device, exiting needs
 the parent PIN, kid sessions only show "back to the wall", and it returns to
 the wall when idle. The redesign only makes that state visible.
 
-## Building it, in order
+## Build status
 
-1. ✅ Tokens, type, icons and the per-kid Style setting —
-   `src/utils/themes2026.ts`, `src/styles/cq2026.css` (incl. a compatibility
-   layer that restyles not-yet-rebuilt screens on 2026 themes), Inter bundled
-   locally, Look & feel picker in the kid avatar sheet.
-2. ✅ (first pass) Kid screens: family home with rings (`KidSelector`),
-   `KidDashboard` ring header + morning/afternoon/evening timeline +
-   "All done for today", `ChoreCard`, kiosk rings and ambient clock. Still to
-   do: the action tiles and badges/rewards hub on the kid dashboard, and the
-   kiosk's priority cards.
-3. Rewards, Savings, and the "all done" moment.
-4. Kitchen: split `WeeklyMenuModal` / `WeeklyGroceryModal` into the Dinners,
-   Cook mode, Groceries and Pantry screens, then the kitchen wall board.
-5. Parent dashboard and the remaining modals.
+All five build steps are done on 2026 themes (the 8 older themes keep their
+original look):
+
+1. ✅ Tokens, type (Inter, bundled), icons, per-kid Look & feel —
+   `src/utils/themes2026.ts`, `src/styles/cq2026.css`.
+2. ✅ Kid screens: family "Today" with rings (`KidSelector`), kid dashboard
+   ring header, morning/afternoon/evening timeline, "All done for today",
+   calm tiles, badges and leader centre, savings bar; kiosk rings, ambient
+   clock, quiet MVP line and Due pills.
+3. ✅ Rewards (calm rows, segmented tabs) and Savings (big balance, goal gauge,
+   weekly pace estimate, neutral goal chips).
+4. ✅ Parent dashboard and other pop-ups via the generated colour map
+   (`src/styles/cq2026-adapt.css`, regenerate with
+   `python3 scripts/gen-cq2026-adapt.py . && python3 scripts/gen-cq2026-adapt-part2.py .`),
+   plus the floating tab bar (`src/components/TabBar.tsx`).
+5. ✅ Kitchen: `src/components/Kitchen/KitchenSheet.tsx` (Dinners, Cook mode,
+   Groceries, Pantry) and `KitchenWall.tsx` on the kiosk. The original
+   menu/grocery modals open from "More tools" for presets, recipe editing,
+   receipts, prices and printing.

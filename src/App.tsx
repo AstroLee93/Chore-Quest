@@ -7,6 +7,7 @@ import { sound } from './utils/sound';
 import { checkCategoryTimeWindow } from './utils/timeWindow';
 import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID, getSavedThemeId, saveThemeId } from './utils/theme';
 import { isCq2026Theme } from './utils/themes2026';
+import { TabBar, TabId } from './components/TabBar';
 import { Navbar } from './components/Navbar';
 import { KidSelector } from './components/KidSelector';
 import { KidDashboard } from './components/KidDashboard';
@@ -233,6 +234,9 @@ export default function App() {
     () => APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID],
     [currentTheme]
   );
+
+  // 2026 design: floating tab bar on 2026 themes outside parent mode
+  const showTabBar = isCq2026Theme(currentTheme) && !isParentMode;
 
   // 2026 design: the active kid's Playful / Balanced / Minimal style (cq2026.css)
   useEffect(() => {
@@ -847,7 +851,39 @@ export default function App() {
         )}
       </main>
 
-      <footer className="relative z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 sm:p-3 px-3 sm:px-6 border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-[11px] sm:text-xs gap-1 sm:gap-3">
+      {/* 2026 floating tab bar */}
+      {showTabBar && (
+        <TabBar
+          hasActiveKid={!!activeKid}
+          showSavings={database.settings.kidCoinEnabled !== false}
+          active={
+            isCalendarOpen ? 'calendar'
+              : isMenuOpen ? 'dinners'
+              : isGroceryOpen ? 'groceries'
+              : isRewardStoreOpen ? 'rewards'
+              : isKidCoinVaultOpen ? 'savings'
+              : 'today'
+          }
+          onSelect={(tab: TabId) => {
+            const closeAll = () => {
+              setIsCalendarOpen(false);
+              setIsMenuOpen(false);
+              setIsGroceryOpen(false);
+              setIsRewardStoreOpen(false);
+              setIsKidCoinVaultOpen(false);
+            };
+            closeAll();
+            if (tab === 'today') window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (tab === 'calendar') setIsCalendarOpen(true);
+            if (tab === 'dinners') setIsMenuOpen(true);
+            if (tab === 'groceries') setIsGroceryOpen(true);
+            if (tab === 'rewards') setIsRewardStoreOpen(true);
+            if (tab === 'savings') setIsKidCoinVaultOpen(true);
+          }}
+        />
+      )}
+
+      <footer className={`relative z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 sm:p-3 px-3 sm:px-6 border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-[11px] sm:text-xs gap-1 sm:gap-3 ${showTabBar ? 'pb-28 sm:pb-28' : ''}`}>
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
           <span className="flex items-center gap-1.5 text-slate-700">
             <span

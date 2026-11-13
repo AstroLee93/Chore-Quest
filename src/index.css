@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./styles/ios.css";
 @import "./styles/cq2026.css";
+@import "./styles/cq2026-adapt.css";
 
 /* `dark:` utilities follow the active ChoreQuest theme (applyThemeToDocument
    toggles .dark on <html>), not the OS setting. Tailwind v4 defaults to the
@@ -8,7 +9,7 @@
    theme picker — e.g. white modals over a dark theme on a light-mode phone. */
 /* …except inside .ios-sheet-light, a "light island" for legacy modal bodies
    that were only designed on white (like iOS's overrideUserInterfaceStyle). */
-@custom-variant dark (&:where(.dark, .dark *):not(:where(.ios-sheet-light, .ios-sheet-light *)));
+@custom-variant dark (&:where(.dark, .dark *):not(:where(html:not(.cq2026) .ios-sheet-light, html:not(.cq2026) .ios-sheet-light *)));
 
 @keyframes fadeIn {
   from {

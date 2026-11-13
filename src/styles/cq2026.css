@@ -105,8 +105,6 @@ html.cq2026 .cq-kiosk-dark {
   background: var(--cq-ground);
 }
 
-/* Light-sheet "islands" keep their own light tokens */
-html.cq2026 .ios-sheet-light { --sheet-bg: #FFFFFF; --cq-surface: #FFFFFF; --cq-line: #E6E1D8; }
 
 /* ── Ground, surfaces, numbers ──────────────────────────────────────────── */
 
@@ -335,3 +333,54 @@ html.cq2026 .cq-leader :is([class*="bg-amber-"], [class*="bg-rose-"], [class*="b
 }
 html.cq2026 .cq-leader .italic { font-style: normal; }
 html.cq2026 .cq-leader [class*="bg-rose-5"], html.cq2026 .cq-leader [class*="bg-red-5"] { background: var(--cq-due); color: #0C0E13; }
+
+/* Solid deep-hue blocks (e.g. the parent dashboard header) → surface */
+html.cq2026.dark :is(div, section, header)[class*=" bg-indigo-9"]:not(button),
+html.cq2026.dark :is(div, section, header)[class*=" bg-purple-9"],
+html.cq2026.dark :is(div, section, header)[class*=" bg-violet-9"],
+html.cq2026.dark :is(div, section, header)[class^="bg-indigo-9"],
+html.cq2026.dark :is(div, section, header)[class*="dark:bg-slate-7"] {
+  background-color: var(--cq-surface);
+  background-image: none;
+  border-color: var(--cq-line);
+}
+
+/* Form fields on dark 2026 themes: always theme-coloured and readable
+   (beats the older white-input contrast rules). */
+html.cq2026.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+html.cq2026.dark textarea,
+html.cq2026.dark select {
+  background-color: var(--cq-surface-2) !important;
+  color: var(--cq-label) !important;
+  -webkit-text-fill-color: var(--cq-label) !important;
+  border-color: var(--cq-line) !important;
+  color-scheme: dark !important;
+}
+html.cq2026.dark :is(input, textarea)::placeholder { color: var(--cq-label-3) !important; -webkit-text-fill-color: var(--cq-label-3) !important; }
+html.cq2026.dark select option { background-color: var(--cq-surface-2) !important; color: var(--cq-label) !important; }
+
+/* ── Floating tab bar ─────────────────────────────────────────────────── */
+.cq-tabbar {
+  background: var(--cq-ground-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--cq-line);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+}
+
+/* Semi-transparent white / pale backgrounds (bg-white/80, bg-yellow-50/90 …) */
+html.cq2026.dark :is(div, section, header, aside, li, nav, span):is([class*=" bg-white/"], [class^="bg-white/"], [class*=" bg-yellow-50/"], [class*=" bg-amber-50/"], [class*=" bg-slate-50/"]):not([class*="dark:bg-"]) {
+  background-color: var(--cq-surface);
+}
+html.cq2026.dark :is(div, section, header, aside, li, nav, span):is([class*="-100/"], [class*="-200/"]):is([class*=" bg-"], [class^="bg-"]):not([class*="dark:bg-"]):not([class*="bg-gradient"]) {
+  background-color: var(--cq-surface-2);
+}
+
+/* Deep indigo/purple buttons & selected pills → accent */
+html.cq2026.dark :is(button, a):is([class*=" bg-indigo-8"], [class*=" bg-indigo-9"], [class^="bg-indigo-8"], [class^="bg-indigo-9"], [class*=" bg-purple-9"], [class*=" bg-violet-9"]) {
+  background: var(--cq-accent);
+  background-image: none;
+  color: var(--cq-on-accent);
+  border-color: transparent;
+}
+html.cq2026.dark :is(button, a):is([class*=" bg-indigo-8"], [class*=" bg-indigo-9"], [class^="bg-indigo-9"]) :is(svg, span) { color: inherit; }

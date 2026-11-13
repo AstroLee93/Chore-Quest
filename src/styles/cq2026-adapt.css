@@ -1,0 +1,478 @@
+/* ── Generated: legacy light-only colours → theme roles (dark 2026 themes) ──
+
+   Only touches elements with no dark: style of their own. Do not edit by hand;
+
+   regenerate with the script noted in docs/design-2026/README.md. */
+
+html.cq2026.dark .bg-white:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-yellow-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-amber-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-slate-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-gray-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-white\/80:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-white\/90:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-white\/95:not([class*="dark:bg-"]) { background-color: var(--cq-surface); }
+
+html.cq2026.dark .bg-slate-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-slate-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-gray-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-gray-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-zinc-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-zinc-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-zinc-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-neutral-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-neutral-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-neutral-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-stone-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-stone-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-stone-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-red-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-red-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-red-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-orange-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-orange-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-orange-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-amber-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-amber-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-yellow-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-yellow-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-lime-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-lime-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-lime-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-green-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-green-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-green-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-emerald-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-emerald-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-emerald-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-teal-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-teal-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-teal-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-cyan-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-cyan-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-cyan-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-sky-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-sky-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-sky-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-blue-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-blue-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-blue-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-indigo-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-indigo-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-indigo-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-violet-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-violet-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-violet-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-purple-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-purple-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-purple-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-fuchsia-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-fuchsia-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-fuchsia-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-pink-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-pink-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-pink-200:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-rose-50:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-rose-100:not([class*="dark:bg-"]),
+html.cq2026.dark .bg-rose-200:not([class*="dark:bg-"]) { background-color: var(--cq-surface-2); }
+
+html.cq2026.dark .text-slate-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-slate-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-slate-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-slate-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-gray-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-gray-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-gray-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-gray-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-zinc-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-zinc-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-zinc-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-zinc-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-neutral-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-neutral-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-neutral-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-neutral-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-stone-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-stone-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-stone-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-stone-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-cyan-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-cyan-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-cyan-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-cyan-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-sky-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-sky-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-sky-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-sky-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-blue-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-blue-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-blue-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-blue-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-indigo-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-indigo-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-indigo-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-indigo-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-violet-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-violet-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-violet-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-violet-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-purple-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-purple-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-purple-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-purple-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-fuchsia-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-fuchsia-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-fuchsia-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-fuchsia-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-pink-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-pink-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-pink-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-pink-950:not([class*="dark:text-"]),
+html.cq2026.dark .text-black:not([class*="dark:text-"]) { color: var(--cq-label); }
+
+html.cq2026.dark .text-green-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-green-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-green-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-green-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-green-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-green-950:not([class*="dark:text-"]) { color: var(--cq-done); }
+
+html.cq2026.dark .text-emerald-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-emerald-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-emerald-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-emerald-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-emerald-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-emerald-950:not([class*="dark:text-"]) { color: var(--cq-done); }
+
+html.cq2026.dark .text-lime-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-lime-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-lime-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-lime-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-lime-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-lime-950:not([class*="dark:text-"]) { color: var(--cq-done); }
+
+html.cq2026.dark .text-teal-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-teal-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-teal-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-teal-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-teal-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-teal-950:not([class*="dark:text-"]) { color: var(--cq-done); }
+
+html.cq2026.dark .text-amber-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-amber-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-amber-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-amber-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-amber-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-amber-950:not([class*="dark:text-"]) { color: var(--cq-due); }
+
+html.cq2026.dark .text-orange-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-orange-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-orange-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-orange-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-orange-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-orange-950:not([class*="dark:text-"]) { color: var(--cq-due); }
+
+html.cq2026.dark .text-yellow-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-yellow-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-yellow-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-yellow-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-yellow-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-yellow-950:not([class*="dark:text-"]) { color: var(--cq-due); }
+
+html.cq2026.dark .text-red-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-red-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-red-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-red-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-red-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-red-950:not([class*="dark:text-"]) { color: var(--cq-danger); }
+
+html.cq2026.dark .text-rose-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-rose-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-rose-700:not([class*="dark:text-"]),
+html.cq2026.dark .text-rose-800:not([class*="dark:text-"]),
+html.cq2026.dark .text-rose-900:not([class*="dark:text-"]),
+html.cq2026.dark .text-rose-950:not([class*="dark:text-"]) { color: var(--cq-danger); }
+
+html.cq2026.dark .text-slate-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-slate-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-slate-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-gray-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-gray-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-gray-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-zinc-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-zinc-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-zinc-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-neutral-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-neutral-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-neutral-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-stone-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-stone-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-stone-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-cyan-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-cyan-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-cyan-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-sky-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-sky-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-sky-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-blue-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-blue-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-blue-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-indigo-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-indigo-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-indigo-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-violet-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-violet-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-violet-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-purple-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-purple-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-purple-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-fuchsia-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-fuchsia-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-fuchsia-600:not([class*="dark:text-"]),
+html.cq2026.dark .text-pink-400:not([class*="dark:text-"]),
+html.cq2026.dark .text-pink-500:not([class*="dark:text-"]),
+html.cq2026.dark .text-pink-600:not([class*="dark:text-"]) { color: var(--cq-label-2); }
+
+html.cq2026.dark .border-slate-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-slate-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-slate-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-slate-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-gray-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-gray-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-gray-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-gray-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-zinc-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-zinc-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-zinc-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-zinc-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-neutral-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-neutral-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-neutral-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-neutral-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-stone-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-stone-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-stone-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-stone-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-red-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-red-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-red-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-red-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-orange-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-orange-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-orange-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-orange-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-amber-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-amber-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-amber-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-amber-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-yellow-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-yellow-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-yellow-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-yellow-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-lime-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-lime-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-lime-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-lime-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-green-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-green-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-green-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-green-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-emerald-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-emerald-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-emerald-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-emerald-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-teal-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-teal-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-teal-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-teal-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-cyan-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-cyan-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-cyan-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-cyan-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-sky-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-sky-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-sky-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-sky-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-blue-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-blue-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-blue-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-blue-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-indigo-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-indigo-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-indigo-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-indigo-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-violet-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-violet-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-violet-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-violet-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-purple-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-purple-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-purple-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-purple-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-fuchsia-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-fuchsia-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-fuchsia-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-fuchsia-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-pink-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-pink-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-pink-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-pink-400:not([class*="dark:border-"]),
+html.cq2026.dark .border-rose-100:not([class*="dark:border-"]),
+html.cq2026.dark .border-rose-200:not([class*="dark:border-"]),
+html.cq2026.dark .border-rose-300:not([class*="dark:border-"]),
+html.cq2026.dark .border-rose-400:not([class*="dark:border-"]) { border-color: var(--cq-line); }
+
+html.cq2026 .ios-sheet-light {
+  --sheet-bg: var(--cq-surface);
+  --label: var(--cq-label);
+  --label-secondary: var(--cq-label-2);
+  --label-tertiary: var(--cq-label-3);
+  --separator: var(--cq-line);
+  color: var(--cq-label);
+  color-scheme: inherit;
+}
+
+/* ── Generated (part 2): colourful dark-first panels, borders, text, buttons ── */
+
+html.cq2026.dark :is(div, section, header, aside)[class*="bg-gradient-to-"]:is([class*=" p-"], [class^="p-"], [class*=" px-"], [class*=" py-"]):not([class*=" h-1"]):not([class*=" h-2"]):not([class*=" h-3"]),
+html.cq2026.dark :is(div, section, header, aside)[class*="bg-linear-to-"]:is([class*=" p-"], [class^="p-"]) {
+  background-image: none;
+  background-color: var(--cq-surface);
+  border-color: var(--cq-line);
+  box-shadow: none;
+}
+
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-red-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-orange-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-amber-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-yellow-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-lime-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-green-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-emerald-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-teal-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-cyan-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-sky-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-blue-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-indigo-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-violet-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-purple-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-fuchsia-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-pink-9"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-rose-9"] { background-color: var(--cq-surface); background-image: none; }
+
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-red-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-orange-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-amber-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-yellow-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-lime-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-green-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-emerald-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-teal-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-cyan-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-sky-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-blue-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-indigo-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-violet-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-purple-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-fuchsia-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-pink-8"],
+html.cq2026.dark :is(div, section, header, aside, li)[class*="dark:bg-rose-8"] { background-color: var(--cq-surface-2); background-image: none; }
+
+html.cq2026.dark :is(div, section, nav)[class*="bg-amber-200"], html.cq2026.dark :is(div, section, nav)[class*="bg-amber-100"],
+html.cq2026.dark :is(div, section, nav)[class*="bg-yellow-200"], html.cq2026.dark :is(div, section, nav)[class*="bg-yellow-100"],
+html.cq2026.dark :is(div, section, nav)[class*="bg-orange-200"], html.cq2026.dark :is(div, section, nav)[class*="bg-orange-100"] { background-color: var(--cq-surface-2); }
+
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-red-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-orange-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-amber-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-yellow-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-lime-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-green-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-emerald-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-teal-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-cyan-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-sky-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-blue-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-indigo-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-violet-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-purple-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-fuchsia-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-pink-"],
+html.cq2026.dark :is(div, section, aside, li, header)[class*="border-rose-"] { border-color: var(--cq-line); }
+
+html.cq2026.dark [class*="text-red-100"]:not(button):not([class*="bg-red-"]), html.cq2026.dark [class*="text-red-200"]:not(button):not([class*="bg-red-"]), html.cq2026.dark [class*="text-red-300"]:not(button):not([class*="bg-red-"]) { color: var(--cq-danger); }
+
+html.cq2026.dark [class*="text-orange-100"]:not(button):not([class*="bg-orange-"]), html.cq2026.dark [class*="text-orange-200"]:not(button):not([class*="bg-orange-"]), html.cq2026.dark [class*="text-orange-300"]:not(button):not([class*="bg-orange-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-amber-100"]:not(button):not([class*="bg-amber-"]), html.cq2026.dark [class*="text-amber-200"]:not(button):not([class*="bg-amber-"]), html.cq2026.dark [class*="text-amber-300"]:not(button):not([class*="bg-amber-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-yellow-100"]:not(button):not([class*="bg-yellow-"]), html.cq2026.dark [class*="text-yellow-200"]:not(button):not([class*="bg-yellow-"]), html.cq2026.dark [class*="text-yellow-300"]:not(button):not([class*="bg-yellow-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-lime-100"]:not(button):not([class*="bg-lime-"]), html.cq2026.dark [class*="text-lime-200"]:not(button):not([class*="bg-lime-"]), html.cq2026.dark [class*="text-lime-300"]:not(button):not([class*="bg-lime-"]) { color: var(--cq-done); }
+
+html.cq2026.dark [class*="text-green-100"]:not(button):not([class*="bg-green-"]), html.cq2026.dark [class*="text-green-200"]:not(button):not([class*="bg-green-"]), html.cq2026.dark [class*="text-green-300"]:not(button):not([class*="bg-green-"]) { color: var(--cq-done); }
+
+html.cq2026.dark [class*="text-emerald-100"]:not(button):not([class*="bg-emerald-"]), html.cq2026.dark [class*="text-emerald-200"]:not(button):not([class*="bg-emerald-"]), html.cq2026.dark [class*="text-emerald-300"]:not(button):not([class*="bg-emerald-"]) { color: var(--cq-done); }
+
+html.cq2026.dark [class*="text-teal-100"]:not(button):not([class*="bg-teal-"]), html.cq2026.dark [class*="text-teal-200"]:not(button):not([class*="bg-teal-"]), html.cq2026.dark [class*="text-teal-300"]:not(button):not([class*="bg-teal-"]) { color: var(--cq-done); }
+
+html.cq2026.dark [class*="text-cyan-100"]:not(button):not([class*="bg-cyan-"]), html.cq2026.dark [class*="text-cyan-200"]:not(button):not([class*="bg-cyan-"]), html.cq2026.dark [class*="text-cyan-300"]:not(button):not([class*="bg-cyan-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-sky-100"]:not(button):not([class*="bg-sky-"]), html.cq2026.dark [class*="text-sky-200"]:not(button):not([class*="bg-sky-"]), html.cq2026.dark [class*="text-sky-300"]:not(button):not([class*="bg-sky-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-blue-100"]:not(button):not([class*="bg-blue-"]), html.cq2026.dark [class*="text-blue-200"]:not(button):not([class*="bg-blue-"]), html.cq2026.dark [class*="text-blue-300"]:not(button):not([class*="bg-blue-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-indigo-100"]:not(button):not([class*="bg-indigo-"]), html.cq2026.dark [class*="text-indigo-200"]:not(button):not([class*="bg-indigo-"]), html.cq2026.dark [class*="text-indigo-300"]:not(button):not([class*="bg-indigo-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-violet-100"]:not(button):not([class*="bg-violet-"]), html.cq2026.dark [class*="text-violet-200"]:not(button):not([class*="bg-violet-"]), html.cq2026.dark [class*="text-violet-300"]:not(button):not([class*="bg-violet-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-purple-100"]:not(button):not([class*="bg-purple-"]), html.cq2026.dark [class*="text-purple-200"]:not(button):not([class*="bg-purple-"]), html.cq2026.dark [class*="text-purple-300"]:not(button):not([class*="bg-purple-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-fuchsia-100"]:not(button):not([class*="bg-fuchsia-"]), html.cq2026.dark [class*="text-fuchsia-200"]:not(button):not([class*="bg-fuchsia-"]), html.cq2026.dark [class*="text-fuchsia-300"]:not(button):not([class*="bg-fuchsia-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-pink-100"]:not(button):not([class*="bg-pink-"]), html.cq2026.dark [class*="text-pink-200"]:not(button):not([class*="bg-pink-"]), html.cq2026.dark [class*="text-pink-300"]:not(button):not([class*="bg-pink-"]) { color: var(--cq-label); }
+
+html.cq2026.dark [class*="text-rose-100"]:not(button):not([class*="bg-rose-"]), html.cq2026.dark [class*="text-rose-200"]:not(button):not([class*="bg-rose-"]), html.cq2026.dark [class*="text-rose-300"]:not(button):not([class*="bg-rose-"]) { color: var(--cq-danger); }
+
+html.cq2026.dark [class*="text-cyan-400"]:not(button):not(button *), html.cq2026.dark [class*="text-cyan-500"]:not(button):not(button *) { color: var(--cq-label-2); }
+
+html.cq2026.dark [class*="text-sky-400"]:not(button):not(button *), html.cq2026.dark [class*="text-sky-500"]:not(button):not(button *) { color: var(--cq-label-2); }
+
+html.cq2026.dark [class*="text-blue-400"]:not(button):not(button *), html.cq2026.dark [class*="text-blue-500"]:not(button):not(button *) { color: var(--cq-label-2); }
+
+html.cq2026.dark [class*="text-indigo-400"]:not(button):not(button *), html.cq2026.dark [class*="text-indigo-500"]:not(button):not(button *) { color: var(--cq-label-2); }
+
+html.cq2026.dark [class*="text-violet-400"]:not(button):not(button *), html.cq2026.dark [class*="text-violet-500"]:not(button):not(button *) { color: var(--cq-label-2); }
+
+html.cq2026.dark [class*="text-purple-400"]:not(button):not(button *), html.cq2026.dark [class*="text-purple-500"]:not(button):not(button *) { color: var(--cq-label-2); }
+
+html.cq2026.dark [class*="text-fuchsia-400"]:not(button):not(button *), html.cq2026.dark [class*="text-fuchsia-500"]:not(button):not(button *) { color: var(--cq-label-2); }
+
+html.cq2026.dark [class*="text-pink-400"]:not(button):not(button *), html.cq2026.dark [class*="text-pink-500"]:not(button):not(button *) { color: var(--cq-label-2); }
+
+html.cq2026.dark :is(button, a):is([class*=" bg-blue-5"], [class*=" bg-blue-6"], [class^="bg-blue-5"], [class^="bg-blue-6"], [class*="from-blue-"]),
+html.cq2026.dark :is(button, a):is([class*=" bg-indigo-5"], [class*=" bg-indigo-6"], [class^="bg-indigo-5"], [class^="bg-indigo-6"], [class*="from-indigo-"]),
+html.cq2026.dark :is(button, a):is([class*=" bg-violet-5"], [class*=" bg-violet-6"], [class^="bg-violet-5"], [class^="bg-violet-6"], [class*="from-violet-"]),
+html.cq2026.dark :is(button, a):is([class*=" bg-purple-5"], [class*=" bg-purple-6"], [class^="bg-purple-5"], [class^="bg-purple-6"], [class*="from-purple-"]),
+html.cq2026.dark :is(button, a):is([class*=" bg-fuchsia-5"], [class*=" bg-fuchsia-6"], [class^="bg-fuchsia-5"], [class^="bg-fuchsia-6"], [class*="from-fuchsia-"]),
+html.cq2026.dark :is(button, a):is([class*=" bg-pink-5"], [class*=" bg-pink-6"], [class^="bg-pink-5"], [class^="bg-pink-6"], [class*="from-pink-"]),
+html.cq2026.dark :is(button, a):is([class*=" bg-sky-5"], [class*=" bg-sky-6"], [class^="bg-sky-5"], [class^="bg-sky-6"], [class*="from-sky-"]),
+html.cq2026.dark :is(button, a):is([class*=" bg-cyan-5"], [class*=" bg-cyan-6"], [class^="bg-cyan-5"], [class^="bg-cyan-6"], [class*="from-cyan-"]) {
+  background: var(--cq-accent);
+  background-image: none;
+  color: var(--cq-on-accent);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+html.cq2026.dark :is(button, a):is([class*=" bg-amber-4"], [class*=" bg-amber-5"], [class^="bg-amber-4"], [class*="from-amber-"]),
+html.cq2026.dark :is(button, a):is([class*=" bg-yellow-4"], [class*=" bg-yellow-5"], [class^="bg-yellow-4"], [class*="from-yellow-"]),
+html.cq2026.dark :is(button, a):is([class*=" bg-orange-4"], [class*=" bg-orange-5"], [class^="bg-orange-4"], [class*="from-orange-"]) {
+  background: var(--cq-surface-2);
+  background-image: none;
+  color: var(--cq-label);
+  border: 1px solid var(--cq-line);
+  box-shadow: none;
+}
+
+html.cq2026.dark :is(button, a):is([class*="from-"], [class*=" bg-"]) :is(svg, span) { color: inherit; }

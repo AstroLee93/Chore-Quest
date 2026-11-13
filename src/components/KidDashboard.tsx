@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home, Sun, Brain, BookOpen, ClipboardList, Users, Shield, CheckSquare } from 'lucide-react';
+import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home, Sun, Brain, BookOpen, ClipboardList, Users, Shield, CheckSquare, Crown, Cake } from 'lucide-react';
 import { KidProfile, ChoreItem, ChoreCategory, ChoreLog, AppSettings, RewardItem, CalendarEvent, FamilyDatabase } from '../types';
 import { ChoreCard } from './ChoreCard';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
@@ -28,6 +28,7 @@ import {
   getReadingClaimsCountForDate,
 } from '../utils/reading';
 import { GoalTracker } from './KidCoin/GoalTracker';
+import { ringDash } from '../utils/progress';
 import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getBountyChores } from '../utils/storage';
 import { calculateKidBadges } from '../utils/badges';
 import { getSeasonalWeatherForDate, EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../utils/calendar';
@@ -332,94 +333,65 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
       {/* Kid Greeting & Live Progress Header (Redesigned Profile Card) */}
       <div
         id="kid-profile-card"
-        className="bg-white dark:bg-slate-900 rounded-[30px] sm:rounded-[36px] p-4 sm:p-7 border-2 sm:border-[2.5px] border-[#ffd5e2] dark:border-pink-900/50 shadow-md shadow-pink-100/30 dark:shadow-none space-y-4 sm:space-y-6 relative overflow-hidden"
+        className="cq-card bg-white dark:bg-slate-900 rounded-[24px] p-5 sm:p-6 border border-slate-200 dark:border-slate-800 space-y-5 relative overflow-hidden"
       >
-          {/* Top Header Row: Date | Weather | Streak */}
-          <div className="flex items-center justify-between gap-2 border-b border-pink-100/70 dark:border-pink-900/30 pb-3 sm:pb-4">
-            {/* Left: Date */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500 stroke-[2.5]" />
-              <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">
-                {formatDateDisplay(todayStr).toUpperCase()}
-              </span>
-            </div>
-
-            {/* Center: Weather */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-sm sm:text-base">☀️</span>
-              <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white">
-                {todayWeather?.tempHigh ?? 72}°{safeSettings.tempUnit || 'F'}
-              </span>
-            </div>
-
-            {/* Right: Streak */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-sm sm:text-base">🔥</span>
-              <span className="text-xs sm:text-sm font-black text-[#e11d48]">
-                {kid.streakDays || 1}-day streak
-              </span>
-            </div>
-          </div>
-
-          {/* Middle Row: Circular Avatar + Greeting & Live Stats */}
-          <div className="flex items-center gap-4 sm:gap-6 pt-0.5 sm:pt-1">
-            {/* Circular Avatar */}
-            <div className="relative shrink-0">
-              {isBirthday && bdayConfig.enabled && (
-                <div className="absolute -top-3.5 -right-1 text-2xl sm:text-3xl filter drop-shadow-md animate-bounce select-none z-10" title="Birthday VIP!">
-                  👑
-                </div>
-              )}
-              <div
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#fce7f3] dark:bg-pink-950/40 border-2 border-[#fbcfe8] dark:border-pink-900/50 flex items-center justify-center text-4xl sm:text-5xl shrink-0 shadow-inner overflow-hidden"
-              >
-                {typeof kid.avatar === 'string' && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
-                  <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="leading-none select-none">{typeof kid.avatar === 'string' ? kid.avatar : '⭐'}</span>
-                )}
+          {/* 2026 hero: progress ring + name + today's numbers */}
+          <div className="flex items-center gap-5 sm:gap-7">
+            <div className="relative w-28 h-28 sm:w-32 sm:h-32 shrink-0">
+              <svg viewBox="0 0 112 112" className="absolute inset-0 w-full h-full -rotate-90" role="img" aria-label={`${completedTasksCount} of ${todaysChores.length} done today`}>
+                <circle cx="56" cy="56" r="48" fill="none" stroke={kid.color || 'var(--cq-accent, #5B8CFF)'} strokeOpacity="0.16" strokeWidth="10" />
+                <circle
+                  cx="56" cy="56" r="48" fill="none" stroke={kid.color || 'var(--cq-accent, #5B8CFF)'} strokeWidth="10" strokeLinecap="round"
+                  strokeDasharray={ringDash(todaysChores.length ? completedTasksCount / todaysChores.length : 1, 48)}
+                  style={{ transition: 'stroke-dasharray 0.7s cubic-bezier(0.16,1,0.3,1)' }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-[30px] sm:text-[34px] font-light cq-num text-slate-900 dark:text-white leading-none">
+                  {completedTasksCount}<span className="text-slate-400 dark:text-slate-500">/{todaysChores.length}</span>
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">done</span>
               </div>
+              {isBirthday && bdayConfig.enabled && (
+                <Crown className="w-6 h-6 absolute -top-1 right-1 text-amber-400 fill-amber-400" aria-hidden="true" />
+              )}
             </div>
 
-            {/* Greeting & Subtitle */}
-            <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 flex-wrap">
-                <span>Hey, {kid.name}!</span> <span className="inline-block">👋</span>
+            <div className="flex-1 min-w-0 flex flex-col gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-[28px] sm:text-[34px] font-bold tracking-[-0.02em] text-slate-900 dark:text-white leading-tight">
+                  {kid.name}
+                </h1>
                 {isBirthday && bdayConfig.enabled && (
                   <button
                     type="button"
                     onClick={handleOpenBirthdayCelebrationModal}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-pink-500 via-amber-400 to-indigo-500 text-white font-black text-xs sm:text-sm shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer animate-pulse"
-                    title="Tap to open your Birthday Celebration!"
+                    className="inline-flex items-center gap-1.5 min-h-[32px] px-3 rounded-full bg-amber-400/15 text-amber-600 dark:text-amber-300 font-semibold text-[13px] cursor-pointer active:scale-95 transition-transform"
+                    title="Open your birthday celebration"
                   >
-                    <span>👑</span>
-                    <span>BIRTHDAY VIP!</span>
-                    <span>🎂</span>
+                    <Cake className="w-4 h-4" /> Birthday
                   </button>
                 )}
-              </h1>
-              <div className="flex items-center gap-2 mt-1 sm:mt-1.5 text-sm sm:text-base flex-wrap">
-                <span className="font-extrabold text-[#f43f5e] tracking-tight">
-                  {isAllComplete
-                    ? 'All missions done! 🚀'
-                    : `${todaysChores.length - completedTasksCount} mission${todaysChores.length - completedTasksCount === 1 ? '' : 's'}`}
-                </span>
-                <span className="text-slate-300 dark:text-slate-600 font-bold">•</span>
-                <span className="font-extrabold flex items-center gap-1.5">
-                  <span className="text-amber-500 font-black">
-                    {starsEarnedToday > 0 ? starsEarnedToday : (kid.stars ?? 0)}
-                  </span>
-                  <span>⭐</span>
-                  <span className="text-slate-800 dark:text-slate-200 font-extrabold">
-                    {starsEarnedToday > 0 ? 'today' : 'balance'}
-                  </span>
-                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="flex flex-col">
+                  <span className="text-[19px] sm:text-[22px] font-medium cq-num text-slate-900 dark:text-white">{kid.streakDays || 0}d</span>
+                  <span className="text-[12px] text-slate-500 dark:text-slate-400">Streak</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[19px] sm:text-[22px] font-medium cq-num text-slate-900 dark:text-white">{(kid.stars ?? 0).toLocaleString()}</span>
+                  <span className="text-[12px] text-slate-500 dark:text-slate-400">{starsEarnedToday > 0 ? `+${starsEarnedToday} today` : 'Points'}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[19px] sm:text-[22px] font-medium cq-num text-slate-900 dark:text-white">{todayWeather?.tempHigh ?? 72}°</span>
+                  <span className="text-[12px] text-slate-500 dark:text-slate-400">{formatDateDisplay(todayStr).split(',')[0]}</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Bottom Row: Action Cards (Snacks, Brain Teaser, Reading Log, and Leader Clipboard) */}
-          <div className={`grid grid-cols-1 ${isThisKidLeader ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'} gap-3 sm:gap-4 pt-1 sm:pt-2`}>
+          <div className={`cq-tiles grid grid-cols-1 ${isThisKidLeader ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'} gap-3 sm:gap-4 pt-1 sm:pt-2`}>
             {/* Card 1: Snacks */}
             {onOpenSnackRequest && (
               <button
@@ -591,7 +563,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
       {isThisKidLeader && (
         <div
           id="leader-command-center"
-          className="bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 dark:from-amber-900/90 dark:via-amber-800/90 dark:to-yellow-900/80 p-0.5 sm:p-1 rounded-[28px] sm:rounded-[34px] shadow-xl text-white relative overflow-hidden"
+          className="cq-leader bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 dark:from-amber-900/90 dark:via-amber-800/90 dark:to-yellow-900/80 p-0.5 sm:p-1 rounded-[28px] sm:rounded-[34px] shadow-xl text-white relative overflow-hidden"
         >
           <div className="bg-white/95 dark:bg-slate-900/95 rounded-[26px] sm:rounded-[32px] p-4 sm:p-6 backdrop-blur-md space-y-4">
             {/* Top Banner Row */}
@@ -684,7 +656,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
 
       {/* If another sibling is leader, show team encouragement note */}
       {!isThisKidLeader && otherLeaderKid && (
-        <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20 border border-amber-200 dark:border-amber-800/50 flex items-center justify-between gap-3 text-xs shadow-2xs">
+        <div className="cq-note p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20 border border-amber-200 dark:border-amber-800/50 flex items-center justify-between gap-3 text-xs shadow-2xs">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="text-xl sm:text-2xl">{otherLeaderKid.avatar}</span>
             <div className="min-w-0">
@@ -700,7 +672,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
       )}
 
       {/* Level, Badges & Rewards Hub (Balanced 2-Card Layout - Zero Dead Space) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+      <div className="cq-hub grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         {/* Card 1: Level, Star Bank, Next Rank & Reward Store (7 cols on desktop) */}
         <div className="lg:col-span-7 bg-indigo-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 text-white relative overflow-hidden shadow-xl flex flex-col justify-between">
           <div className="relative z-10 space-y-4">
@@ -816,7 +788,8 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                       setIsBrainTeaserOpen(false);
                       setIsReadingLogOpen(false);
                     }}
-                    className={`relative rounded-xl p-2 flex flex-col items-center justify-center transition-all cursor-pointer group active:scale-95 border-2 ${
+                    data-unlocked={isUnlocked ? 'true' : 'false'}
+                    className={`cq-badge relative rounded-xl p-2 flex flex-col items-center justify-center transition-all cursor-pointer group active:scale-95 border-2 ${
                       isUnlocked
                         ? `bg-gradient-to-br ${badge.bgGradient} border-amber-300 text-slate-950 shadow-md shadow-amber-500/20 hover:scale-105`
                         : 'bg-indigo-950/60 border-indigo-700/80 text-indigo-300 opacity-60 hover:opacity-90 grayscale hover:grayscale-0'
@@ -842,7 +815,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             </div>
 
             {/* Local Host Privacy Banner */}
-            <div className="mt-4 bg-emerald-600/90 rounded-2xl p-3 sm:p-3.5 text-white flex items-center gap-3 border border-emerald-400/40 shadow-xs">
+            <div className="cq-hide-2026 mt-4 bg-emerald-600/90 rounded-2xl p-3 sm:p-3.5 text-white flex items-center gap-3 border border-emerald-400/40 shadow-xs">
               <div className="text-2xl shrink-0">🛡️</div>
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-wider text-emerald-200 leading-tight">Privacy Mode Active</p>
@@ -905,28 +878,37 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
         )}
 
-        {/* All Complete Celebration Banner */}
+        {/* All done for today — the one deliberately celebratory moment (2026 design) */}
         {isAllComplete && totalTasksCount > 0 && (
-          <div className="p-4 sm:p-5 rounded-3xl bg-emerald-500 text-white border-b-8 border-emerald-700 shadow-lg flex items-center justify-between animate-fade-in">
-            <div className="flex items-center gap-3.5">
-              <span className="text-3xl">🎉</span>
-              <div>
-                <h3 className="font-black text-base sm:text-lg">Mission Accomplished!</h3>
-                <p className="text-xs sm:text-sm text-emerald-100 font-medium">
-                  You finished all of your chores today and earned all your star points!
+          <section
+            aria-label="All done for today"
+            className="relative overflow-hidden rounded-[24px] border border-amber-400/25 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 animate-scale-in"
+            style={{ background: 'radial-gradient(120% 140% at 15% 0%, rgba(255,181,71,0.18) 0%, var(--cq-surface, #161922) 60%)' }}
+          >
+            <div className="flex items-center gap-4 flex-1">
+              <span className="w-14 h-14 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 animate-[checkPop_0.4s_cubic-bezier(0.34,1.56,0.64,1)]">
+                <CheckCircle2 className="w-8 h-8" strokeWidth={2.5} />
+              </span>
+              <div className="flex flex-col gap-0.5">
+                <h3 className="text-[20px] sm:text-[22px] font-bold tracking-[-0.01em] text-slate-900 dark:text-white">All done for today</h3>
+                <p className="text-[14px] text-slate-600 dark:text-slate-300">
+                  Nice work, {kid.name}. {totalTasksCount} of {totalTasksCount} finished
+                  {starsEarnedToday > 0 ? ` · +${starsEarnedToday} pts` : ''}
+                  {kid.streakDays ? ` · ${kid.streakDays}-day streak` : ''}.
                 </p>
               </div>
             </div>
             <button
+              type="button"
               onClick={() => {
                 sound.playTap();
                 onOpenRewardStore();
               }}
-              className="px-4 py-2 rounded-xl bg-white text-emerald-800 font-black text-xs sm:text-sm hover:bg-emerald-50 active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer hidden sm:block"
+              className="min-h-[44px] px-5 rounded-2xl bg-amber-400 text-slate-950 font-semibold text-[15px] active:scale-95 transition-transform shrink-0 cursor-pointer"
             >
-              {settings?.pauseRewardStore ? 'Store (Paused ⏸️)' : 'Store 🎁'}
+              {settings?.pauseRewardStore ? 'Rewards (paused)' : 'See what you can get'}
             </button>
-          </div>
+          </section>
         )}
 
         {/* Active Embedded Subscreen: Brain Teaser, Reading Log, or Quest Badges */}
@@ -1058,51 +1040,80 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
         </div>
 
-        {/* Chores Cards Grid (Responsive 2-column grid utilizing full width) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
-          {visibleChores.length === 0 ? (
-            <div className="md:col-span-2 bg-white dark:bg-slate-800 rounded-3xl p-12 text-center border-b-8 border-r-4 border-slate-200 dark:border-slate-700 border-t-2 border-l-2 border-t-slate-100 border-l-slate-100 shadow-sm">
-              <div className="text-5xl mb-3">🌴</div>
-              <h3 className="font-black text-slate-800 dark:text-white text-xl">No missions found here!</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-sm mx-auto">
-                There are no tasks scheduled for this category right now. Check other categories or enjoy your break!
-              </p>
-            </div>
-          ) : (
-            visibleChores.map((chore) => {
-              const category = categories.find((c) => c.id === chore.categoryId);
-              const log = logMap.get(chore.id);
-              const otherKidClaimLog = chore.isBounty
-                ? (logs || []).find(
-                    (l) => l.choreId === chore.id && l.date === todayStr && l.status === 'completed' && l.kidId !== kid.id
-                  )
-                : null;
-              const otherKidClaimer = otherKidClaimLog
-                ? (database?.kids || []).find((k) => k.id === otherKidClaimLog.kidId)
-                : null;
-
-              return (
-                <ChoreCard
-                  key={chore.id}
-                  chore={chore}
-                  category={category}
-                  log={log}
-                  isBirthdayPassAvailable={isBirthday && bdayConfig.enabled && bdayConfig.freeChorePassEnabled}
-                  onToggleComplete={onToggleCompleteChore}
-                  onOpenSkipModal={(c) => setSkipModalChore(c)}
-                  onUndo={onUndoChoreStatus}
-                  onStartTimer={(c) => setActiveTimerChore(c)}
-                  claimedByOtherKidName={otherKidClaimer?.name}
-                  onOpenReadingLog={() => {
-                    setIsReadingLogOpen(true);
-                    setIsBrainTeaserOpen(false);
-                    setIsBadgeModalOpen(false);
-                  }}
-                />
+        {/* Chores — grouped into a morning / afternoon / evening timeline (2026 design) */}
+        {visibleChores.length === 0 ? (
+          <div className="cq-card bg-white dark:bg-slate-800 rounded-3xl p-10 text-center border border-slate-200 dark:border-slate-700">
+            <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-slate-400" strokeWidth={1.6} />
+            <h3 className="font-semibold text-slate-800 dark:text-white text-lg">Nothing here right now</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+              No tasks in this view. Try another category or time of day.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5">
+            {[
+              { id: 'morning', label: 'Morning' },
+              { id: 'afternoon', label: 'Afternoon' },
+              { id: 'evening', label: 'Evening' },
+              { id: 'anytime', label: 'Anytime' },
+            ].map((section) => {
+              const sectionChores = visibleChores.filter((c) =>
+                section.id === 'anytime'
+                  ? !c.timeOfDay || !['morning', 'afternoon', 'evening'].includes(c.timeOfDay)
+                  : c.timeOfDay === section.id
               );
-            })
-          )}
-        </div>
+              if (sectionChores.length === 0) return null;
+              const doneCount = sectionChores.filter((c) => logMap.get(c.id)?.status === 'completed').length;
+              const allDone = doneCount === sectionChores.length;
+              return (
+                <section key={section.id} aria-labelledby={`section-${section.id}`} className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between px-1">
+                    <h2 id={`section-${section.id}`} className="cq-eyebrow text-[13px] font-semibold uppercase tracking-[0.06em] text-slate-500 dark:text-slate-400">
+                      {section.label}
+                    </h2>
+                    <span className={`text-[13px] cq-num ${allDone ? 'text-emerald-500' : 'text-slate-500 dark:text-slate-400'}`}>
+                      {doneCount} of {sectionChores.length}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {sectionChores.map((chore) => {
+                      const category = categories.find((c) => c.id === chore.categoryId);
+                      const log = logMap.get(chore.id);
+                      const otherKidClaimLog = chore.isBounty
+                        ? (logs || []).find(
+                            (l) => l.choreId === chore.id && l.date === todayStr && l.status === 'completed' && l.kidId !== kid.id
+                          )
+                        : null;
+                      const otherKidClaimer = otherKidClaimLog
+                        ? (database?.kids || []).find((k) => k.id === otherKidClaimLog.kidId)
+                        : null;
+
+                      return (
+                        <ChoreCard
+                          key={chore.id}
+                          chore={chore}
+                          category={category}
+                          log={log}
+                          isBirthdayPassAvailable={isBirthday && bdayConfig.enabled && bdayConfig.freeChorePassEnabled}
+                          onToggleComplete={onToggleCompleteChore}
+                          onOpenSkipModal={(c) => setSkipModalChore(c)}
+                          onUndo={onUndoChoreStatus}
+                          onStartTimer={(c) => setActiveTimerChore(c)}
+                          claimedByOtherKidName={otherKidClaimer?.name}
+                          onOpenReadingLog={() => {
+                            setIsReadingLogOpen(true);
+                            setIsBrainTeaserOpen(false);
+                            setIsBadgeModalOpen(false);
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
 
         {/* Western Bounty Board (Extra Credit Missions) */}
         {bountyChores.length > 0 && (

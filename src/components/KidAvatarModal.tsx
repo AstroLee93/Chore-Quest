@@ -37,6 +37,7 @@ export const KidAvatarModal: React.FC<KidAvatarModalProps> = ({
   const [selectedAvatar, setSelectedAvatar] = useState<string>(kid.avatar || '🦁');
   const [selectedColor, setSelectedColor] = useState<string>(kid.color || '#3b82f6');
   const [kidName, setKidName] = useState<string>(kid.name);
+  const [uiStyle, setUiStyle] = useState<NonNullable<KidProfile['uiStyle']>>(kid.uiStyle || 'balanced');
 
   if (!isOpen) return null;
 
@@ -52,6 +53,7 @@ export const KidAvatarModal: React.FC<KidAvatarModalProps> = ({
       name: kidName.trim() || kid.name,
       avatar: selectedAvatar,
       color: selectedColor,
+      uiStyle,
     };
 
     if (onSave) {
@@ -163,6 +165,36 @@ export const KidAvatarModal: React.FC<KidAvatarModalProps> = ({
             title="Character Avatar"
             categoryFilter="all"
           />
+        </div>
+
+        {/* Look & feel (2026 design): how grown-up this kid's screens are */}
+        <div className="flex flex-col gap-2 pt-3">
+          <span id="kid-style-label" className="text-sm font-semibold text-slate-700">Look &amp; feel</span>
+          <div role="radiogroup" aria-labelledby="kid-style-label" className="ios-segmented !max-w-none">
+            {([
+              ['playful', 'Playful'],
+              ['balanced', 'Balanced'],
+              ['minimal', 'Minimal'],
+            ] as const).map(([value, text]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={uiStyle === value}
+                onClick={() => { sound.playTap(); setUiStyle(value); }}
+                className="ios-segment"
+              >
+                {text}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500">
+            {uiStyle === 'playful'
+              ? 'Bright colours, emoji and big celebrations. Best for younger kids.'
+              : uiStyle === 'minimal'
+              ? 'Calm and monochrome with plain words. Great for teens.'
+              : 'Clean and colourful, with celebrations saved for big moments.'}
+          </p>
         </div>
 
         {/* Action Buttons */}

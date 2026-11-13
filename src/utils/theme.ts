@@ -1,4 +1,5 @@
 import { IOS_THEMES } from './iosThemes';
+import { CQ2026_THEMES, isCq2026Theme } from './themes2026';
 
 export type AppThemeId =
   | 'coastal-horizon'
@@ -14,10 +15,18 @@ export type AppThemeId =
   | 'ios-dusk'
   | 'ios-ocean'
   | 'ios-forest'
-  | 'ios-midnight';
+  | 'ios-midnight'
+  | 'cq-midnight'
+  | 'cq-sage'
+  | 'cq-ember'
+  | 'cq-nebula'
+  | 'cq-paper'
+  | 'cq-fog'
+  | 'cq-sorbet'
+  | 'cq-green';
 
 /** Theme used for first launch and as the fallback for unknown ids. */
-export const DEFAULT_THEME_ID: AppThemeId = 'ios-aurora';
+export const DEFAULT_THEME_ID: AppThemeId = 'cq-midnight';
 
 export interface AppThemeConfig {
   id: AppThemeId;
@@ -103,7 +112,8 @@ export interface AppThemeConfig {
 }
 
 export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
-  // 🍎 iOS glass themes (src/utils/iosThemes.ts) listed first so they lead the picker
+  // 2026 themes (src/utils/themes2026.ts) lead the picker, then the iOS glass themes
+  ...CQ2026_THEMES,
   ...IOS_THEMES,
 
   // 🌊 PALETTE 1 (Uploaded Image 1): Ocean Beach Coastal (#579FB6, #77B7D0, #B3E0F4, #FCFDFE, #EED3CE, #E2BAB1)
@@ -783,6 +793,8 @@ export function applyThemeToDocument(themeId: AppThemeId): void {
   try {
     const theme = APP_THEMES[themeId] || APP_THEMES[DEFAULT_THEME_ID];
     document.documentElement.setAttribute('data-theme', theme.id);
+    // .cq2026 switches on the 2026 design layer (src/styles/cq2026.css)
+    document.documentElement.classList.toggle('cq2026', isCq2026Theme(theme.id));
     // Tint Safari's toolbar / the status-bar area to match the theme.
     let themeColorMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!themeColorMeta) {

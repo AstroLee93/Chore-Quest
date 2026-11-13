@@ -3,6 +3,7 @@ import { Star, X, Gift, Check, Clock, Sparkles, Award, ShoppingBag, AlertCircle,
 import { fireConfetti } from '../utils/confetti';
 import { KidProfile, RewardItem, RewardRedemption, AppSettings } from '../types';
 import { sound } from '../utils/sound';
+import { isCq2026Active } from '../utils/themes2026';
 
 interface RewardStoreModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
   isParentMode = false,
   onUnpauseStore,
 }) => {
+  const isCq2026 = isCq2026Active();
   const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
   const [redeemingReward, setRedeemingReward] = useState<RewardItem | null>(null);
   const [customNote, setCustomNote] = useState('');
@@ -85,18 +87,24 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-fade-in">
       <div
         id="reward-store-dialog"
-        className="ios-sheet-detached ios-sheet-light bg-yellow-50 w-full max-w-2xl rounded-[2.5rem] p-6 sm:p-8 shadow-2xl border-4 border-yellow-300 max-h-[90vh] flex flex-col"
+        className={`ios-sheet-detached ${isCq2026 ? 'cq-adapt' : 'ios-sheet-light'} bg-yellow-50 w-full max-w-2xl rounded-[2.5rem] p-6 sm:p-8 shadow-2xl border-4 border-yellow-300 max-h-[90vh] flex flex-col`}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b-2 border-yellow-200">
           <div className="flex items-center gap-3.5">
-            <div className="w-13 h-13 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-3xl font-black shadow-lg transform -rotate-3">
-              🎁
-            </div>
+            {isCq2026 ? (
+              <div className="w-12 h-12 rounded-2xl bg-[var(--cq-accent-soft)] text-[var(--cq-accent-text)] flex items-center justify-center">
+                <Gift className="w-6 h-6" strokeWidth={1.8} />
+              </div>
+            ) : (
+              <div className="w-13 h-13 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-3xl font-black shadow-lg transform -rotate-3">
+                🎁
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-2xl sm:text-3xl font-black text-indigo-900 italic tracking-tight">
-                  Star Reward Store
+                <h2 className={isCq2026 ? 'text-[28px] font-bold tracking-[-0.02em]' : 'text-2xl sm:text-3xl font-black text-indigo-900 italic tracking-tight'}>
+                  {isCq2026 ? 'Rewards' : 'Star Reward Store'}
                 </h2>
                 {isStorePaused && (
                   <span className="px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-950 border border-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-2xs">
@@ -140,20 +148,22 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
         )}
 
         {/* Tab Switcher */}
-        <div className="flex gap-2 my-4 p-1.5 rounded-2xl bg-yellow-200/70 border-2 border-yellow-300">
+        <div className={isCq2026 ? 'ios-segmented !max-w-none my-4' : 'flex gap-2 my-4 p-1.5 rounded-2xl bg-yellow-200/70 border-2 border-yellow-300'} role={isCq2026 ? 'radiogroup' : undefined}>
           <button
             id="tab-reward-catalog"
             onClick={() => {
               sound.playTap();
               setActiveTab('catalog');
             }}
-            className={`flex-1 min-h-[44px] py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            role={isCq2026 ? 'radio' : undefined}
+            aria-checked={isCq2026 ? activeTab === 'catalog' : undefined}
+            className={isCq2026 ? 'ios-segment' : `flex-1 min-h-[44px] py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
               activeTab === 'catalog'
                 ? 'bg-indigo-900 text-white shadow-sm'
                 : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            Available Rewards ({rewards.filter((r) => r.isActive).length})
+            {isCq2026 ? 'Available' : `Available Rewards (${rewards.filter((r) => r.isActive).length})`}
           </button>
           <button
             id="tab-reward-history"
@@ -161,13 +171,15 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
               sound.playTap();
               setActiveTab('history');
             }}
-            className={`flex-1 min-h-[44px] py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            role={isCq2026 ? 'radio' : undefined}
+            aria-checked={isCq2026 ? activeTab === 'history' : undefined}
+            className={isCq2026 ? 'ios-segment' : `flex-1 min-h-[44px] py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
               activeTab === 'history'
                 ? 'bg-indigo-900 text-white shadow-sm'
                 : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            Claimed History ({kidRedemptions.length})
+            {isCq2026 ? `History (${kidRedemptions.length})` : `Claimed History (${kidRedemptions.length})`}
           </button>
         </div>
 
@@ -259,6 +271,49 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
                   const starsShort = reward.starCost - activeKid.stars;
                   const borderClasses = ['border-pink-500', 'border-indigo-500', 'border-emerald-500', 'border-orange-400'];
                   const borderClass = borderClasses[i % borderClasses.length];
+
+                  if (isCq2026) {
+                    const pct = Math.max(4, Math.min(100, Math.round((activeKid.stars / Math.max(1, reward.starCost)) * 100)));
+                    return (
+                      <div
+                        key={reward.id}
+                        id={`reward-card-${reward.id}`}
+                        className="sm:col-span-2 flex items-center gap-3.5 p-3.5 rounded-[18px] bg-[var(--cq-surface-2)] border border-[var(--cq-line)]"
+                      >
+                        <span className="cq-emoji w-11 h-11 rounded-xl bg-[var(--cq-surface)] flex items-center justify-center text-2xl shrink-0" aria-hidden="true">
+                          {reward.icon || '🎁'}
+                        </span>
+                        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                          <div className="flex flex-col">
+                            <span className="text-[16px] font-semibold text-[var(--cq-label)] truncate">{reward.title}</span>
+                            <span className="text-[13px] text-[var(--cq-label-2)] truncate">
+                              {canAfford ? (reward.description || 'You can get this now') : `${starsShort} more points`}
+                            </span>
+                          </div>
+                          {!canAfford && (
+                            <div className="h-1 rounded-full bg-[var(--cq-line)] overflow-hidden" aria-hidden="true">
+                              <div className="h-full rounded-full bg-[var(--cq-label-3)]" style={{ width: `${pct}%` }} />
+                            </div>
+                          )}
+                        </div>
+                        {canAfford ? (
+                          <button
+                            id={`btn-claim-reward-${reward.id}`}
+                            type="button"
+                            onClick={() => {
+                              sound.playTap();
+                              setRedeemingReward(reward);
+                            }}
+                            className="min-h-[36px] px-3.5 rounded-full bg-[var(--cq-accent)] text-[var(--cq-on-accent)] text-[14px] font-semibold cq-num whitespace-nowrap cursor-pointer active:scale-95 transition-transform"
+                          >
+                            {reward.starCost} pts
+                          </button>
+                        ) : (
+                          <span className="text-[14px] text-[var(--cq-label-2)] cq-num whitespace-nowrap">{reward.starCost} pts</span>
+                        )}
+                      </div>
+                    );
+                  }
 
                   return (
                     <div

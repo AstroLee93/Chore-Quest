@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Theme collection</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#3D5AFE}a:hover{color:#1A3BDB}
+</style>
+</helmet>
+<div style="width: 1640px; height: 900px; box-sizing: border-box; background: #E9EAEE; color: #111318; font-family: Inter, system-ui, sans-serif; padding: 48px; display: flex; flex-direction: column; gap: 28px; font-feature-settings: 'tnum' 1, 'cv11' 1;">
+  <div style="display: flex; justify-content: space-between; align-items: baseline;">
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em;">Eight themes, one system</h1>
+    <span style="font-size: 15px; color: #4E5360;">Each is a background, a surface, two text tones and one accent. Kid ring colours stay the same in every theme.</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; flex: 1;">
+    <sc-for list="{{themes}}" as="t" hint-placeholder-count="8">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="flex: 1; border-radius: 22px; background: {{t.bg}}; color: {{t.text}}; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.08);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.01em;">Today</span>
+            <span style="font-size: 12px; color: {{t.sub}};">Fri, Nov 13</span>
+          </div>
+          <div style="border-radius: 16px; background: {{t.surface}}; padding: 12px; display: flex; align-items: center; gap: 12px; border: 1px solid {{t.line}};">
+            <div style="position: relative; width: 44px; height: 44px; flex-shrink: 0;">
+              <svg aria-hidden="true" width="44" height="44" viewBox="0 0 44 44" style="position: absolute; inset: 0; transform: rotate(-90deg);">
+                <circle cx="22" cy="22" r="18" fill="none" stroke="{{t.line}}" stroke-width="4"></circle>
+                <circle cx="22" cy="22" r="18" fill="none" stroke="{{t.accent}}" stroke-width="4" stroke-linecap="round" stroke-dasharray="70 113.1"></circle>
+              </svg>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 15px; font-weight: 600;">Maya</span>
+              <span style="font-size: 12px; color: {{t.sub}};">9 of 12 done</span>
+            </div>
+            <span style="font-size: 15px; font-weight: 500;">62</span>
+          </div>
+          <div style="border-radius: 16px; background: {{t.surface}}; padding: 10px 12px; display: flex; align-items: center; gap: 10px; border: 1px solid {{t.line}};">
+            <span style="width: 20px; height: 20px; border-radius: 10px; border: 2px solid {{t.sub}}; flex-shrink: 0;"></span>
+            <span style="flex: 1; font-size: 14px;">Set the table</span>
+            <span style="font-size: 12px; font-weight: 600; color: {{t.accent}};">+3</span>
+          </div>
+          <div style="margin-top: auto; display: flex; align-items: center; justify-content: center; min-height: 36px; border-radius: 12px; background: {{t.accent}}; color: {{t.onAccent}}; font-size: 14px; font-weight: 600;">Approve +6</div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px;">
+          <div style="display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 16px; font-weight: 600;">{{t.name}}</span>
+            <span style="font-size: 13px; color: #4E5360;">{{t.note}}</span>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <span style="width: 16px; height: 16px; border-radius: 8px; background: {{t.bg}}; border: 1px solid rgba(0,0,0,0.12);"></span>
+            <span style="width: 16px; height: 16px; border-radius: 8px; background: {{t.surface}}; border: 1px solid rgba(0,0,0,0.12);"></span>
+            <span style="width: 16px; height: 16px; border-radius: 8px; background: {{t.accent}}; border: 1px solid rgba(0,0,0,0.12);"></span>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      themes: [
+        { name: 'Midnight', note: 'Dark · default', bg: '#0C0E13', surface: '#161922', text: '#F2F3F5', sub: '#9BA1AD', line: 'rgba(255,255,255,0.08)', accent: '#5B8CFF', onAccent: '#0C0E13' },
+        { name: 'Graphite & Sage', note: 'Dark · calm, earthy', bg: '#101311', surface: '#1A1E1B', text: '#EEF1EC', sub: '#A3AAA2', line: 'rgba(255,255,255,0.08)', accent: '#8FC4A0', onAccent: '#101311' },
+        { name: 'Ember', note: 'Dark · warm for evenings', bg: '#14100E', surface: '#1F1915', text: '#F5EEE9', sub: '#B3A69C', line: 'rgba(255,255,255,0.08)', accent: '#F08A5D', onAccent: '#14100E' },
+        { name: 'Nebula', note: 'Dark · violet glass', bg: '#0D0B17', surface: '#191529', text: '#F1EEFA', sub: '#A79FC0', line: 'rgba(255,255,255,0.09)', accent: '#A78BFA', onAccent: '#0D0B17' },
+        { name: 'Paper', note: 'Light · warm, print-like', bg: '#F6F3EE', surface: '#FFFFFF', text: '#1D1B18', sub: '#625C53', line: '#E6E1D8', accent: '#3D5AFE', onAccent: '#FFFFFF' },
+        { name: 'Fog', note: 'Light · cool and clean', bg: '#EEF1F4', surface: '#FFFFFF', text: '#12161C', sub: '#56606C', line: '#DDE2E8', accent: '#0F7C7E', onAccent: '#FFFFFF' },
+        { name: 'Sorbet', note: 'Light · for Playful style', bg: '#FFF4EE', surface: '#FFFFFF', text: '#2A1E1A', sub: '#6E5C54', line: '#F3E1D7', accent: '#E8437A', onAccent: '#FFFFFF' },
+        { name: 'Midnight Green', note: 'Dark · team colours', bg: '#041618', surface: '#0B2A2E', text: '#EAF2F2', sub: '#9DB5B6', line: 'rgba(255,255,255,0.09)', accent: '#A5ACAF', onAccent: '#041618' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

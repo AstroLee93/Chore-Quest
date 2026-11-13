@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Leo's rewards</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7FA6FF}a:hover{color:#A9C3FF}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0C0E13; color: #F2F3F5; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 20px; padding: 56px 20px 28px; overflow: hidden; font-feature-settings: 'tnum' 1, 'cv11' 1;">
+
+  <a href="KidToday.dc.html" style="align-self: flex-start; display: flex; align-items: center; gap: 2px; min-height: 44px; color: #7FA6FF; text-decoration: none; font-size: 17px; margin-left: -6px;">
+    <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    Leo
+  </a>
+
+  <section aria-label="Points balance" style="display: flex; justify-content: space-between; align-items: flex-end;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <h1 style="margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.02em;">Rewards</h1>
+      <span style="font-size: 15px; color: #9BA1AD;">Spend points on things you pick</span>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: flex-end;">
+      <span style="font-size: 32px; font-weight: 300; letter-spacing: -0.02em;">45</span>
+      <span style="font-size: 12px; color: #9BA1AD;">points</span>
+    </div>
+  </section>
+
+  <div role="tablist" aria-label="Rewards view" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; padding: 2px; border-radius: 10px; background: rgba(118,118,128,0.24);">
+    <button type="button" role="tab" aria-selected="true" style="min-height: 34px; border-radius: 8px; border: none; background: #636366; color: #FFFFFF; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer;">Available</button>
+    <button type="button" role="tab" aria-selected="false" style="min-height: 34px; border-radius: 8px; border: none; background: transparent; color: #F2F3F5; font: 500 14px Inter, system-ui, sans-serif; cursor: pointer;">History</button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <sc-for list="{{rewards}}" as="r" hint-placeholder-count="4">
+      <div style="display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 18px; background: #161922; border: 1px solid rgba(255,255,255,0.06);">
+        <span style="width: 44px; height: 44px; border-radius: 12px; background: {{r.tint}}; color: {{r.color}}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{r.icon}}"/></svg>
+        </span>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 16px; font-weight: 600;">{{r.title}}</span>
+            <span style="font-size: 13px; color: #9BA1AD;">{{r.sub}}</span>
+          </div>
+          <sc-if value="{{r.locked}}" hint-placeholder-val="{{false}}">
+            <div style="height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden;">
+              <div style="width: {{r.pct}}; height: 100%; border-radius: 2px; background: #5C6270;"></div>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{r.canBuy}}" hint-placeholder-val="{{true}}">
+          <button type="button" style="min-height: 36px; padding: 0 14px; border-radius: 18px; border: none; background: #5B8CFF; color: #0C0E13; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; white-space: nowrap;">{{r.cost}} pts</button>
+        </sc-if>
+        <sc-if value="{{r.locked}}" hint-placeholder-val="{{false}}">
+          <span style="font-size: 14px; color: #9BA1AD; white-space: nowrap;">{{r.cost}} pts</span>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+
+  <p style="margin: auto 4px 0; font-size: 13px; color: #7C8290; line-height: 1.5;">A parent approves each reward. Screen time can unlock apps automatically once the iOS companion app exists.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var have = 45;
+    var I = {
+      screen: 'M4 5h16v11H4zM8 20h8M12 16v4',
+      cone: 'M7 11a5 5 0 0 1 10 0M7 11h10l-5 11z',
+      tent: 'M3.5 21 12 4l8.5 17M12 4v17M2 21h20',
+      pizza: 'M12 3 3 20c6 2 12 2 18 0zM9 12h.01M14 15h.01M12 9h.01'
+    };
+    var list = [
+      { title: '30 min screen time', cost: 20, icon: I.screen, color: '#7FA6FF', tint: 'rgba(91,140,255,0.14)' },
+      { title: 'Ice cream trip', cost: 35, icon: I.cone, color: '#FF6FA5', tint: 'rgba(255,111,165,0.14)' },
+      { title: 'Backyard campout', cost: 80, icon: I.tent, color: '#30D158', tint: 'rgba(48,209,88,0.14)' },
+      { title: 'Pick Friday dinner', cost: 120, icon: I.pizza, color: '#FFB547', tint: 'rgba(255,181,71,0.14)' }
+    ];
+    return {
+      rewards: list.map(function (r) {
+        var can = have >= r.cost;
+        return Object.assign({}, r, {
+          canBuy: can, locked: !can,
+          sub: can ? 'You can get this now' : (r.cost - have) + ' more points',
+          pct: Math.round(have / r.cost * 100) + '%'
+        });
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

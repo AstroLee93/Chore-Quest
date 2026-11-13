@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock, Hourglass, AlertTriangle } from 'lucide-react';
+import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock, Hourglass, AlertTriangle, Crown } from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
 import { FamilyDatabase, KidProfile, ChoreItem, ChoreLog, CalendarEvent, RewardItem, RewardRedemption, ChoreCategory } from '../types';
+import { ringDash, initials } from '../utils/progress';
+import { isCq2026Theme } from '../utils/themes2026';
 import { getTodayDateString, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getMvpKid } from '../utils/storage';
 import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar';
 import { getCurrentDayOfWeekKey, DEFAULT_WEEKLY_MENU } from '../utils/menu';
@@ -83,6 +85,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [selectedBirthdayKid, setSelectedBirthdayKid] = useState<KidProfile | null>(null);
 
   const theme = APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID];
+  const isCq2026 = isCq2026Theme(currentTheme);
   const todayStr = useMemo(() => getTodayDateString(), []);
   const todayWeather = useMemo(() => getSeasonalWeatherForDate(todayStr), [todayStr]);
   const todayDayKey = useMemo(() => getCurrentDayOfWeekKey(), []);
@@ -436,8 +439,38 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
       {/* Main Kiosk Content Area: MVP Spotlight + Kids Missions Grid */}
       <div className="flex-1 flex flex-col gap-4 mb-4">
+        {/* MVP — 2026 themes: one quiet line */}
+        {mvpKid && isCq2026 && (
+          <div
+            id="kiosk-mvp-spotlight-bar"
+            className="flex items-center gap-4 rounded-[22px] px-5 py-3.5 bg-[var(--cq-surface)] border border-[var(--cq-line)]"
+          >
+            <span
+              className="relative w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-bold shrink-0"
+              style={{ color: mvpKid.color || 'var(--cq-accent)', backgroundColor: `color-mix(in srgb, ${mvpKid.color || '#5B8CFF'} 16%, transparent)` }}
+              aria-hidden="true"
+            >
+              {initials(mvpKid.name)}
+              <Crown className="absolute -top-2 -right-1.5 w-4 h-4 text-amber-400 fill-amber-400" />
+            </span>
+            <p className="flex-1 min-w-0 text-[17px] text-[var(--cq-label)]">
+              <span className="font-semibold">{mvpKid.name} leads today</span>
+              <span className="text-[var(--cq-label-2)]"> · {mvpKid.stars} pts · {mvpKid.streakDays}-day streak</span>
+            </p>
+            <button
+              id="btn-cheer-mvp"
+              type="button"
+              onClick={handleCheerMvp}
+              className="min-h-[40px] px-4 rounded-full bg-[var(--cq-surface-2)] border border-[var(--cq-line)] text-[var(--cq-label)] text-[14px] font-semibold flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              Cheer
+            </button>
+          </div>
+        )}
+
         {/* MVP Spotlight Banner */}
-        {mvpKid && (
+        {mvpKid && !isCq2026 && (
           <div
             id="kiosk-mvp-spotlight-bar"
             className={`relative overflow-hidden rounded-3xl p-4 sm:p-5 ${theme.kioskMvpSpotlightBg} border-2 ${theme.kioskMvpSpotlightBorder} flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in`}
@@ -550,6 +583,23 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group/header p-1 -m-1 rounded-2xl hover:bg-white/10 transition-colors min-w-0 flex-1"
                     title={`Tap to unlock ${kid.name}'s Profile Dashboard (PIN required)`}
                   >
+                    {isCq2026 ? (
+                      <div className="relative w-16 h-16 shrink-0" aria-hidden="true">
+                        <svg viewBox="0 0 64 64" className="absolute inset-0 w-full h-full -rotate-90">
+                          <circle cx="32" cy="32" r="28" fill="none" stroke={kid.color || 'var(--cq-accent)'} strokeOpacity="0.16" strokeWidth="5" />
+                          <circle cx="32" cy="32" r="28" fill="none" stroke={kid.color || 'var(--cq-accent)'} strokeWidth="5" strokeLinecap="round" strokeDasharray={ringDash(totalChores ? completedCount / totalChores : 1, 28)} style={{ transition: 'stroke-dasharray 0.7s cubic-bezier(0.16,1,0.3,1)' }} />
+                        </svg>
+                        <span
+                          className="absolute inset-[9px] rounded-full flex items-center justify-center text-[14px] font-bold"
+                          style={{ color: kid.color || 'var(--cq-accent)', backgroundColor: `color-mix(in srgb, ${kid.color || '#5B8CFF'} 16%, transparent)` }}
+                        >
+                          {initials(kid.name)}
+                        </span>
+                        {(isBirthday || isMvp) && (
+                          <Crown className="absolute -top-1.5 -right-1 w-5 h-5 text-amber-400 fill-amber-400" />
+                        )}
+                      </div>
+                    ) : (
                     <div className="relative shrink-0">
                       {(isBirthday || isMvp) && (
                         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 text-2xl filter drop-shadow-[0_3px_6px_rgba(245,158,11,0.9)] animate-bounce select-none pointer-events-none">
@@ -568,6 +618,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                         {kid.avatar}
                       </div>
                     </div>
+                    )}
 
                     <div className="min-w-0 flex-1">
                       <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-1.5 flex-wrap group-hover/header:text-amber-200 transition-colors">
@@ -823,7 +874,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     return (
                       <>
                         {/* Priority Alert Banner for kid when tasks are expiring soon */}
-                        {expiringChoresCount > 0 && (
+                        {expiringChoresCount > 0 && !isCq2026 && (
                           <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/25 via-rose-500/20 to-amber-500/25 border border-amber-400/40 text-amber-200 text-xs font-black shadow-xs mb-2 animate-pulse">
                             <div className="flex items-center gap-1.5">
                               <Hourglass className="w-3.5 h-3.5 text-amber-300" />
@@ -862,6 +913,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                   ? theme.kioskCardItemDone
                                   : isTimeLocked
                                   ? 'bg-black/30 border-amber-500/30 opacity-80'
+                                  : isCq2026 && isExpiringSoon
+                                  ? `${theme.kioskCardItemBg} !border-[var(--cq-due)]/60`
                                   : isUrgent
                                   ? 'bg-gradient-to-r from-rose-950/90 via-amber-950/80 to-rose-950/90 border-rose-400 shadow-xl shadow-rose-500/30 ring-2 ring-rose-400/80 animate-pulse'
                                   : isExpiringSoon
@@ -887,7 +940,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                               )}
 
                               <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                                <span className={`text-2xl sm:text-3xl shrink-0 ${isExpiringSoon ? 'animate-bounce' : ''}`}>
+                                <span className={`cq-emoji text-2xl sm:text-3xl shrink-0 ${isExpiringSoon && !isCq2026 ? 'animate-bounce' : ''}`}>
                                   {chore.icon || '⭐'}
                                 </span>
                                 <div className="min-w-0 flex-1">
@@ -897,15 +950,21 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                     </div>
                                     {isExpiringSoon && (
                                       <span
-                                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-md shrink-0 ${
-                                          isUrgent
+                                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full shrink-0 ${
+                                          isCq2026
+                                            ? 'text-[12px] font-semibold bg-[var(--cq-due)]/15 text-[var(--cq-due)]'
+                                            : 'text-[10px] font-black uppercase tracking-wider shadow-md'
+                                        } ${
+                                          isCq2026
+                                            ? ''
+                                            : isUrgent
                                             ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white animate-bounce'
                                             : 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950'
                                         }`}
                                         title={`Window closes at ${timeStatus.endTimeFormatted} (${timeStatus.minutesRemaining}m remaining)`}
                                       >
                                         <Hourglass className="w-3 h-3 text-current" />
-                                        <span>{isUrgent ? '⚡ URGENT' : '⚡ PRIORITY'}: {timeStatus.expirationBadgeText}</span>
+                                        <span>{isCq2026 ? `Due · ${timeStatus.expirationBadgeText}` : `${isUrgent ? '⚡ URGENT' : '⚡ PRIORITY'}: ${timeStatus.expirationBadgeText}`}</span>
                                       </span>
                                     )}
                                   </div>

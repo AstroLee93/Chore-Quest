@@ -1,3 +1,4 @@
+import { isCq2026Active } from '../../utils/themes2026';
 import React, { useState } from 'react';
 import { KidProfile, SavingsGoal, FamilyDatabase } from '../../types';
 import { RocketGoalTrack } from './RocketGoalTrack';
@@ -134,7 +135,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
             sound.playTap();
             setShowNewGoalModal(true);
           }}
-          className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black rounded-xl shadow-md shadow-orange-500/20 transition-transform active:scale-95 cursor-pointer inline-flex items-center gap-2"
+          className="cq-btn-secondary px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black rounded-xl shadow-md shadow-orange-500/20 transition-transform active:scale-95 cursor-pointer inline-flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           <span>Launch Dream Goal {kid.totalSaved && Number(kid.totalSaved) > 0 ? `(Reallocate $${(Number(kid.totalSaved) || 0).toFixed(2)})` : ''}</span>
@@ -160,7 +161,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
       {/* Top Banner with Quick Summary */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white shadow-md shadow-orange-500/20 text-xl font-black shrink-0">
+          <div className="cq-icon-tile w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white shadow-md shadow-orange-500/20 text-xl font-black shrink-0">
             <GoalIcon icon={primaryGoal.icon} className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -193,7 +194,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
               sound.playTap();
               setShowNewGoalModal(true);
             }}
-            className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black rounded-xl transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-xs"
+            className="cq-btn-secondary px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black rounded-xl transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-xs"
             title="Set a new savings goal"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -239,7 +240,8 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
                 key={g.id}
                 type="button"
                 onClick={() => handleSelectGoal(g.id)}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                data-selected={isCurrent ? 'true' : 'false'}
+                className={`cq-chip px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   isCurrent
                     ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30 ring-1 ring-indigo-400'
                     : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
@@ -260,13 +262,30 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
         </div>
       )}
 
-      {/* Cosmic Rocket Trajectory */}
-      <RocketGoalTrack
-        goal={primaryGoal}
-        kid={kid}
-        compact={compact}
-        onLaunchRocket={() => setShowTakeoffModal(true)}
-      />
+      {/* Cosmic Rocket Trajectory (2026 themes: a slim progress bar instead) */}
+      {isCq2026Active() ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[28px] font-light cq-num leading-none">{percent}%</span>
+            <span className="text-[13px] text-slate-500 dark:text-slate-400">{'$' + remaining.toFixed(2)} to go</span>
+          </div>
+          <div className="h-2 rounded-full bg-[var(--cq-line)] overflow-hidden" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`${primaryGoal.title} progress`}>
+            <div className="h-full rounded-full bg-[var(--cq-accent)]" style={{ width: `${Math.max(2, percent)}%`, transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
+          </div>
+          {percent >= 100 && (
+            <button type="button" onClick={() => setShowTakeoffModal(true)} className="self-start mt-1 min-h-[40px] px-4 rounded-xl bg-[var(--cq-accent)] text-[var(--cq-on-accent)] text-[14px] font-semibold cursor-pointer">
+              Celebrate this goal
+            </button>
+          )}
+        </div>
+      ) : (
+        <RocketGoalTrack
+          goal={primaryGoal}
+          kid={kid}
+          compact={compact}
+          onLaunchRocket={() => setShowTakeoffModal(true)}
+        />
+      )}
 
       {/* Subtle Financial Education & Auto-Deposit Note */}
       <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800/80 flex-wrap gap-2">

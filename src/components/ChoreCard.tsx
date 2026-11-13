@@ -34,12 +34,6 @@ interface ChoreCardProps {
   onOpenReadingLog?: () => void;
 }
 
-const TIME_OF_DAY_LABEL: Record<string, string> = {
-  morning: '🌅 Morning',
-  afternoon: '☀️ Afternoon',
-  evening: '🌙 Bedtime',
-};
-
 export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
   chore,
   category,
@@ -159,7 +153,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
         {/* Icon */}
         <div
           aria-hidden="true"
-          className={`w-11 h-11 rounded-[12px] flex items-center justify-center text-2xl shrink-0 ${
+          className={`cq-emoji w-11 h-11 rounded-[12px] flex items-center justify-center text-2xl shrink-0 ${
             isCompleted ? 'bg-ios-green/12 grayscale-[40%]' : chore.isBounty ? 'bg-ios-orange/15' : 'bg-fill'
           }`}
         >
@@ -193,9 +187,6 @@ export const ChoreCard: React.FC<ChoreCardProps> = React.memo(({
                 </span>
               ) : (
                 <span className="ios-tag">Routine · 0 pts</span>
-              )}
-              {chore.timeOfDay && TIME_OF_DAY_LABEL[chore.timeOfDay] && (
-                <span className="ios-tag">{TIME_OF_DAY_LABEL[chore.timeOfDay]}</span>
               )}
               {category?.name && <span className="ios-tag">{category.name}</span>}
               {timeWindowStatus.hasRestriction && !isTimeLocked && !isExpiringSoon && (

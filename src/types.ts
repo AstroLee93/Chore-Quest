@@ -148,6 +148,8 @@ export interface KidBookShelfItem {
 
 export interface KidProfile {
   id: string;
+  /** 2026 design: how grown-up this kid's screens look. Defaults to 'balanced'. */
+  uiStyle?: 'playful' | 'balanced' | 'minimal';
   name: string;
   avatar: string; // emoji or icon id
   color: string; // Tailwind color name / hex

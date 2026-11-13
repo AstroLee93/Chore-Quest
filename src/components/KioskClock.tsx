@@ -34,7 +34,7 @@ export const KioskClock: React.FC<KioskClockProps> = React.memo(({
     <div className="flex items-center gap-4 flex-wrap">
       {/* Time */}
       <div className="text-left">
-        <div className="text-[40px] font-light text-label tracking-[-1px] leading-none tabular-nums font-rounded">
+        <div className="text-[56px] font-extralight text-label tracking-[-0.04em] leading-none tabular-nums">
           {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
         <div className="text-[13px] font-medium text-label-secondary mt-1">

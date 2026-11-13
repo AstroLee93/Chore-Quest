@@ -549,7 +549,7 @@ export default function App() {
           }`}
         >
           {/* STRICT KIOSK KID SESSION HEADER: ONLY Return to Kiosk button, NO adult links */}
-          <header
+          {!isCq2026Theme(currentTheme) && <header
             className={`ios-navbar sticky top-0 z-40 pb-3.5 backdrop-blur-xl border-b flex items-center justify-between gap-3 ${
               themeConfig.isDark
                 ? 'bg-slate-900/90 border-slate-700 text-white'
@@ -608,7 +608,7 @@ export default function App() {
               <span>Done / Return to Kiosk 🏠</span>
             </button>
             )}
-          </header>
+          </header>}
 
           <main className="flex-1 p-3 sm:p-6 flex flex-col max-w-7xl mx-auto w-full">
             <ErrorBoundary

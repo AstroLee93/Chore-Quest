@@ -92,11 +92,7 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b-2 border-yellow-200">
           <div className="flex items-center gap-3.5">
-            {isCq2026 ? (
-              <div className="w-12 h-12 rounded-2xl bg-[var(--cq-accent-soft)] text-[var(--cq-accent-text)] flex items-center justify-center">
-                <Gift className="w-6 h-6" strokeWidth={1.8} />
-              </div>
-            ) : (
+            {isCq2026 ? null : (
               <div className="w-13 h-13 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-3xl font-black shadow-lg transform -rotate-3">
                 🎁
               </div>
@@ -119,7 +115,8 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
+              {isCq2026 && <p className="text-[15px] text-[var(--cq-label-2)] mt-0.5">Spend points on things you pick</p>}
+              <div className={`flex items-center gap-2 mt-0.5 ${isCq2026 ? 'hidden' : ''}`}>
                 <span className="text-xs text-slate-600 font-bold">
                   {activeKid.name}'s Balance:
                 </span>
@@ -129,6 +126,12 @@ export const RewardStoreModal: React.FC<RewardStoreModalProps> = ({
               </div>
             </div>
           </div>
+          {isCq2026 && (
+            <div className="ml-auto mr-3 flex flex-col items-end">
+              <span className="text-[32px] font-light cq-num leading-none">{activeKid.stars}</span>
+              <span className="text-[12px] text-[var(--cq-label-2)]">points</span>
+            </div>
+          )}
           <button
             id="btn-close-rewards"
             onClick={() => {

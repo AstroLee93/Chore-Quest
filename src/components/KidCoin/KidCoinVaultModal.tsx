@@ -393,7 +393,62 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
                           </button>
                         )}
                       </section>
-                    ) : (
+                    ) : null}
+
+                    {isCq2026 && (() => {
+                      // Last 8 weeks of money in (mockup Savings)
+                      const weekMs = 7 * 86400000;
+                      const weeks = Array.from({ length: 8 }, (_, i) => {
+                        const end = nowMs - (7 - i) * weekMs;
+                        const start = end - weekMs;
+                        const total = transactions
+                          .filter((t) => t.type !== 'withdrawal')
+                          .filter((t) => { const ts = new Date(t.date).getTime(); return ts > start && ts <= end; })
+                          .reduce((sum, t) => sum + t.amount, 0);
+                        return { total, label: i === 7 ? 'Now' : new Date(end).toLocaleDateString(undefined, { month: 'short' }).charAt(0) };
+                      });
+                      const maxWeek = Math.max(1, ...weeks.map((w) => w.total));
+                      const avg = weeks.reduce((sum, w) => sum + w.total, 0) / 8;
+                      const recent = [...transactions].sort((x, y) => (y.date || '').localeCompare(x.date || '')).slice(0, 4);
+                      return (
+                        <>
+                          <section aria-labelledby="vault-weeks-h" className="rounded-[22px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 flex flex-col gap-3.5">
+                            <div className="flex justify-between items-baseline">
+                              <h3 id="vault-weeks-h" className="text-[15px] font-semibold">Last 8 weeks</h3>
+                              <span className="text-[13px] text-slate-500 dark:text-slate-400">{'avg $' + avg.toFixed(2) + ' / wk'}</span>
+                            </div>
+                            <div role="img" aria-label="Money saved each of the last 8 weeks" className="grid grid-cols-8 gap-2 items-end h-24">
+                              {weeks.map((w, i) => (
+                                <div key={i} className="flex flex-col items-center gap-1.5 h-full justify-end">
+                                  <div className="w-full rounded-md" style={{ height: `${Math.max(4, Math.round((w.total / maxWeek) * 70))}px`, background: i === 7 ? 'var(--cq-accent, #5B8CFF)' : 'color-mix(in srgb, var(--cq-accent, #5B8CFF) 32%, transparent)' }} />
+                                  <span className="text-[11px] text-slate-500 dark:text-slate-400">{w.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                          {recent.length > 0 && (
+                            <section aria-labelledby="vault-recent-h" className="flex flex-col gap-2">
+                              <h3 id="vault-recent-h" className="cq-eyebrow px-1">Recent</h3>
+                              <div className="rounded-[18px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden">
+                                {recent.map((t, i) => (
+                                  <div key={t.id} className={`flex items-center gap-3 px-4 py-3 ${i ? 'border-t border-slate-200 dark:border-slate-800' : ''}`}>
+                                    <div className="flex-1 min-w-0 flex flex-col">
+                                      <span className="text-[15px] truncate">{t.description || (t.type === 'interest' ? 'Interest' : 'Deposit')}</span>
+                                      <span className="text-[12px] text-slate-500 dark:text-slate-400">{new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                    </div>
+                                    <span className="text-[15px] font-medium cq-num" style={{ color: t.type === 'withdrawal' ? 'var(--cq-danger, #FF6B5E)' : 'var(--cq-done, #30D158)' }}>
+                                      {(t.type === 'withdrawal' ? '−$' : '+$') + Math.abs(t.amount).toFixed(2)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </section>
+                          )}
+                        </>
+                      );
+                    })()}
+
+                    {!isCq2026 && (
                       <RocketGoalTrack
                         goal={primaryGoal}
                         kid={kid}
@@ -451,7 +506,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
                     </div>
 
                     {/* Milestones Card Grid */}
-                    <div className="space-y-2">
+                    <div className="cq-hide-2026 space-y-2">
                       <span className="text-xs font-black uppercase tracking-wider text-slate-500">
                         Cosmic Milestones & XP Bonuses
                       </span>

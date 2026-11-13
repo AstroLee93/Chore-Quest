@@ -5,12 +5,13 @@
  * pads under the status bar & Dynamic Island, and uses adaptive label colors.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Shield, ChevronLeft, Menu, X, Star } from 'lucide-react';
 import { KidProfile, AppSettings, CalendarEvent } from '../types';
 import { sound } from '../utils/sound';
 import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID } from '../utils/theme';
 import { haptic } from '../utils/haptics';
+import { isCq2026Active } from '../utils/themes2026';
 import { AppNavMenu } from './AppNavMenu';
 
 interface NavbarProps {
@@ -63,6 +64,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenHouseRules,
 }) => {
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
+
+  // 2026 family home has no top bar; its header's menu button opens this drawer.
+  useEffect(() => {
+    const open = () => setIsMenuDrawerOpen(true);
+    window.addEventListener('cq-open-menu', open);
+    return () => window.removeEventListener('cq-open-menu', open);
+  }, []);
   const theme = APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID];
 
   const vaultTotal =
@@ -72,7 +80,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       <header
-        className={`ios-navbar sticky top-0 z-40 ${theme.headerBg} border-b ${theme.headerBorder} pb-2.5 transition-colors duration-300`}
+        className={!activeKid && !isParentMode && isCq2026Active()
+          ? 'hidden'
+          : `ios-navbar sticky top-0 z-40 ${theme.headerBg} border-b ${theme.headerBorder} pb-2.5 transition-colors duration-300`}
       >
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3">
 
@@ -86,13 +96,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title="Switch Child Profile"
               >
                 <ChevronLeft className="w-7 h-7 stroke-[2.25] -mr-0.5" />
-                <span>Kids</span>
+                <span>Family</span>
               </button>
             )}
 
             <div
               onClick={() => { if (activeKid && !isParentMode) { sound.playTap(); onSelectKid(null); } }}
-              className={`items-center gap-2.5 cursor-pointer select-none min-w-0 ${activeKid && !isParentMode ? 'hidden sm:flex' : 'flex'}`}
+              className={`items-center gap-2.5 cursor-pointer select-none min-w-0 ${activeKid && !isParentMode ? 'hidden sm:flex' : !activeKid && !isParentMode && isCq2026Active() ? 'hidden' : 'flex'}`}
             >
               <div className={`w-8 h-8 ${theme.headerLogoBg} rounded-[9px] flex items-center justify-center shrink-0 shadow-sm`}>
                 <span className={`text-[13px] font-bold font-rounded ${theme.headerLogoText}`}>CQ</span>

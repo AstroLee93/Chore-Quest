@@ -396,3 +396,38 @@ html.cq2026.dark input.cq-bare-input.cq-bare-input:not([type="checkbox"]):not([t
 /* Badges must not pick up the accent-button rule */
 html.cq2026 button.cq-badge.cq-badge { background: var(--cq-surface-2) !important; color: var(--cq-label) !important; }
 html.cq2026 button.cq-badge.cq-badge :is(span, svg) { color: inherit; }
+
+/* 2026 kid dashboard: activity tiles become one scrolling row of chips */
+html.cq2026 .cq-tiles {
+  display: flex !important;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-top: 2px;
+}
+html.cq2026 .cq-tiles::-webkit-scrollbar { display: none; }
+html.cq2026 .cq-tiles > button {
+  flex: 0 0 auto;
+  min-height: 56px;
+  padding: 8px 14px 8px 8px;
+  gap: 10px;
+  display: flex;
+  align-items: center;
+  border-radius: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+html.cq2026 .cq-tiles > button > div:first-child { width: 36px; height: 36px; border-radius: 11px; }
+html.cq2026 .cq-tiles > button > div:last-child > div:first-child { font-size: 15px; line-height: 1.2; }
+html.cq2026 .cq-tiles > button > div:last-child > div:nth-child(2) { font-size: 12px; margin-top: 1px; }
+
+/* Serif display fonts from the old bounty board → system type */
+html.cq2026 .font-serif { font-family: inherit; }
+
+/* Minimal style (mockup KidMinimal): no colour except for deadlines */
+html.cq2026[data-cq-style="minimal"] {
+  --cq-accent: var(--cq-label);
+  --cq-accent-text: var(--cq-label);
+  --cq-accent-soft: rgb(127 127 127 / 0.14);
+  --cq-on-accent: var(--cq-ground);
+}

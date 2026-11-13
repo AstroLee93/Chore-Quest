@@ -9,7 +9,9 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ChevronRight, Shield, Crown, Pencil } from 'lucide-react';
+import { ChevronRight, Shield, Crown, Pencil, Bell, Menu } from 'lucide-react';
+import { ParentPinModal } from './ParentPinModal';
+import { isCq2026Active } from '../utils/themes2026';
 import { KidProfile, CalendarEvent, FamilyDatabase } from '../types';
 import { getTodayDateString } from '../utils/storage';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
@@ -65,24 +67,75 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
   }, [database, kids, todayStr]);
 
   const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const isCq = isCq2026Active();
+
+  // "Needs you" inbox (mockup Main): finished chores waiting for a parent,
+  // today's skip requests, and pending kid grocery/snack requests.
+  const [pinAction, setPinAction] = useState<null | { kind: 'approve'; logId: string } | { kind: 'open' }>(null);
+  const kidName = (id: string) => kids.find((k) => k.id === id)?.name || 'Someone';
+  const kidColor = (id: string) => kids.find((k) => k.id === id)?.color || '#5B8CFF';
+  const choreTitle = (id: string) => database?.chores.find((c) => c.id === id)?.title || 'a chore';
+  const ago = (iso?: string) => {
+    if (!iso) return '';
+    const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+  };
+  type InboxItem = { id: string; kidId: string; title: string; sub: string; approveLogId?: string };
+  const inbox = useMemo((): InboxItem[] => {
+    if (!database) return [];
+    const unverified = (database.logs || [])
+      .filter((l) => l.status === 'completed' && !l.verifiedByParent)
+      .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))
+      .map((l) => ({ id: `v-${l.id}`, kidId: l.kidId, title: `${kidName(l.kidId)} finished “${choreTitle(l.choreId)}”`, sub: ago(l.completedAt) || 'Waiting for a parent', approveLogId: l.id }));
+    const skips = (database.logs || [])
+      .filter((l) => l.status === 'skipped' && l.date === todayStr)
+      .map((l) => ({ id: `s-${l.id}`, kidId: l.kidId, title: `${kidName(l.kidId)} wants to skip “${choreTitle(l.choreId)}”`, sub: l.skippedReason ? `“${l.skippedReason}”` : (l.skippedReasonCategory || '').replace(/_/g, ' ') }));
+    const requests = (database.weeklyGroceryList?.requests || [])
+      .filter((r) => r.status === 'pending')
+      .map((r) => ({ id: `r-${r.id}`, kidId: r.kidId, title: `${r.kidName} asked for ${r.name}`, sub: r.starCost ? `${r.starCost} pts` : 'Grocery request' }));
+    return [...unverified, ...skips, ...requests];
+  }, [database, todayStr]);
+
+  const approveLog = (logId: string) => {
+    if (!database || !onUpdateDatabase) return;
+    sound.playStarEarned();
+    haptic('success');
+    onUpdateDatabase({ ...database, logs: database.logs.map((l) => (l.id === logId ? { ...l, verifiedByParent: true } : l)) });
+  };
 
   return (
-    <div className="max-w-2xl mx-auto px-5 pt-6 pb-[calc(2rem+var(--safe-bottom))] w-full flex flex-col gap-6">
+    <div className="max-w-2xl mx-auto px-5 pt-[calc(var(--safe-top,0px)+24px)] pb-[calc(2rem+var(--safe-bottom))] w-full flex flex-col gap-6">
       <header className="flex items-end justify-between gap-3 animate-fade-up">
         <div className="flex flex-col gap-0.5">
           <span className="text-[13px] font-medium text-label-secondary">{dateLabel}</span>
           <h1 className="text-[34px] leading-tight font-bold tracking-[-0.02em] text-label">Today</h1>
         </div>
+        <div className="flex items-center gap-2.5">
         <button
           type="button"
           id="btn-parent-mode-header"
           onClick={() => { sound.playTap(); onOpenParentPin(); }}
-          className="w-11 h-11 rounded-full cq-card flex items-center justify-center text-label cursor-pointer active:scale-95 transition-transform"
+          className="relative w-11 h-11 rounded-full cq-card flex items-center justify-center text-label cursor-pointer active:scale-95 transition-transform"
           aria-label="Parent settings"
           title="Parent settings"
         >
-          <Shield className="w-5 h-5" strokeWidth={1.8} />
+          {isCq ? <Bell className="w-5 h-5" strokeWidth={1.8} /> : <Shield className="w-5 h-5" strokeWidth={1.8} />}
+          {isCq && inbox.length > 0 && (
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full" style={{ background: 'var(--cq-due)', boxShadow: '0 0 0 2px var(--cq-surface)' }} />
+          )}
         </button>
+        {isCq && (
+          <button
+            type="button"
+            onClick={() => { sound.playTap(); window.dispatchEvent(new Event('cq-open-menu')); }}
+            className="w-11 h-11 rounded-full cq-card flex items-center justify-center text-label cursor-pointer active:scale-95 transition-transform"
+            aria-label="Menu"
+            title="Menu"
+          >
+            <Menu className="w-5 h-5" strokeWidth={1.8} />
+          </button>
+        )}
+        </div>
       </header>
 
       {database && (
@@ -184,6 +237,57 @@ export const KidSelector: React.FC<KidSelectorProps> = ({
           })}
         </ul>
       </section>
+
+      {isCq && inbox.length > 0 && (
+        <section aria-labelledby="needs-you-h" className="flex flex-col gap-2 animate-fade-up stagger-3">
+          <h2 id="needs-you-h" className="cq-eyebrow px-1">Needs you · {inbox.length}</h2>
+          <div className="cq-card p-4 flex flex-col gap-3.5">
+            {inbox.slice(0, 3).map((item, i) => (
+              <div key={item.id} className={`flex flex-col gap-3 ${i ? 'pt-3.5 border-t border-[var(--cq-line)]' : ''}`}>
+                <div className="flex gap-3 items-center">
+                  <span className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0"
+                    style={{ color: kidColor(item.kidId), background: `color-mix(in srgb, ${kidColor(item.kidId)} 16%, transparent)` }}>
+                    {initials(kidName(item.kidId))}
+                  </span>
+                  <button type="button" onClick={() => setPinAction({ kind: 'open' })} className="flex-1 min-w-0 flex flex-col text-left cursor-pointer">
+                    <span className="text-[15px] font-semibold text-label truncate">{item.title}</span>
+                    <span className="text-[13px] text-label-secondary truncate">{item.sub}</span>
+                  </button>
+                  {!item.approveLogId && <ChevronRight className="w-[18px] h-[18px] text-label-tertiary shrink-0" aria-hidden="true" />}
+                </div>
+                {item.approveLogId && (
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setPinAction({ kind: 'approve', logId: item.approveLogId! })}
+                      className="flex-1 min-h-[44px] rounded-xl bg-[var(--cq-accent)] text-[var(--cq-on-accent)] text-[15px] font-semibold cursor-pointer">Approve</button>
+                    <button type="button" onClick={() => setPinAction({ kind: 'open' })}
+                      className="flex-1 min-h-[44px] rounded-xl bg-[var(--cq-surface-2)] text-label text-[15px] font-semibold cursor-pointer">Review</button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {inbox.length > 3 && (
+              <button type="button" onClick={() => setPinAction({ kind: 'open' })} className="self-start min-h-[36px] text-[15px] text-[var(--cq-accent-text)] cursor-pointer">
+                See all {inbox.length}
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {database && (
+        <ParentPinModal
+          isOpen={!!pinAction}
+          correctPin={database.settings.parentPin || '1234'}
+          isDefaultPin={!database.settings.parentPin || database.settings.parentPin === '1234'}
+          onClose={() => setPinAction(null)}
+          onSuccess={() => {
+            const action = pinAction;
+            setPinAction(null);
+            if (action?.kind === 'approve') approveLog(action.logId);
+            else onOpenParentPin();
+          }}
+        />
+      )}
 
       <KidPinModal
         isOpen={!!selectedKidForPin}

@@ -111,7 +111,7 @@ export const PiGuideModal: React.FC<PiGuideModalProps> = ({ isOpen, onClose }) =
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-xs animate-fade-in">
       <div
         id="pi-guide-dialog"
-        className="bg-yellow-50 w-full max-w-5xl rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-7 shadow-2xl border-2 sm:border-4 border-yellow-300 max-h-[95vh] flex flex-col overflow-hidden"
+        className="ios-sheet-detached ios-sheet-light bg-yellow-50 w-full max-w-5xl rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-7 shadow-2xl border-2 sm:border-4 border-yellow-300 max-h-[95vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 pb-3 sm:pb-4 border-b-2 border-yellow-200 shrink-0">

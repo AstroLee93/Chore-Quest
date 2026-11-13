@@ -968,7 +968,7 @@ export const RewardsManagementSection: React.FC<RewardsManagementSectionProps> =
       {/* QUICK STAR TUNER MODAL (When clicking directly on a reward's star badge) */}
       {quickTuningReward && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-4 border-amber-400 space-y-4">
+          <div className="ios-sheet-detached bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-4 border-amber-400 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-2xl p-1.5 rounded-xl bg-yellow-100 border border-yellow-300">
@@ -1036,7 +1036,7 @@ export const RewardsManagementSection: React.FC<RewardsManagementSectionProps> =
       {/* FULL REWARD EDIT / CREATE MODAL */}
       {editingReward && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
-          <div className="bg-yellow-50 dark:bg-slate-900 rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl border-4 border-yellow-400 dark:border-slate-700 my-8 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="ios-sheet-detached bg-yellow-50 dark:bg-slate-900 rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl border-4 border-yellow-400 dark:border-slate-700 my-8 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-yellow-200 dark:border-slate-700">
               <h3 className="font-black text-lg sm:text-xl text-slate-900 dark:text-white italic flex items-center gap-2">
                 <span>{editingReward.id ? 'Edit Reward Item' : 'Create New Reward Item'}</span>

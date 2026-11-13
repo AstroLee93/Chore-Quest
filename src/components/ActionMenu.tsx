@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 import { Menu, ChevronDown } from 'lucide-react';
 import { sound } from '../utils/sound';
 
@@ -18,6 +18,8 @@ export interface ActionMenuProps {
   menuClassName?: string;
   align?: 'left' | 'right';
   id?: string;
+  /** Compact iOS-style round icon trigger (e.g. a "…" glyph). `label` is then used only for accessibility. */
+  icon?: React.ReactNode;
 }
 
 export const ActionMenu: React.FC<ActionMenuProps> = ({
@@ -27,7 +29,10 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
   menuClassName,
   align = 'right',
   id,
+  icon,
 }) => {
+  const generatedId = useId();
+  const buttonId = id || `action-menu-btn-${generatedId}`;
   const [isOpen, setIsOpen] = useState(false);
   const [openUpward, setOpenUpward] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -55,7 +60,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
 
     checkPosition();
 
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: PointerEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
@@ -72,13 +77,13 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
       checkPosition();
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('pointerdown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
     window.addEventListener('resize', handleScrollOrResize);
     window.addEventListener('scroll', handleScrollOrResize, true);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('pointerdown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleScrollOrResize);
       window.removeEventListener('scroll', handleScrollOrResize, true);
@@ -105,15 +110,15 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
   const getVariantClasses = (variant?: string) => {
     switch (variant) {
       case 'danger':
-        return 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:text-rose-700';
+        return 'text-ios-red hover:bg-fill';
       case 'success':
-        return 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700';
+        return 'text-ios-green hover:bg-fill';
       case 'warning':
-        return 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50 hover:text-amber-700';
+        return 'text-ios-orange hover:bg-fill';
       case 'primary':
-        return 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 hover:text-indigo-700 font-black';
+        return 'text-ios-blue hover:bg-fill font-semibold';
       default:
-        return 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700';
+        return 'text-label hover:bg-fill';
     }
   };
 
@@ -121,34 +126,39 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
     <div className={`relative inline-block text-left ${isOpen ? 'z-50' : ''}`} ref={menuRef}>
       <button
         ref={buttonRef}
-        id={id || `action-menu-btn-${Math.random().toString(36).substr(2, 6)}`}
+        id={buttonId}
         type="button"
         onClick={handleToggle}
         className={
           buttonClassName ||
+          (icon ? `btn-ios-icon ${isOpen ? 'bg-fill-strong text-label' : ''}` : '') ||
           'min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-extrabold text-xs transition-all shadow-2xs cursor-pointer active:scale-95'
         }
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label={label ? `${label} actions menu` : 'Action menu'}
       >
-        <Menu className="w-3.5 h-3.5 stroke-[2.5]" />
-        <span>{label}</span>
-        <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        {icon ?? (
+          <>
+            <Menu className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>{label}</span>
+            <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+          </>
+        )}
       </button>
 
       {isOpen && (
         <div
           role="menu"
           aria-orientation="vertical"
-          aria-labelledby={id}
+          aria-labelledby={buttonId}
           className={`absolute ${
             align === 'right' ? 'right-0' : 'left-0'
           } ${
             openUpward
               ? 'bottom-full mb-1.5 origin-bottom-right'
               : 'top-full mt-1.5 origin-top-right'
-          } w-56 max-h-[min(380px,80vh)] overflow-y-auto rounded-2xl bg-white dark:bg-slate-800 shadow-2xl border border-slate-200 dark:border-slate-700 py-2 z-50 animate-in fade-in zoom-in-95 duration-150 ${
+          } w-60 max-h-[min(380px,80vh)] overflow-y-auto rounded-[14px] glass-strong py-1 z-50 animate-scale-in divide-y divide-separator ${
             menuClassName || ''
           }`}
         >
@@ -159,14 +169,14 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
               type="button"
               disabled={item.disabled}
               onClick={(e) => handleItemClick(item, e)}
-              className={`w-full min-h-[44px] text-left px-4 py-2.5 text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
+              className={`w-full min-h-[44px] text-left px-4 py-2.5 text-[15px] tracking-[-0.24px] flex items-center justify-between gap-3 transition-colors cursor-pointer ${
                 item.disabled
-                  ? 'opacity-40 cursor-not-allowed text-slate-400'
+                  ? 'opacity-40 cursor-not-allowed text-label-tertiary'
                   : getVariantClasses(item.variant)
               }`}
             >
-              {item.icon && <span className="w-4 h-4 shrink-0 flex items-center justify-center">{item.icon}</span>}
               <span className="truncate">{item.label}</span>
+              {item.icon && <span className="w-4 h-4 shrink-0 flex items-center justify-center" aria-hidden="true">{item.icon}</span>}
             </button>
           ))}
         </div>

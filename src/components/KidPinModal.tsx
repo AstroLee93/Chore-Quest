@@ -1,8 +1,16 @@
+/**
+ * KidPinModal — iOS lock-screen passcode sheet.
+ * Round keypad with ABC letters, filled/empty dots, the lock-screen shake on a
+ * wrong code, hardware-keyboard support, and the default-PIN / forgot hints.
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { Lock, Delete, X, Sparkles, ShieldCheck, HelpCircle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Delete, HelpCircle } from 'lucide-react';
 import { KidProfile } from '../types';
 import { sound } from '../utils/sound';
 import { fireConfetti } from '../utils/confetti';
+import { haptic } from '../utils/haptics';
 
 interface KidPinModalProps {
   isOpen: boolean;
@@ -12,18 +20,25 @@ interface KidPinModalProps {
   onOpenParentPin?: () => void;
 }
 
+const KEY_LETTERS: Record<string, string> = {
+  '1': '', '2': 'ABC', '3': 'DEF',
+  '4': 'GHI', '5': 'JKL', '6': 'MNO',
+  '7': 'PQRS', '8': 'TUV', '9': 'WXYZ',
+  '0': '',
+};
+
 export const KidPinModal: React.FC<KidPinModalProps> = ({
   isOpen,
   kid,
   onSuccess,
   onClose,
-  onOpenParentPin,
 }) => {
   const [pin, setPin] = useState<string>('');
   const [error, setError] = useState<boolean>(false);
   const [showHint, setShowHint] = useState<boolean>(false);
+  // Bumped on every wrong attempt so the shake animation replays each time.
+  const [shakeKey, setShakeKey] = useState(0);
 
-  // Clear state whenever modal opens or kid changes
   useEffect(() => {
     if (isOpen) {
       setPin('');
@@ -37,29 +52,30 @@ export const KidPinModal: React.FC<KidPinModalProps> = ({
 
   const handleKeyPress = useCallback(
     (digit: string) => {
+      if (pin.length >= 4) return; // ignore taps while a wrong code is clearing
       sound.playTap();
+      haptic('selection');
       setError(false);
-      if (pin.length < 4) {
+      {
         const nextPin = pin + digit;
         setPin(nextPin);
 
         if (nextPin.length === 4) {
           if (nextPin === correctPin) {
             sound.playChoreComplete();
+            haptic('success');
             fireConfetti({
               origin: { y: 0.6 },
-              colors: [kid?.color || '#f59e0b', '#ec4899', '#38bdf8', '#10b981'],
+              colors: [kid?.color || '#0A84FF', '#34C759', '#5AC8FA', '#FFD60A'],
               mode: 'snappy',
             });
-            setTimeout(() => {
-              onSuccess();
-            }, 100);
+            setTimeout(() => onSuccess(), 100);
           } else {
             sound.playUndo();
+            haptic('error');
             setError(true);
-            setTimeout(() => {
-              setPin('');
-            }, 400);
+            setShakeKey((k) => k + 1);
+            setTimeout(() => setPin(''), 450);
           }
         }
       }
@@ -68,186 +84,152 @@ export const KidPinModal: React.FC<KidPinModalProps> = ({
   );
 
   const handleDelete = useCallback(() => {
+    if (pin.length === 0) return;
     sound.playTap();
     setError(false);
     setPin((prev) => prev.slice(0, -1));
-  }, []);
+  }, [pin.length]);
 
-  const handleClear = useCallback(() => {
-    sound.playTap();
-    setError(false);
-    setPin('');
-  }, []);
-
-  // Handle hardware keyboard events
   useEffect(() => {
     if (!isOpen) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key >= '0' && e.key <= '9') {
-        handleKeyPress(e.key);
-      } else if (e.key === 'Backspace') {
-        handleDelete();
-      } else if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key >= '0' && e.key <= '9') handleKeyPress(e.key);
+      else if (e.key === 'Backspace') handleDelete();
+      else if (e.key === 'Escape') onClose();
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleKeyPress, handleDelete, onClose]);
 
   if (!isOpen || !kid) return null;
 
-  return (
+  const isCustomPhoto = kid.avatar && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/'));
+
+  // Portal to <body> so no transformed/animated ancestor can trap the fixed overlay.
+  return createPortal(
     <div
       id="kid-pin-modal"
-      className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="kid-pin-title"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 ios-backdrop animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 border-4 rounded-[2.5rem] p-6 sm:p-8 max-w-sm w-full shadow-2xl relative overflow-hidden flex flex-col items-center text-center animate-scale-up"
-        style={{ borderColor: kid.color || '#f59e0b' }}
+        className="ios-sheet-detached w-full max-w-[360px] py-[max(1.25rem,3dvh)] px-6 relative max-h-[calc(100dvh-2rem)] overflow-y-auto scrollbar-none flex flex-col items-center text-center animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Glow ambient background */}
-        <div
-          className="absolute -top-20 -left-20 w-48 h-48 rounded-full blur-3xl opacity-30 pointer-events-none"
-          style={{ backgroundColor: kid.color || '#f59e0b' }}
-        />
-        <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Close Button */}
+        {/* Close */}
         <button
           id="btn-close-kid-pin-modal"
-          onClick={() => {
-            sound.playTap();
-            onClose();
-          }}
-          className="absolute top-4 right-4 w-11 h-11 rounded-2xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer active:scale-95"
+          onClick={() => { sound.playTap(); onClose(); }}
+          className="btn-ios-icon absolute top-4 right-4"
           title="Cancel"
+          aria-label="Cancel"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
-        {/* Kid Avatar Header */}
-        <div className="relative mb-3">
-          <div
-            style={{ backgroundColor: `${kid.color || '#f59e0b'}30`, borderColor: kid.color || '#f59e0b' }}
-            className="w-20 h-20 rounded-3xl border-3 flex items-center justify-center text-4xl shadow-lg ring-4 ring-white/10 overflow-hidden"
-          >
-            {kid.avatar && (kid.avatar.startsWith('http') || kid.avatar.startsWith('data:image') || kid.avatar.startsWith('/')) ? (
-              <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="leading-none">{kid.avatar || '⭐'}</span>
-            )}
-          </div>
+        {/* Avatar */}
+        <div
+          className="w-14 h-14 rounded-full flex items-center justify-center text-3xl overflow-hidden mb-2 ring-2 ring-separator shadow-md"
+          style={{ backgroundColor: `${kid.color || '#0A84FF'}` }}
+        >
+          {isCustomPhoto ? (
+            <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
+          ) : (
+            <span className="leading-none">{kid.avatar || '⭐'}</span>
+          )}
         </div>
 
-        <h3 className="text-2xl font-black text-white tracking-tight">
-          Welcome, {kid.name}!
+        <h3 id="kid-pin-title" className="text-[20px] font-semibold text-label tracking-[0.38px]">
+          {kid.name}
         </h3>
-        <p className="text-xs font-bold text-slate-300 mt-1 max-w-[240px]">
-          Enter your 4-digit secret PIN to open your missions and star bank.
+        <p className="text-[15px] text-label-secondary mt-1 max-w-[220px] leading-snug">
+          Enter your passcode
         </p>
 
-        {/* PIN Indicators */}
-        <div className={`flex items-center gap-3 my-5 ${error ? 'animate-shake' : ''}`}>
-          {[0, 1, 2, 3].map((index) => {
-            const isFilled = pin.length > index;
-            return (
-              <div
-                key={index}
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-black transition-all duration-200 border-2 ${
-                  error
-                    ? 'border-rose-500 bg-rose-950/80 text-rose-300 ring-2 ring-rose-500/50'
-                    : isFilled
-                      ? 'border-amber-400 bg-amber-400/20 text-amber-300 ring-4 ring-amber-400/30 scale-105'
-                      : 'border-white/20 bg-white/5 text-transparent'
-                }`}
-              >
-                {isFilled ? '⭐' : '•'}
-              </div>
-            );
-          })}
+        {/* PIN dots */}
+        <div
+          key={shakeKey}
+          className={`flex items-center gap-5 my-[max(1rem,3dvh)] ${shakeKey > 0 ? 'animate-pin-shake' : ''}`}
+          role="status"
+          aria-label={`${pin.length} of 4 digits entered`}
+        >
+          {[0, 1, 2, 3].map((index) => (
+            <div
+              key={index}
+              className={`pin-dot ${pin.length > index ? 'filled' : ''} ${error ? 'error' : ''}`}
+            />
+          ))}
         </div>
 
-        {/* Error message */}
         {error && (
-          <div className="text-xs font-black text-rose-400 mb-2 animate-fade-in flex items-center gap-1">
-            <span>❌ Incorrect PIN. Try again!</span>
-          </div>
+          <p role="alert" className="text-[13px] font-medium text-ios-red -mt-2 mb-3">Wrong passcode — try again</p>
         )}
 
-        {/* Touch Keypad */}
-        <div className="grid grid-cols-3 gap-2.5 w-full max-w-[260px] my-1">
+        {/* Numpad */}
+        <div className="grid grid-cols-3 gap-x-6 gap-y-4">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
             <button
               key={digit}
               id={`btn-kid-pin-${digit}`}
               onClick={() => handleKeyPress(digit)}
-              className="h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-white font-black text-2xl transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-sm border border-white/10"
+              className="numpad-key"
+              aria-label={digit}
             >
-              {digit}
+              <span className="numpad-key-num">{digit}</span>
+              {KEY_LETTERS[digit] && <span className="numpad-key-letters">{KEY_LETTERS[digit]}</span>}
             </button>
           ))}
 
-          <button
-            key="btn-kid-pin-clear"
-            id="btn-kid-pin-clear"
-            onClick={handleClear}
-            className="h-14 rounded-2xl bg-white/5 hover:bg-white/15 active:bg-white/20 text-slate-400 font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center cursor-pointer border border-white/10"
-          >
-            Clear
-          </button>
+          <div />
 
           <button
             key="btn-kid-pin-0"
             id="btn-kid-pin-0"
             onClick={() => handleKeyPress('0')}
-            className="h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-white font-black text-2xl transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-sm border border-white/10"
+            className="numpad-key"
+            aria-label="0"
           >
-            0
+            <span className="numpad-key-num">0</span>
           </button>
 
           <button
             key="btn-kid-pin-delete"
             id="btn-kid-pin-delete"
             onClick={handleDelete}
-            className="h-14 rounded-2xl bg-white/5 hover:bg-white/15 active:bg-white/20 text-slate-300 font-black transition-all active:scale-95 flex items-center justify-center cursor-pointer border border-white/10"
-            title="Backspace"
+            className={`numpad-key-size rounded-full flex items-center justify-center text-[17px] text-label cursor-pointer active:opacity-40 transition-opacity ${pin.length === 0 ? 'invisible' : ''}`}
+            title="Delete"
+            aria-label="Delete last digit"
           >
-            <Delete className="w-5 h-5" />
+            <Delete className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Helper Footer: Forgot PIN / Default PIN hint */}
-        <div className="mt-4 pt-3 border-t border-white/10 w-full flex flex-col items-center gap-1.5 text-xs">
+        {/* Footer */}
+        <div className="mt-6 pt-4 border-t border-separator w-full flex flex-col items-center gap-1.5">
           {isDefaultPin && (
-            <div className="text-[11px] font-bold text-amber-300/80">
-              💡 Tip: Default PIN is <span className="font-mono font-black text-amber-200">1234</span>
-            </div>
+            <p className="text-[13px] text-label-secondary">
+              Default passcode is <span className="font-semibold text-label tabular-nums">1234</span>
+            </p>
           )}
-
           <button
             type="button"
-            onClick={() => {
-              sound.playTap();
-              setShowHint((prev) => !prev);
-            }}
-            className="text-slate-400 hover:text-white transition-colors flex items-center gap-1 font-bold text-[11px] cursor-pointer py-1"
+            onClick={() => { sound.playTap(); setShowHint((p) => !p); }}
+            className="text-ios-blue active:opacity-50 transition-opacity flex items-center gap-1.5 text-[15px] cursor-pointer min-h-[44px]"
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            <span>Forgot PIN? Ask a Parent</span>
+            <span>Forgot passcode?</span>
           </button>
-
           {showHint && (
-            <div className="p-2.5 rounded-xl bg-indigo-950/80 border border-indigo-700/80 text-[11px] text-indigo-200 font-bold max-w-xs animate-fade-in">
-              Parents can reset or view any child's PIN in the <span className="font-black text-white">Parent Dashboard &rarr; Kids Profiles &rarr; Reset PIN</span>.
-            </div>
+            <p className="text-[13px] text-label-secondary max-w-[260px] leading-relaxed animate-fade-in">
+              Ask a parent to reset it from Parent Dashboard → Kids Profiles → Reset PIN.
+            </p>
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

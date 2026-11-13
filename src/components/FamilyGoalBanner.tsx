@@ -3,7 +3,7 @@ import { fireConfetti } from '../utils/confetti';
 import { FamilyDatabase } from '../types';
 import { getFamilyWeeklyGoalProgress } from '../utils/storage';
 import { sound } from '../utils/sound';
-import { AppThemeId, APP_THEMES } from '../utils/theme';
+import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID } from '../utils/theme';
 
 interface FamilyGoalBannerProps {
   database: FamilyDatabase;
@@ -16,13 +16,13 @@ interface FamilyGoalBannerProps {
 export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
   database,
   isParentMode = false,
-  currentTheme = 'coastal-horizon',
+  currentTheme = DEFAULT_THEME_ID,
   onEditGoal,
   className = '',
 }) => {
   const { goal, completedCount, target, percent, isReached, remaining } =
     getFamilyWeeklyGoalProgress(database);
-  const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
+  const theme = APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID];
 
   if (!goal.isActive) return null;
 

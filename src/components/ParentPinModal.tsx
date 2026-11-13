@@ -75,7 +75,7 @@ export const ParentPinModal: React.FC<ParentPinModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-fade-in">
       <div
         id="parent-pin-dialog"
-        className={`bg-yellow-50 w-full max-w-sm rounded-[2.5rem] p-6 sm:p-7 shadow-2xl border-4 border-yellow-300 transition-all ${
+        className={`ios-sheet-detached ios-sheet-light bg-yellow-50 w-full max-w-sm rounded-[2.5rem] p-6 sm:p-7 shadow-2xl border-4 border-yellow-300 transition-all ${
           shake ? 'animate-bounce' : ''
         }`}
       >

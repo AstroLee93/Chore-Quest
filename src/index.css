@@ -1,4 +1,13 @@
 @import "tailwindcss";
+@import "./styles/ios.css";
+
+/* `dark:` utilities follow the active ChoreQuest theme (applyThemeToDocument
+   toggles .dark on <html>), not the OS setting. Tailwind v4 defaults to the
+   prefers-color-scheme media query, which made every dark: style ignore the
+   theme picker — e.g. white modals over a dark theme on a light-mode phone. */
+/* …except inside .ios-sheet-light, a "light island" for legacy modal bodies
+   that were only designed on white (like iOS's overrideUserInterfaceStyle). */
+@custom-variant dark (&:where(.dark, .dark *):not(:where(.ios-sheet-light, .ios-sheet-light *)));
 
 @keyframes fadeIn {
   from {

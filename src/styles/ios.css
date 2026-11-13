@@ -1,0 +1,786 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   ChoreQuest — iOS design system
+   Imported by src/index.css (after Tailwind). Everything here adapts to
+   light and dark: the `.dark` class that applyThemeToDocument() puts on
+   <html> flips the semantic tokens, the same way iOS's dynamic system
+   colors work. Never hardcode `text-white/…` in a component; use the
+   `ink`, `label`, `ios-*` tokens below so it reads on every theme.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Semantic tokens ───────────────────────────────────────────────────── */
+
+:root,
+.ios-sheet-light {
+  --font-sf: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --font-sf-rounded: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont,
+    system-ui, sans-serif;
+
+  /* "ink" is the base foreground; components use it with opacity
+     (text-ink/60, bg-ink/10, border-ink/10), exactly like iOS's
+     label / fill colors are alpha-on-black (light) or alpha-on-white (dark). */
+  --ink: #000000;
+  --label: #000000;
+  --label-secondary: rgb(60 60 67 / 0.6);
+  --label-tertiary: rgb(60 60 67 / 0.3);
+  --separator: rgb(60 60 67 / 0.18);
+  --fill: rgb(120 120 128 / 0.16);
+  --fill-strong: rgb(120 120 128 / 0.24);
+
+  /* iOS system colors — light variants */
+  --ios-blue: #007aff;
+  --ios-green: #34c759;
+  --ios-orange: #ff9500;
+  --ios-red: #ff3b30;
+  --ios-yellow: #ffcc00;
+  --ios-purple: #af52de;
+  --ios-teal: #30b0c7;
+  --ios-indigo: #5856d6;
+  --ios-pink: #ff2d55;
+
+  /* Glass materials (light) */
+  --glass-thin: rgb(255 255 255 / 0.55);
+  --glass-mid: rgb(255 255 255 / 0.68);
+  --glass-strong: rgb(255 255 255 / 0.8);
+  --glass-border: rgb(0 0 0 / 0.07);
+  --glass-border-strong: rgb(0 0 0 / 0.11);
+  --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
+  --sheet-bg: rgb(250 250 252 / 0.9);
+  --sheet-grouped-bg: rgb(242 242 247 / 0.94);
+  --backdrop-dim: rgb(0 0 0 / 0.32);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-ios: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Notch / Dynamic Island / home-indicator insets (need viewport-fit=cover) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+.dark {
+  --ink: #ffffff;
+  --label: #ffffff;
+  --label-secondary: rgb(235 235 245 / 0.6);
+  --label-tertiary: rgb(235 235 245 / 0.3);
+  --separator: rgb(84 84 88 / 0.6);
+  --fill: rgb(120 120 128 / 0.32);
+  --fill-strong: rgb(120 120 128 / 0.44);
+
+  --ios-blue: #0a84ff;
+  --ios-green: #30d158;
+  --ios-orange: #ff9f0a;
+  --ios-red: #ff453a;
+  --ios-yellow: #ffd60a;
+  --ios-purple: #bf5af2;
+  --ios-teal: #40c8e0;
+  --ios-indigo: #5e5ce6;
+  --ios-pink: #ff375f;
+
+  --glass-thin: rgb(255 255 255 / 0.07);
+  --glass-mid: rgb(255 255 255 / 0.11);
+  --glass-strong: rgb(255 255 255 / 0.16);
+  --glass-border: rgb(255 255 255 / 0.12);
+  --glass-border-strong: rgb(255 255 255 / 0.2);
+  --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.25);
+  --sheet-bg: rgb(28 28 30 / 0.9);
+  --sheet-grouped-bg: rgb(28 28 30 / 0.94);
+  --backdrop-dim: rgb(0 0 0 / 0.55);
+}
+
+/* Expose the tokens to Tailwind: text-ink/60, bg-ios-green, border-separator … */
+@theme inline {
+  --color-ink: var(--ink);
+  --color-label: var(--label);
+  --color-label-secondary: var(--label-secondary);
+  --color-label-tertiary: var(--label-tertiary);
+  --color-separator: var(--separator);
+  --color-fill: var(--fill);
+  --color-fill-strong: var(--fill-strong);
+  --color-ios-blue: var(--ios-blue);
+  --color-ios-green: var(--ios-green);
+  --color-ios-orange: var(--ios-orange);
+  --color-ios-red: var(--ios-red);
+  --color-ios-yellow: var(--ios-yellow);
+  --color-ios-purple: var(--ios-purple);
+  --color-ios-teal: var(--ios-teal);
+  --color-ios-indigo: var(--ios-indigo);
+  --color-ios-pink: var(--ios-pink);
+  --font-sans: var(--font-sf);
+  --font-rounded: var(--font-sf-rounded);
+}
+
+/* ── Platform base ─────────────────────────────────────────────────────── */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Kill the whole-page rubber band in standalone mode; inner scrollers keep theirs. */
+  overscroll-behavior-y: none;
+}
+
+body {
+  font-family: var(--font-sf);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+  /* No 300ms double-tap-zoom delay on buttons */
+  touch-action: manipulation;
+}
+
+/* Long-press on UI chrome shouldn't pop the iOS text-selection callout. */
+button,
+[role="button"],
+.numpad-key,
+.check-circle,
+.ios-list-item {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* iOS Safari zooms the whole page when a focused field's text is < 16px.
+   Keep form text at 16px on touch devices so tapping an input never zooms. */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* Accent-colored native controls (checkboxes, radios, range sliders) */
+:root { accent-color: var(--ios-blue); }
+
+/* Keyboard focus ring in the system style; hidden for touch/mouse. */
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ios-blue) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* Safe-area helpers for fixed/sticky chrome */
+.pt-safe { padding-top: var(--safe-top); }
+.pb-safe { padding-bottom: var(--safe-bottom); }
+.px-safe { padding-left: var(--safe-left); padding-right: var(--safe-right); }
+
+@layer components {
+
+/* ── Wallpapers ────────────────────────────────────────────────────────── */
+/* Applied to the app root via theme.bgGradient. The scene is painted on a
+   viewport-fixed pseudo layer *behind* the content (z-index -1 inside an
+   isolated stacking context), so it never scrolls or stretches on long pages
+   and — unlike background-attachment: fixed — it works in iOS Safari. */
+
+.wallpaper-aurora,
+.wallpaper-dusk,
+.wallpaper-ocean,
+.wallpaper-forest,
+.wallpaper-midnight,
+.wallpaper-daylight {
+  position: relative;
+  isolation: isolate;
+  background: var(--wallpaper-base);
+}
+
+.wallpaper-aurora::before,
+.wallpaper-dusk::before,
+.wallpaper-ocean::before,
+.wallpaper-forest::before,
+.wallpaper-midnight::before,
+.wallpaper-daylight::before,
+.wallpaper-aurora::after,
+.wallpaper-dusk::after,
+.wallpaper-ocean::after,
+.wallpaper-forest::after,
+.wallpaper-midnight::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.wallpaper-aurora::before,
+.wallpaper-dusk::before,
+.wallpaper-ocean::before,
+.wallpaper-forest::before,
+.wallpaper-midnight::before,
+.wallpaper-daylight::before {
+  background: var(--wallpaper-scene);
+}
+
+/* Star field on the dark scenes */
+.wallpaper-aurora::after,
+.wallpaper-dusk::after,
+.wallpaper-ocean::after,
+.wallpaper-forest::after,
+.wallpaper-midnight::after {
+  background-image:
+    radial-gradient(1px 1px at 12% 8%, rgb(255 255 255 / 0.75) 0%, transparent 100%),
+    radial-gradient(1px 1px at 38% 5%, rgb(255 255 255 / 0.55) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 65% 14%, rgb(255 255 255 / 0.65) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 4%, rgb(255 255 255 / 0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 22% 25%, rgb(255 255 255 / 0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 93% 32%, rgb(255 255 255 / 0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 52% 19%, rgb(255 255 255 / 0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 77% 28%, rgb(255 255 255 / 0.3) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 8% 45%, rgb(255 255 255 / 0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 44% 38%, rgb(255 255 255 / 0.3) 0%, transparent 100%);
+}
+
+.wallpaper-aurora {
+  --wallpaper-base: #060b18;
+  --wallpaper-scene:
+    radial-gradient(ellipse 55% 45% at 75% 15%, rgb(139 92 246 / 0.5) 0%, transparent 65%),
+    radial-gradient(ellipse 60% 50% at 20% 75%, rgb(59 130 246 / 0.42) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 40% at 55% 50%, rgb(16 185 129 / 0.18) 0%, transparent 60%),
+    linear-gradient(165deg, #060b18 0%, #0c1535 45%, #090d1f 100%);
+}
+
+.wallpaper-dusk {
+  --wallpaper-base: #0f0a0e;
+  --wallpaper-scene:
+    radial-gradient(ellipse 60% 40% at 80% 10%, rgb(251 113 133 / 0.45) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 15% 60%, rgb(249 115 22 / 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 60% at 50% 85%, rgb(139 92 246 / 0.3) 0%, transparent 60%),
+    linear-gradient(170deg, #0f0a0e 0%, #1a0f18 50%, #0d0a14 100%);
+}
+
+.wallpaper-ocean {
+  --wallpaper-base: #030c18;
+  --wallpaper-scene:
+    radial-gradient(ellipse 55% 45% at 70% 20%, rgb(14 165 233 / 0.48) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 55% at 25% 70%, rgb(16 185 129 / 0.35) 0%, transparent 65%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgb(99 102 241 / 0.25) 0%, transparent 60%),
+    linear-gradient(165deg, #030c18 0%, #061525 50%, #040e1c 100%);
+}
+
+.wallpaper-forest {
+  --wallpaper-base: #030c0a;
+  --wallpaper-scene:
+    radial-gradient(ellipse 55% 50% at 65% 25%, rgb(16 185 129 / 0.4) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 50% at 20% 65%, rgb(5 150 105 / 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 80% 80%, rgb(14 165 233 / 0.2) 0%, transparent 60%),
+    linear-gradient(165deg, #030c0a 0%, #061a0f 50%, #030e08 100%);
+}
+
+.wallpaper-midnight {
+  --wallpaper-base: #07070d;
+  --wallpaper-scene:
+    radial-gradient(ellipse 50% 40% at 70% 20%, rgb(99 102 241 / 0.35) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 45% at 25% 70%, rgb(139 92 246 / 0.28) 0%, transparent 60%),
+    linear-gradient(165deg, #07070d 0%, #0d0d1a 50%, #09090f 100%);
+}
+
+/* Light scene — soft iOS-style morning wallpaper */
+.wallpaper-daylight {
+  --wallpaper-base: #f2f2f7;
+  --wallpaper-scene:
+    radial-gradient(ellipse 60% 45% at 80% 8%, rgb(90 200 250 / 0.45) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 50% at 12% 70%, rgb(175 82 222 / 0.22) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 70% 95%, rgb(255 149 0 / 0.2) 0%, transparent 60%),
+    linear-gradient(170deg, #f7f9fc 0%, #eef1f8 50%, #f4eff6 100%);
+}
+
+/* ── Glass materials ───────────────────────────────────────────────────── */
+/* Component classes live in @layer components so Tailwind utilities on the
+   same element (absolute, p-0, …) can still override them. The sheet
+   material uses !important where it must replace a legacy bg/border. */
+
+.glass,
+.glass-mid,
+.glass-strong {
+  border: 0.5px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass {
+  background: var(--glass-thin);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+.glass-mid {
+  background: var(--glass-mid);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
+}
+
+.glass-strong {
+  background: var(--glass-strong);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border-color: var(--glass-border-strong);
+}
+
+/* Header bar: glass, plus room for the status bar / Dynamic Island. */
+.ios-navbar {
+  padding-top: calc(var(--safe-top) + 10px);
+  padding-left: max(16px, var(--safe-left));
+  padding-right: max(16px, var(--safe-right));
+  box-shadow: none;
+  border-width: 0 0 0.5px 0;
+}
+
+/* ── Sheets (modals) ───────────────────────────────────────────────────── */
+
+.ios-sheet,
+.ios-sheet-detached {
+  background: var(--sheet-bg) !important;
+  backdrop-filter: blur(48px) saturate(200%);
+  -webkit-backdrop-filter: blur(48px) saturate(200%);
+  border: 0.5px solid var(--glass-border-strong) !important;
+  color: var(--label);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.28);
+}
+
+.ios-sheet { border-radius: 20px 20px 0 0 !important; }
+.ios-sheet-detached { border-radius: var(--radius-xl) !important; }
+
+/* Bottom sheet on phones, centered detached sheet from 640px up. */
+.ios-sheet-adaptive {
+  border-radius: 20px 20px 0 0 !important;
+  border-bottom-width: 0 !important;
+  animation: iosSlideUp 0.42s var(--ease-out-ios) both;
+}
+@media (min-width: 640px) {
+  .ios-sheet-adaptive {
+    border-radius: var(--radius-xl) !important;
+    border-bottom-width: 0.5px !important;
+    animation: iosScaleIn 0.28s var(--ease-out-ios) both;
+  }
+}
+
+/* For legacy modal bodies that were only ever designed on a white card
+   (no dark: variants): keep them on a light sheet in every theme so their
+   slate text stays readable, while still dropping the heavy yellow frame. */
+.ios-sheet-light {
+  /* light tokens are re-declared via the `:root, .ios-sheet-light` block above */
+  --sheet-bg: rgb(250 250 252 / 0.97);
+  color-scheme: light;
+}
+
+.ios-backdrop {
+  background: var(--backdrop-dim);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--fill-strong);
+  margin: 0 auto 12px;
+}
+
+/* ── Type scale (iOS Dynamic Type "Large" defaults) ────────────────────── */
+
+.type-largetitle { font-size: 34px; font-weight: 700; letter-spacing: 0.37px; line-height: 41px; }
+.type-title1 { font-size: 28px; font-weight: 700; letter-spacing: 0.36px; line-height: 34px; }
+.type-title2 { font-size: 22px; font-weight: 700; letter-spacing: 0.35px; line-height: 28px; }
+.type-title3 { font-size: 20px; font-weight: 600; letter-spacing: 0.38px; line-height: 25px; }
+.type-headline { font-size: 17px; font-weight: 600; letter-spacing: -0.41px; line-height: 22px; }
+.type-body { font-size: 17px; font-weight: 400; letter-spacing: -0.41px; line-height: 22px; }
+.type-callout { font-size: 16px; font-weight: 400; letter-spacing: -0.32px; line-height: 21px; }
+.type-subhead { font-size: 15px; font-weight: 400; letter-spacing: -0.24px; line-height: 20px; }
+.type-footnote { font-size: 13px; font-weight: 400; letter-spacing: -0.08px; line-height: 18px; }
+.type-caption1 { font-size: 12px; font-weight: 400; letter-spacing: 0; line-height: 16px; }
+.type-caption2 { font-size: 11px; font-weight: 400; letter-spacing: 0.07px; line-height: 13px; }
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+
+.btn-ios {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px; /* HIG minimum touch target */
+  font-family: var(--font-sf);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.41px;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s var(--spring), opacity 0.15s, background-color 0.15s;
+}
+
+.btn-ios:active { transform: scale(0.96); opacity: 0.8; }
+.btn-ios:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-ios-primary { background: var(--ios-blue); color: #fff; }
+.btn-ios-green { background: var(--ios-green); color: #fff; }
+.btn-ios-tinted {
+  background: color-mix(in srgb, var(--ios-blue) 15%, transparent);
+  color: var(--ios-blue);
+}
+.btn-ios-glass {
+  background: var(--glass-mid);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--label);
+  border: 0.5px solid var(--glass-border);
+}
+
+.btn-ios-sm {
+  min-height: 36px;
+  font-size: 15px;
+  letter-spacing: -0.24px;
+  padding: 7px 14px;
+  border-radius: 999px;
+}
+
+/* Round icon button (close ×, back ←). 30pt visual, 44pt hit area. */
+.btn-ios-icon {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--fill);
+  color: var(--label-secondary);
+  cursor: pointer;
+  transition: transform 0.15s var(--spring), background-color 0.15s;
+}
+.btn-ios-icon::before { content: ""; position: absolute; inset: -7px; }
+.btn-ios-icon:hover { background: var(--fill-strong); }
+.btn-ios-icon:active { transform: scale(0.9); }
+
+/* ── Completion check (Reminders-style) ────────────────────────────────── */
+
+.check-circle {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.18s var(--spring), background-color 0.2s, border-color 0.2s;
+  cursor: pointer;
+}
+/* Invisible 44×44 hit area around the 30pt circle */
+.check-circle::before { content: ""; position: absolute; inset: -7px; }
+
+.check-circle-empty {
+  border: 2px solid var(--label-tertiary);
+  background: transparent;
+}
+.check-circle-empty:hover { border-color: var(--ios-green); }
+
+.check-circle-done {
+  background: var(--ios-green);
+  border: none;
+  animation: checkPop 0.32s var(--spring);
+}
+
+.check-circle:active { transform: scale(0.86); }
+
+@keyframes checkPop {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* ── Grouped lists (Settings-style) ────────────────────────────────────── */
+
+.ios-list {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.ios-list-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  min-height: 60px;
+  padding: 12px 16px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  transition: background-color 0.12s;
+  cursor: pointer;
+}
+.ios-list-item:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.ios-list-item:active { background: var(--fill); }
+
+/* Inset hairline separator that starts after the leading icon, like iOS */
+.ios-list-item + .ios-list-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 72px;
+  right: 0;
+  height: 0.5px;
+  background: var(--separator);
+}
+
+.section-header {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--label-secondary);
+  letter-spacing: -0.08px;
+  text-transform: uppercase;
+  padding: 0 16px;
+  margin-bottom: 0;
+}
+
+/* ── Segmented control ─────────────────────────────────────────────────── */
+
+.ios-segmented {
+  display: flex;
+  width: 100%;
+  max-width: 520px;
+  padding: 2px;
+  gap: 2px;
+  border-radius: 10px;
+  background: var(--fill);
+}
+.ios-segment {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.08px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--label);
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease-out-ios), box-shadow 0.2s;
+}
+.ios-segment[aria-checked="true"],
+.ios-segment[aria-selected="true"] {
+  font-weight: 600;
+  background: #ffffff;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.12), 0 3px 1px rgb(0 0 0 / 0.04);
+}
+.dark .ios-segment[aria-checked="true"],
+.dark .ios-segment[aria-selected="true"] {
+  background: #636366;
+}
+
+/* ── Tags ──────────────────────────────────────────────────────────────── */
+
+.ios-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--label-secondary);
+  white-space: nowrap;
+}
+
+.ios-tag-sm { font-size: 11px; padding: 1px 8px; }
+
+.ios-tag-orange,
+.ios-tag-bounty {
+  background: color-mix(in srgb, var(--ios-orange) 16%, transparent);
+  color: var(--ios-orange);
+}
+.ios-tag-green,
+.ios-tag-done {
+  background: color-mix(in srgb, var(--ios-green) 16%, transparent);
+  color: var(--ios-green);
+}
+.ios-tag-blue {
+  background: color-mix(in srgb, var(--ios-blue) 14%, transparent);
+  color: var(--ios-blue);
+}
+.ios-tag-purple {
+  background: color-mix(in srgb, var(--ios-purple) 15%, transparent);
+  color: var(--ios-purple);
+}
+.ios-tag-red {
+  background: color-mix(in srgb, var(--ios-red) 14%, transparent);
+  color: var(--ios-red);
+}
+.ios-tag-birthday {
+  background: linear-gradient(90deg, var(--ios-pink), var(--ios-purple), var(--ios-orange));
+  color: #fff;
+}
+
+/* Inline status banner inside a card (locked / expiring / claimed) */
+.ios-callout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.ios-callout-orange { background: color-mix(in srgb, var(--ios-orange) 12%, transparent); color: var(--ios-orange); }
+.ios-callout-red { background: color-mix(in srgb, var(--ios-red) 12%, transparent); color: var(--ios-red); }
+.ios-callout-yellow { background: color-mix(in srgb, var(--ios-yellow) 14%, transparent); color: color-mix(in srgb, var(--ios-orange) 70%, var(--label)); }
+
+/* ── Progress ──────────────────────────────────────────────────────────── */
+
+.ios-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--fill);
+  overflow: hidden;
+}
+.ios-progress > * {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.6s var(--ease-out-ios);
+}
+
+/* ── PIN pad (lock-screen style) ───────────────────────────────────────── */
+
+.pin-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid var(--label);
+  transition: background-color 0.12s, transform 0.15s var(--spring);
+}
+.pin-dot.filled { background: var(--label); transform: scale(1.05); }
+.pin-dot.error { border-color: var(--ios-red); }
+.pin-dot.error.filled { background: var(--ios-red); }
+
+/* Key size tracks screen height so the whole lock-screen pad fits on small phones. */
+.numpad-key,
+.numpad-key-size {
+  width: clamp(58px, 10dvh, 78px);
+  height: clamp(58px, 10dvh, 78px);
+}
+.numpad-key {
+  border-radius: 50%;
+  background: var(--fill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  cursor: pointer;
+  transition: background-color 0.25s ease-out;
+}
+/* iOS keys flash on press and fade back slowly */
+.numpad-key:active { background: var(--fill-strong); transition-duration: 0s; }
+
+.numpad-key-num {
+  font-size: clamp(28px, 4.4dvh, 36px);
+  font-weight: 400;
+  color: var(--label);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.numpad-key-letters {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--label);
+  letter-spacing: 0.14em;
+  margin-top: 2px;
+}
+
+/* ── Live indicator ────────────────────────────────────────────────────── */
+
+.live-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ios-green);
+}
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--ios-green);
+  opacity: 0.45;
+  animation: iosPing 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes iosPing { 75%, 100% { transform: scale(2.2); opacity: 0; } }
+
+/* ── Motion ────────────────────────────────────────────────────────────── */
+/* (animate-fade-in, animate-scale-up, animate-shake … live in index.css) */
+
+@keyframes iosFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes iosScaleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes iosSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+/* The "wrong passcode" wobble from the iOS lock screen */
+@keyframes iosPinShake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-14px); }
+  30% { transform: translateX(12px); }
+  45% { transform: translateX(-9px); }
+  60% { transform: translateX(6px); }
+  75% { transform: translateX(-3px); }
+}
+
+.animate-fade-up { animation: iosFadeUp 0.35s var(--ease-out-ios) both; }
+.animate-scale-in { animation: iosScaleIn 0.28s var(--ease-out-ios) both; }
+.animate-slide-up { animation: iosSlideUp 0.4s var(--ease-out-ios) both; }
+.animate-pin-shake { animation: iosPinShake 0.5s ease-out; }
+
+.stagger-1 { animation-delay: 0.04s; }
+.stagger-2 { animation-delay: 0.08s; }
+.stagger-3 { animation-delay: 0.12s; }
+
+} /* end @layer components */
+
+/* Respect Settings → Accessibility → Motion → Reduce Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Settings → Accessibility → Display → Reduce Transparency:
+   swap frosted glass for solid materials. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-mid, .glass-strong, .ios-sheet, .ios-sheet-detached, .btn-ios-glass {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .glass, .glass-mid, .glass-strong, .btn-ios-glass { background: rgb(255 255 255 / 0.96); }
+  .dark .glass, .dark .glass-mid, .dark .glass-strong, .dark .btn-ios-glass { background: rgb(28 28 30 / 0.98); }
+  .ios-sheet, .ios-sheet-detached { --sheet-bg: rgb(250 250 252); }
+  .dark .ios-sheet, .dark .ios-sheet-detached { --sheet-bg: rgb(28 28 30); }
+}
+
+/* Settings → Accessibility → Display → Increase Contrast */
+@media (prefers-contrast: more) {
+  :root { --glass-border: rgb(0 0 0 / 0.3); --separator: rgb(60 60 67 / 0.5); }
+  .dark { --glass-border: rgb(255 255 255 / 0.4); --separator: rgb(235 235 245 / 0.5); }
+}

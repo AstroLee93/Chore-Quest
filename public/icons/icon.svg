@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5E5CE6"/>
+      <stop offset="0.55" stop-color="#0A84FF"/>
+      <stop offset="1" stop-color="#40C8E0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.78" cy="0.18" r="0.6">
+      <stop offset="0" stop-color="#BF5AF2" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#BF5AF2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="star" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE45C"/>
+      <stop offset="1" stop-color="#FFB800"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+  <circle cx="512" cy="540" r="270" fill="#fff" fill-opacity="0.18"/>
+  <circle cx="512" cy="540" r="270" fill="none" stroke="#fff" stroke-opacity="0.55" stroke-width="10"/>
+  <path d="M388 548 L476 636 L650 448" fill="none" stroke="#fff" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+  <path transform="translate(728 262) scale(1.55)" d="M0 -62 L18 -20 L62 -18 L28 10 L39 54 L0 30 L-39 54 L-28 10 L-62 -18 L-18 -20 Z" fill="url(#star)" stroke="#fff" stroke-width="7" stroke-linejoin="round"/>
+</svg>

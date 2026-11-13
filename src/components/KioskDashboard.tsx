@@ -7,7 +7,7 @@ import { getSeasonalWeatherForDate, WEATHER_CONDITIONS } from '../utils/calendar
 import { getCurrentDayOfWeekKey, DEFAULT_WEEKLY_MENU } from '../utils/menu';
 import { sound } from '../utils/sound';
 import { checkCategoryTimeWindow, checkChoreTimeWindow } from '../utils/timeWindow';
-import { AppThemeId, APP_THEMES } from '../utils/theme';
+import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID } from '../utils/theme';
 import { KioskClock } from './KioskClock';
 import { FamilyGoalBanner } from './FamilyGoalBanner';
 import { ParentPinModal } from './ParentPinModal';
@@ -51,7 +51,7 @@ interface KioskDashboardProps {
 
 export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   database,
-  currentTheme = 'coastal-horizon',
+  currentTheme = DEFAULT_THEME_ID,
   onThemeChange,
   onUpdateDatabase,
   onExitKiosk,
@@ -82,7 +82,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   const [isLeaderClipboardOpen, setIsLeaderClipboardOpen] = useState<boolean>(false);
   const [selectedBirthdayKid, setSelectedBirthdayKid] = useState<KidProfile | null>(null);
 
-  const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
+  const theme = APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID];
   const todayStr = useMemo(() => getTodayDateString(), []);
   const todayWeather = useMemo(() => getSeasonalWeatherForDate(todayStr), [todayStr]);
   const todayDayKey = useMemo(() => getCurrentDayOfWeekKey(), []);

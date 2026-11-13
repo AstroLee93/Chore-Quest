@@ -1,4 +1,14 @@
-import React, { useEffect } from 'react';
+/**
+ * Modal — iOS sheet.
+ * Phones: a bottom sheet with a grab handle that rises from the home
+ * indicator. Tablets / desktop / the Pi kiosk: a centered, detached sheet.
+ * Frosted adaptive material (light or dark per theme), 44pt close button,
+ * Escape to close, and a reference-counted body scroll lock so nested
+ * modals don't unlock the page underneath each other.
+ */
+
+import React, { useEffect, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { TaskList, TaskListProps } from './TaskList';
 import { ChoreItem, ChoreLog, ChoreCategory } from '../types';
@@ -15,13 +25,8 @@ export interface ModalProps {
   footer?: React.ReactNode;
 }
 
-/**
- * Standard Modal / Popup component meeting all requirements:
- * 1. Fixed backdrop positioning (fixed inset-0 z-50 flex items-center justify-center)
- * 2. Box sizing & scroll isolation (max-w-2xl max-h-[85vh] flex flex-col; inner body flex-1 overflow-y-auto)
- * 3. Locks background page body scroll with useEffect ('hidden' -> 'unset')
- * 4. Renders clean, unnested content
- */
+let openModalCount = 0;
+
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -33,55 +38,55 @@ export const Modal: React.FC<ModalProps> = ({
   maxHeightClass = 'max-h-[85vh]',
   footer,
 }) => {
-  // Prevent background page body scroll while modal is open, restore on cleanup
+  const titleId = useId();
+
   useEffect(() => {
     if (!isOpen) return;
-
+    openModalCount += 1;
     document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
     };
-  }, [isOpen]);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      openModalCount = Math.max(0, openModalCount - 1);
+      if (openModalCount === 0) document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in"
+      aria-labelledby={title ? titleId : undefined}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 ios-backdrop animate-fade-in"
     >
-      {/* Modal Box */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`w-full ${maxWidthClass} ${maxHeightClass} flex flex-col bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border-2 sm:border-4 border-yellow-300 overflow-hidden text-slate-800 dark:text-slate-100`}
+        className={`ios-sheet ios-sheet-adaptive w-full ${maxWidthClass} ${maxHeightClass} flex flex-col overflow-hidden text-label pb-[var(--safe-bottom)] sm:pb-0`}
       >
-        {/* Header */}
+        <div className="sheet-handle mt-2 !mb-0 sm:hidden" aria-hidden="true" />
+
         {(title || icon) && (
-          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-yellow-50/60 dark:bg-slate-800/60">
-            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+          <div className="flex items-center justify-between gap-3 px-5 pt-3 pb-3 sm:pt-4 border-b border-separator shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
               {icon && typeof icon === 'string' ? (
-                <span className="text-2xl shrink-0">{icon}</span>
+                <span className="text-2xl shrink-0" aria-hidden="true">{icon}</span>
               ) : (
                 icon
               )}
-              <div className="min-w-0">
+              <div className="min-w-0" id={titleId}>
                 {typeof title === 'string' ? (
-                  <h3 className="font-black text-base sm:text-xl text-slate-900 dark:text-white truncate">
-                    {title}
-                  </h3>
+                  <h3 className="type-headline text-label truncate">{title}</h3>
                 ) : (
                   title
                 )}
                 {subtitle && (
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate">
-                    {subtitle}
-                  </p>
+                  <p className="text-[13px] text-label-secondary truncate mt-0.5">{subtitle}</p>
                 )}
               </div>
             </div>
@@ -89,28 +94,27 @@ export const Modal: React.FC<ModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-9 h-9 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer shrink-0"
+              className="btn-ios-icon"
               title="Close"
-              aria-label="Close modal"
+              aria-label="Close"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 stroke-[2.5]" />
             </button>
           </div>
         )}
 
-        {/* Inner Body: isolated scroll container */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-5">
           {children}
         </div>
 
-        {/* Footer */}
         {footer && (
-          <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-800/40 flex items-center justify-end gap-2">
+          <div className="px-5 py-4 border-t border-separator shrink-0 flex items-center justify-end gap-2">
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

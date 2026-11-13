@@ -290,7 +290,7 @@ export const FamilyGoalModal: React.FC<FamilyGoalModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-yellow-50 rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-7 max-w-3xl w-full shadow-2xl border-2 sm:border-4 border-yellow-300 max-h-[96vh] sm:max-h-[92vh] flex flex-col my-auto"
+        className="ios-sheet-detached ios-sheet-light bg-yellow-50 rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-7 max-w-3xl w-full shadow-2xl border-2 sm:border-4 border-yellow-300 max-h-[96vh] sm:max-h-[92vh] flex flex-col my-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-2.5 sm:pb-4 border-b-2 border-yellow-200/80 shrink-0">
@@ -866,7 +866,7 @@ export const FamilyGoalModal: React.FC<FamilyGoalModalProps> = ({
         {/* PIN Prompt Dialog (if locked) */}
         {showPinPrompt && (
           <div className="fixed inset-0 z-80 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in">
-            <div className="bg-yellow-50 rounded-3xl p-6 max-w-sm w-full border-4 border-yellow-300 shadow-2xl text-center">
+            <div className="ios-sheet-detached ios-sheet-light bg-yellow-50 rounded-3xl p-6 max-w-sm w-full border-4 border-yellow-300 shadow-2xl text-center">
               <div className="w-14 h-14 rounded-2xl bg-amber-400 text-slate-900 flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">
                 🔒
               </div>

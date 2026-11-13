@@ -1,3 +1,5 @@
+import { IOS_THEMES } from './iosThemes';
+
 export type AppThemeId =
   | 'coastal-horizon'
   | 'nordic-forest'
@@ -6,7 +8,16 @@ export type AppThemeId =
   | 'warm-sand'
   | 'classic-sunshine'
   | 'philadelphia-eagles'
-  | 'ohio-state-buckeyes';
+  | 'ohio-state-buckeyes'
+  | 'ios-aurora'
+  | 'ios-daylight'
+  | 'ios-dusk'
+  | 'ios-ocean'
+  | 'ios-forest'
+  | 'ios-midnight';
+
+/** Theme used for first launch and as the fallback for unknown ids. */
+export const DEFAULT_THEME_ID: AppThemeId = 'ios-aurora';
 
 export interface AppThemeConfig {
   id: AppThemeId;
@@ -92,6 +103,9 @@ export interface AppThemeConfig {
 }
 
 export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
+  // 🍎 iOS glass themes (src/utils/iosThemes.ts) listed first so they lead the picker
+  ...IOS_THEMES,
+
   // 🌊 PALETTE 1 (Uploaded Image 1): Ocean Beach Coastal (#579FB6, #77B7D0, #B3E0F4, #FCFDFE, #EED3CE, #E2BAB1)
   'coastal-horizon': {
     id: 'coastal-horizon',
@@ -752,7 +766,7 @@ export const APP_THEMES: Record<AppThemeId, AppThemeConfig> = {
 const THEME_STORAGE_KEY = 'chorequest_theme_id_v4';
 
 export function getSavedThemeId(): AppThemeId {
-  if (typeof window === 'undefined') return 'coastal-horizon';
+  if (typeof window === 'undefined') return DEFAULT_THEME_ID;
   try {
     const saved = localStorage.getItem(THEME_STORAGE_KEY) as AppThemeId | null;
     if (saved && APP_THEMES[saved]) {
@@ -761,14 +775,22 @@ export function getSavedThemeId(): AppThemeId {
   } catch (e) {
     // Ignore localStorage read failures
   }
-  return 'coastal-horizon';
+  return DEFAULT_THEME_ID;
 }
 
 export function applyThemeToDocument(themeId: AppThemeId): void {
   if (typeof window === 'undefined') return;
   try {
-    const theme = APP_THEMES[themeId] || APP_THEMES['coastal-horizon'];
+    const theme = APP_THEMES[themeId] || APP_THEMES[DEFAULT_THEME_ID];
     document.documentElement.setAttribute('data-theme', theme.id);
+    // Tint Safari's toolbar / the status-bar area to match the theme.
+    let themeColorMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!themeColorMeta) {
+      themeColorMeta = document.createElement('meta');
+      themeColorMeta.name = 'theme-color';
+      document.head.appendChild(themeColorMeta);
+    }
+    themeColorMeta.content = theme.pageBackground;
     document.body.setAttribute('data-theme', theme.id);
     if (theme.isDark) {
       document.documentElement.classList.add('dark');

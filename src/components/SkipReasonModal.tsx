@@ -73,7 +73,7 @@ export const SkipReasonModal: React.FC<SkipReasonModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-fade-in">
       <div
         id="skip-reason-dialog"
-        className="bg-yellow-50 w-full max-w-lg rounded-[2.5rem] p-6 sm:p-8 shadow-2xl border-4 border-yellow-300 max-h-[90vh] overflow-y-auto"
+        className="ios-sheet-detached ios-sheet-light bg-yellow-50 w-full max-w-lg rounded-[2.5rem] p-6 sm:p-8 shadow-2xl border-4 border-yellow-300 max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-4">

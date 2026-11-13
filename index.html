@@ -2,7 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover lets the app paint under the notch / Dynamic Island; safe-area insets pad the chrome -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Updated at runtime to the active theme's background (utils/theme.ts) -->
+    <meta name="theme-color" content="#060B18" />
+
+    <!-- Add to Home Screen: full-screen app with a translucent status bar -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ChoreQuest" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <title>ChoreQuest: Family Chore Tracker</title>
     <meta name="description" content="A kid-friendly, offline-capable chore, reward, and Kid-Coin financial savings tracker for local home networks and Raspberry Pi, featuring interactive rocket savings missions, compound interest calculations, wishlists, parent admin controls, and gamified star rewards." />
     <meta property="og:title" content="ChoreQuest: Family Chore Tracker" />

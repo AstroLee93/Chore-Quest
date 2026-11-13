@@ -524,7 +524,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
     >
       <div
         id="weekly-menu-modal-container"
-        className="bg-white border-4 border-amber-300 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden relative"
+        className="ios-sheet-detached ios-sheet-light bg-white border-4 border-amber-300 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden relative"
       >
         {/* Top Header Banner */}
         <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 p-4 sm:p-5 flex items-center justify-between shadow-md shrink-0">
@@ -1602,7 +1602,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
       {/* PRESET INSPIRATION MODAL */}
       {showPresetMenuModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl border-4 border-amber-400 p-6 max-w-xl w-full shadow-2xl space-y-4">
+          <div className="ios-sheet-detached ios-sheet-light bg-white rounded-3xl border-4 border-amber-400 p-6 max-w-xl w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">✨</span>
@@ -1675,7 +1675,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
       {/* CONFIRMATION MODAL: DELETE SPECIFIC DAY */}
       {deleteConfirmDay && (
         <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl border-4 border-rose-400 p-6 max-w-md w-full shadow-2xl space-y-4">
+          <div className="ios-sheet-detached ios-sheet-light bg-white rounded-3xl border-4 border-rose-400 p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="w-10 h-10 rounded-2xl bg-rose-100 flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-rose-600" />
@@ -1719,7 +1719,7 @@ export const WeeklyMenuModal: React.FC<WeeklyMenuModalProps> = ({
       {/* CONFIRMATION MODAL: DELETE FULL WEEK */}
       {showDeleteWeekConfirm && (
         <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl border-4 border-rose-500 p-6 max-w-md w-full shadow-2xl space-y-4">
+          <div className="ios-sheet-detached ios-sheet-light bg-white rounded-3xl border-4 border-rose-500 p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-6 h-6 text-rose-600" />

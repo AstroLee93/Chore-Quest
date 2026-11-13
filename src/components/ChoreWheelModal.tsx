@@ -154,7 +154,7 @@ export const ChoreWheelModal: React.FC<ChoreWheelModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border-4 border-yellow-300 relative text-slate-800 text-center overflow-hidden"
+        className="ios-sheet-detached ios-sheet-light bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border-4 border-yellow-300 relative text-slate-800 text-center overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}

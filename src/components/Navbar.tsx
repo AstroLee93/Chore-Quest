@@ -1,21 +1,16 @@
+/**
+ * Navbar — iOS navigation bar.
+ * Calm three-zone bar: back + brand / the active kid's balances / menu.
+ * Keeps the theme's own header material (so team themes stay branded),
+ * pads under the status bar & Dynamic Island, and uses adaptive label colors.
+ */
+
 import React, { useState } from 'react';
-import {
-  Shield,
-  Sparkles,
-  Volume2,
-  VolumeX,
-  Wifi,
-  Server,
-  LogOut,
-  ArrowLeft,
-  Calendar as CalendarIcon,
-  Menu,
-  X,
-} from 'lucide-react';
+import { Shield, ChevronLeft, Menu, X, Star } from 'lucide-react';
 import { KidProfile, AppSettings, CalendarEvent } from '../types';
 import { sound } from '../utils/sound';
-import { getTodayDateString } from '../utils/storage';
-import { AppThemeId, APP_THEMES } from '../utils/theme';
+import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID } from '../utils/theme';
+import { haptic } from '../utils/haptics';
 import { AppNavMenu } from './AppNavMenu';
 
 interface NavbarProps {
@@ -51,7 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isCalendarOpen = false,
   isMenuOpen = false,
   isGroceryOpen = false,
-  currentTheme = 'coastal-horizon',
+  currentTheme = DEFAULT_THEME_ID,
   onThemeChange,
   onOpenParentPin,
   onExitParentMode,
@@ -68,164 +63,122 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenHouseRules,
 }) => {
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
-  const todayStr = getTodayDateString();
-  const todayEventsCount = events.filter((e) => e.date === todayStr).length;
-  const theme = APP_THEMES[currentTheme] || APP_THEMES['coastal-horizon'];
+  const theme = APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID];
+
+  const vaultTotal =
+    (activeKid?.goals?.reduce((acc, g) => acc + g.currentSaved, 0) ?? 0) +
+    (activeKid?.kidCoinBalance || 0);
 
   return (
     <>
       <header
-        className={`sticky top-0 z-40 ${theme.headerBg} border-b ${theme.headerBorder} px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 shadow-sm transition-all duration-300`}
+        className={`ios-navbar sticky top-0 z-40 ${theme.headerBg} border-b ${theme.headerBorder} pb-2.5 transition-colors duration-300`}
       >
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2 sm:gap-4">
-          {/* Left Brand & Child Switcher */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3">
+
+          {/* ── Left: Brand ──────────────────────────────────── */}
+          <div className="flex items-center gap-2.5 shrink-0 min-w-0">
             {activeKid && !isParentMode && (
               <button
                 id="btn-back-to-kids"
-                onClick={() => {
-                  sound.playTap();
-                  onSelectKid(null);
-                }}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white/80 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-black transition-all cursor-pointer shadow-2xs shrink-0 active:scale-95"
+                onClick={() => { sound.playTap(); onSelectKid(null); }}
+                className="flex items-center -ml-2 pr-1 min-h-[44px] text-ios-blue text-[17px] tracking-[-0.41px] cursor-pointer active:opacity-50 transition-opacity shrink-0"
                 title="Switch Child Profile"
               >
-                <ArrowLeft className="w-4 h-4 stroke-[3]" />
-                <span className="hidden sm:inline">All Kids</span>
+                <ChevronLeft className="w-7 h-7 stroke-[2.25] -mr-0.5" />
+                <span>Kids</span>
               </button>
             )}
 
             <div
-              onClick={() => {
-                if (activeKid && !isParentMode) {
-                  sound.playTap();
-                  onSelectKid(null);
-                }
-              }}
-              className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group select-none"
+              onClick={() => { if (activeKid && !isParentMode) { sound.playTap(); onSelectKid(null); } }}
+              className={`items-center gap-2.5 cursor-pointer select-none min-w-0 ${activeKid && !isParentMode ? 'hidden sm:flex' : 'flex'}`}
             >
-              <div
-                className={`w-9 h-9 sm:w-11 sm:h-11 ${theme.headerLogoBg} rounded-2xl flex items-center justify-center shadow-md transform -rotate-3 group-hover:rotate-0 transition-transform shrink-0`}
-              >
-                <span className={`text-base sm:text-xl font-black ${theme.headerLogoText}`}>CQ</span>
+              <div className={`w-8 h-8 ${theme.headerLogoBg} rounded-[9px] flex items-center justify-center shrink-0 shadow-sm`}>
+                <span className={`text-[13px] font-bold font-rounded ${theme.headerLogoText}`}>CQ</span>
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h1 className={`text-lg sm:text-2xl font-black tracking-tight ${theme.headerTextColor} italic leading-none`}>
-                    ChoreQuest
-                  </h1>
-                  <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                    Pi Active
-                  </span>
-                </div>
-                <p className={`text-[10px] sm:text-xs font-bold hidden sm:block opacity-80 ${theme.headerTextColor} truncate mt-0.5`}>
-                  {isParentMode ? 'Parent Admin Control' : settings.familyName || 'Family Chore Server'}
+                <h1 className="text-[17px] font-semibold text-label leading-tight tracking-[-0.41px] truncate">
+                  ChoreQuest
+                </h1>
+                <p className="text-[12px] text-label-secondary truncate leading-tight">
+                  {isParentMode ? 'Parent admin' : settings.familyName || 'Family'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Center / Kid Quick Info (Stars & Profile Badge) */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* ── Center: Active kid's currency pill ──────────── */}
+          <div className="flex items-center gap-2 shrink-0">
             {activeKid && !isParentMode && (
               <>
-                {/* Star Points pill */}
                 <button
                   id="btn-open-rewards-nav"
-                  onClick={() => {
-                    sound.playTap();
-                    if (onOpenRewardStore) onOpenRewardStore();
-                  }}
-                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border-2 flex items-center gap-1.5 sm:gap-2.5 transition-all cursor-pointer active:scale-95 shadow-xs shrink-0 ${
-                    settings.pauseRewardStore
-                      ? 'bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-950/80 border-amber-300 dark:border-amber-700'
-                      : 'bg-pink-100 hover:bg-pink-200 dark:bg-pink-950/60 dark:hover:bg-pink-950/80 border-pink-300 dark:border-pink-800'
-                  }`}
-                  title={settings.pauseRewardStore ? 'Rewards Store (Paused by Parents)' : 'Open Rewards Store'}
+                  onClick={() => { sound.playTap(); haptic('selection'); onOpenRewardStore?.(); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full glass-mid min-h-[36px] transition-transform cursor-pointer active:scale-95 shrink-0"
+                  title={settings.pauseRewardStore ? 'Rewards Store (paused)' : 'Open Rewards Store'}
                 >
-                  <span className="text-base sm:text-xl leading-none">{settings.pauseRewardStore ? '⏸️' : '⭐'}</span>
-                  <span className={`font-black text-sm sm:text-lg leading-none ${settings.pauseRewardStore ? 'text-amber-800 dark:text-amber-300' : 'text-pink-600 dark:text-pink-300'}`}>
-                    {activeKid.stars.toLocaleString()}{' '}
-                    <span className="text-[10px] uppercase sm:text-xs font-extrabold">Pts</span>
+                  <Star className={`w-3.5 h-3.5 ${settings.pauseRewardStore ? 'text-label-tertiary' : 'fill-ios-yellow text-ios-yellow'}`} />
+                  <span className="text-[15px] font-semibold text-label tabular-nums">
+                    {activeKid.stars.toLocaleString()}
                   </span>
                 </button>
 
-                {/* Kid-Coin Vault Pill */}
                 {settings.kidCoinEnabled !== false && (
                   <button
                     id="btn-open-kidcoin-vault"
-                    onClick={() => {
-                      sound.playCoinSound();
-                      if (onOpenVault) onOpenVault();
-                    }}
-                    className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full border-2 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs shrink-0 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-950/80 border-amber-300 dark:border-amber-700"
-                    title="Open Kid-Coin Savings Vault & Rocket Missions"
+                    onClick={() => { sound.playCoinSound(); haptic('selection'); onOpenVault?.(); }}
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full glass-mid min-h-[36px] transition-transform cursor-pointer active:scale-95 shrink-0"
+                    title="Kid-Coin savings vault"
                   >
-                    <span className="text-base sm:text-lg leading-none">🪙</span>
-                    <span className="font-black text-xs sm:text-sm leading-none text-amber-900 dark:text-amber-200">
-                      ${((activeKid.goals?.reduce((acc, g) => acc + g.currentSaved, 0) ?? 0) + (activeKid.kidCoinBalance || 0)).toFixed(2)}
-                    </span>
+                    <span className="text-sm leading-none">🪙</span>
+                    <span className="text-[15px] font-semibold text-label tabular-nums">${vaultTotal.toFixed(2)}</span>
                   </button>
                 )}
 
-                {/* Kid Profile Badge */}
-                <div className="hidden lg:flex items-center gap-2 bg-white/90 dark:bg-slate-800/90 p-1 pr-3 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs">
+                {/* Avatar chip — desktop only */}
+                <div className="hidden lg:flex items-center gap-2 pl-1 pr-3 py-1 rounded-full glass-mid">
                   <div
-                    className="w-7 h-7 rounded-full border border-white dark:border-slate-700 overflow-hidden flex items-center justify-center text-white font-black text-xs shadow-2xs shrink-0"
-                    style={{ backgroundColor: activeKid.color || '#3b82f6' }}
+                    className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[11px] font-semibold text-white shrink-0"
+                    style={{ backgroundColor: activeKid.color || '#0A84FF' }}
                   >
                     {activeKid.avatar && (activeKid.avatar.startsWith('http') || activeKid.avatar.startsWith('data:image') || activeKid.avatar.startsWith('/')) ? (
                       <img src={activeKid.avatar} alt={activeKid.name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-sm leading-none">{activeKid.avatar || activeKid.name.slice(0, 2).toUpperCase()}</span>
+                      <span>{activeKid.avatar || activeKid.name.slice(0, 2).toUpperCase()}</span>
                     )}
                   </div>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-200 text-xs">
-                    {activeKid.name}
-                  </span>
+                  <span className="text-[15px] font-medium text-label">{activeKid.name}</span>
                 </div>
               </>
             )}
 
             {isParentMode && (
-              <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-900 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-800 text-[11px] sm:text-xs font-black shrink-0">
-                <Shield className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span className="hidden sm:inline">Parent Admin Active</span>
-                <span className="sm:hidden">Admin</span>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full glass-mid text-[13px] font-semibold text-label">
+                <Shield className="w-3.5 h-3.5 text-ios-blue" />
+                <span className="hidden sm:inline">Parent admin</span>
               </div>
             )}
           </div>
 
-          {/* Right Action Hub: ONLY the Unified Menu Drop Down Icon */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            {/* UNIFIED NAVIGATION & CONTROLS MENU BUTTON */}
+          {/* ── Right: Menu ──────────────────────────────────── */}
+          <div className="flex items-center shrink-0">
             <button
               id="btn-app-menu-toggle"
-              onClick={() => {
-                sound.playTap();
-                setIsMenuDrawerOpen((prev) => !prev);
-              }}
-              className={`px-3 py-2 rounded-xl border-2 flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95 shrink-0 ${
-                isMenuDrawerOpen
-                  ? 'bg-slate-900 text-white border-slate-950 ring-2 ring-slate-400/50'
-                  : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-600'
+              onClick={() => { sound.playTap(); haptic('selection'); setIsMenuDrawerOpen(p => !p); }}
+              className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-transform cursor-pointer active:scale-90 before:absolute before:-inset-1 before:content-[''] ${
+                isMenuDrawerOpen ? 'bg-fill-strong text-label' : 'glass-mid text-label'
               }`}
-              title="Open Navigation Menu & Controls"
-              aria-label="Open Navigation Menu & Controls"
+              title="Menu"
+              aria-label="Open navigation menu"
               aria-expanded={isMenuDrawerOpen}
             >
-              {isMenuDrawerOpen ? (
-                <X className="w-4 h-4 stroke-[2.5]" />
-              ) : (
-                <Menu className="w-4 h-4 stroke-[2.5]" />
-              )}
-              <span className="text-xs sm:text-sm font-black">Menu</span>
+              {isMenuDrawerOpen ? <X className="w-4 h-4 stroke-[2.5]" /> : <Menu className="w-4 h-4 stroke-[2.5]" />}
             </button>
           </div>
         </div>
       </header>
 
-      {/* Universal Hub Menu: Houses Dinner, Calendar, Kiosk, Host Guide, Theme Switcher, Sound & Parents */}
       <AppNavMenu
         isOpen={isMenuDrawerOpen}
         onClose={() => setIsMenuDrawerOpen(false)}

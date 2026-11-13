@@ -1,3 +1,4 @@
+import { isCq2026Active } from '../../utils/themes2026';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
@@ -58,6 +59,20 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
   const totalSaved = goals.reduce((acc, g) => acc + g.currentSaved, 0);
   const transactions = kid.transactions || [];
   const interestRate = database.settings.bankInterestRateMonthlyPercent ?? 5;
+  const isCq2026 = isCq2026Active();
+
+  // 2026 design: money in over the last 7 days and average weekly pace (last 8 weeks)
+  const nowMs = Date.now();
+  const depositsSince = (days: number) =>
+    transactions
+      .filter((t) => t.type !== 'withdrawal' && nowMs - new Date(t.date).getTime() <= days * 86400000)
+      .reduce((acc, t) => acc + t.amount, 0);
+  const thisWeekIn = depositsSince(7);
+  const weeklyPace = Math.max(depositsSince(56) / 8, kid.weeklyAllowance || 0);
+  const goalRemaining = primaryGoal ? Math.max(0, primaryGoal.targetCost - primaryGoal.currentSaved) : 0;
+  const goalFraction = primaryGoal ? Math.min(1, primaryGoal.currentSaved / Math.max(0.01, primaryGoal.targetCost)) : 0;
+  const weeksToGoal = weeklyPace > 0 ? Math.ceil(goalRemaining / weeklyPace) : null;
+  const grandTotal = totalSaved + (kid.kidCoinBalance || 0);
 
   const handleDepositToGoal = (amountNum: number, note: string) => {
     if (!primaryGoal || amountNum <= 0) return;
@@ -161,21 +176,23 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
           className="relative w-full max-w-4xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl my-6 flex flex-col max-h-[92vh] overflow-hidden text-slate-900 dark:text-white"
         >
           {/* Header Bar */}
-          <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-transparent">
+          <div className={`p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 ${isCq2026 ? '' : 'bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-transparent'}`}>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white shadow-md shadow-orange-500/30 text-2xl font-black">
-                🪙
-              </div>
+              {!isCq2026 && (
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white shadow-md shadow-orange-500/30 text-2xl font-black">
+                  🪙
+                </div>
+              )}
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
-                    {kid.name}'s Kid-Coin Savings Vault
+                  <h2 className={isCq2026 ? 'text-[17px] font-semibold' : 'text-lg sm:text-xl font-black text-slate-900 dark:text-white'}>
+                    {isCq2026 ? `${kid.name}'s savings` : `${kid.name}'s Kid-Coin Savings Vault`}
                   </h2>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase tracking-wider border border-amber-300 dark:border-amber-700">
+                  {!isCq2026 && <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase tracking-wider border border-amber-300 dark:border-amber-700">
                     Active
-                  </span>
+                  </span>}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className={`text-xs text-slate-500 dark:text-slate-400 ${isCq2026 ? 'hidden' : ''}`}>
                   Fuel your rocket missions with chores • Bank of Mom & Dad {interestRate}% Monthly Interest
                 </p>
               </div>
@@ -189,8 +206,29 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
             </button>
           </div>
 
+          {/* 2026: big balance */}
+          {isCq2026 && (
+            <div className="px-5 sm:px-6 pt-5 pb-4 flex items-end justify-between gap-4 flex-wrap border-b border-slate-200 dark:border-slate-800">
+              <div className="flex flex-col">
+                <span className="cq-eyebrow">Savings</span>
+                <span className="text-[44px] sm:text-[52px] font-light cq-num leading-none mt-1">
+                  {'$' + Math.floor(grandTotal)}
+                  <span className="text-slate-500 dark:text-slate-400">{'.' + (grandTotal % 1).toFixed(2).slice(2)}</span>
+                </span>
+                {thisWeekIn > 0 && (
+                  <span className="text-[14px] text-emerald-500 mt-1.5">{'+$' + thisWeekIn.toFixed(2)} this week</span>
+                )}
+              </div>
+              <div className="flex gap-5 text-[13px] text-slate-500 dark:text-slate-400">
+                <span><span className="block text-[17px] font-medium cq-num text-slate-900 dark:text-white">{'$' + (kid.kidCoinBalance || 0).toFixed(2)}</span>Pocket</span>
+                <span><span className="block text-[17px] font-medium cq-num text-slate-900 dark:text-white">{'$' + (kid.weeklyAllowance || 5).toFixed(2)}</span>Per week</span>
+                <span><span className="block text-[17px] font-medium cq-num text-slate-900 dark:text-white">{interestRate}%</span>Interest / mo</span>
+              </div>
+            </div>
+          )}
+
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-slate-800">
+          {!isCq2026 && <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-slate-800">
             <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
               <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Total Saved</span>
               <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
@@ -222,7 +260,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
                 <span>+{interestRate}% / mo</span>
               </div>
             </div>
-          </div>
+          </div>}
 
           {/* Tab Navigation */}
           <div className="flex gap-2 px-4 pt-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
@@ -238,7 +276,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
               }`}
             >
               <Flame className="w-3.5 h-3.5" />
-              <span>Rocket Missions ({goals.length})</span>
+              <span>{isCq2026 ? `Goals (${goals.length})` : `Rocket Missions (${goals.length})`}</span>
             </button>
 
             <button
@@ -253,7 +291,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
               }`}
             >
               <Compass className="w-3.5 h-3.5" />
-              <span>Captain Penny Coach</span>
+              <span>{isCq2026 ? 'Coach' : 'Captain Penny Coach'}</span>
             </button>
 
             <button
@@ -268,7 +306,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
               }`}
             >
               <History className="w-3.5 h-3.5" />
-              <span>Transaction Ledger ({transactions.length})</span>
+              <span>{isCq2026 ? 'History' : `Transaction Ledger (${transactions.length})`}</span>
             </button>
           </div>
 
@@ -319,11 +357,48 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
                 {/* Primary Rocket Goal Track */}
                 {primaryGoal ? (
                   <div className="space-y-4">
-                    <RocketGoalTrack
-                      goal={primaryGoal}
-                      kid={kid}
-                      onLaunchRocket={() => setShowTakeoffModal(true)}
-                    />
+                    {isCq2026 ? (
+                      <section
+                        aria-label={`Goal: ${primaryGoal.title}`}
+                        className="rounded-[22px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 flex flex-col items-center gap-1"
+                      >
+                        <div className="relative w-[260px] h-[140px]">
+                          <svg viewBox="0 0 260 140" className="absolute inset-0 w-full h-full" role="img" aria-label={`${Math.round(goalFraction * 100)} percent of goal saved`}>
+                            <path d="M 20 130 A 110 110 0 0 1 240 130" fill="none" stroke="currentColor" strokeOpacity="0.1" strokeWidth="14" strokeLinecap="round" />
+                            <path
+                              d="M 20 130 A 110 110 0 0 1 240 130" fill="none" stroke="var(--cq-accent, #5B8CFF)" strokeWidth="14" strokeLinecap="round"
+                              strokeDasharray={`${(345.6 * goalFraction).toFixed(1)} 345.6`}
+                              style={{ transition: 'stroke-dasharray 0.8s cubic-bezier(0.16,1,0.3,1)' }}
+                            />
+                          </svg>
+                          <div className="absolute inset-x-0 bottom-1 flex flex-col items-center">
+                            <span className="text-[36px] font-light cq-num leading-none">{Math.round(goalFraction * 100)}%</span>
+                            <span className="text-[12px] text-slate-500 dark:text-slate-400 mt-1">{'of $' + primaryGoal.targetCost.toFixed(2)}</span>
+                          </div>
+                        </div>
+                        <span className="text-[17px] font-semibold mt-2 text-center">{primaryGoal.title}</span>
+                        <span className="text-[14px] text-slate-500 dark:text-slate-400 text-center">
+                          {goalRemaining <= 0
+                            ? 'Goal reached!'
+                            : '$' + goalRemaining.toFixed(2) + ' to go' + (weeksToGoal ? ' · about ' + weeksToGoal + ' week' + (weeksToGoal === 1 ? '' : 's') + ' at your pace' : '')}
+                        </span>
+                        {goalRemaining <= 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowTakeoffModal(true)}
+                            className="mt-3 min-h-[44px] px-5 rounded-2xl bg-[var(--cq-accent,#5B8CFF)] text-[var(--cq-on-accent,#0C0E13)] font-semibold text-[15px] cursor-pointer active:scale-95 transition-transform"
+                          >
+                            Celebrate this goal
+                          </button>
+                        )}
+                      </section>
+                    ) : (
+                      <RocketGoalTrack
+                        goal={primaryGoal}
+                        kid={kid}
+                        onLaunchRocket={() => setShowTakeoffModal(true)}
+                      />
+                    )}
 
                     {/* Quick Deposit Console */}
                     <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">

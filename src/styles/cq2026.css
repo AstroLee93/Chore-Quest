@@ -203,3 +203,63 @@ html.cq2026:not([data-cq-style="playful"]) .cq-playful-extra { display: none !im
 html.cq2026:not(.dark) .cq-ground:not(.cq-kiosk-dark) .text-white:not([class*="bg-"]),
 html.cq2026:not(.dark) .cq-ground:not(.cq-kiosk-dark) .text-white\/90:not([class*="bg-"]) { color: var(--cq-label); }
 html.cq2026:not(.dark) .cq-ground:not(.cq-kiosk-dark) [class*="text-white/"]:not([class*="bg-"]) { color: var(--cq-label-2); }
+
+/* ── Kid dashboard action tiles (Snacks, Brain Teaser, Reading, Leader) ── */
+html.cq2026 .cq-tiles > button {
+  background: var(--cq-surface-2);
+  background-image: none;
+  border: 1px solid var(--cq-line);
+  border-radius: 16px;
+  box-shadow: none;
+  min-height: 64px;
+}
+html.cq2026 .cq-tiles > button:hover { background: var(--cq-surface-2); filter: brightness(1.08); }
+html.cq2026 .cq-tiles > button > div:first-child {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--cq-accent-soft);
+  background-image: none;
+  color: var(--cq-accent-text);
+  box-shadow: none;
+}
+html.cq2026 .cq-tiles > button > div:last-child > div:first-child { color: var(--cq-label); font-weight: 600; }
+html.cq2026 .cq-tiles > button > div:last-child > div:nth-child(2),
+html.cq2026 .cq-tiles > button > div:last-child > div:nth-child(2) span { color: var(--cq-label-2); font-weight: 500; }
+html.cq2026 .cq-tiles > button > div:last-child span[class*="bg-"] { background: var(--cq-surface); color: var(--cq-label-2); }
+html.cq2026 .cq-tiles .animate-ping { background: var(--cq-due); }
+
+/* ── Kid dashboard level / badges hub ─────────────────────────────────── */
+html.cq2026 .cq-hub > div {
+  background: var(--cq-surface);
+  background-image: none;
+  border: 1px solid var(--cq-line);
+  border-radius: 24px;
+  color: var(--cq-label);
+  box-shadow: none;
+}
+html.cq2026 .cq-hub [class*="bg-indigo-9"],
+html.cq2026 .cq-hub [class*="bg-indigo-8"],
+html.cq2026 .cq-hub [class*="bg-slate-9"] { background: var(--cq-surface-2); border-color: var(--cq-line); }
+html.cq2026 .cq-hub .italic { font-style: normal; }
+html.cq2026 .cq-hub [class*="text-indigo-"],
+html.cq2026 .cq-hub [class*="text-slate-4"],
+html.cq2026 .cq-hub [class*="text-white/"] { color: var(--cq-label-2); }
+html.cq2026 .cq-hub .text-white,
+html.cq2026 .cq-hub .text-yellow-400,
+html.cq2026 .cq-hub .text-orange-400,
+html.cq2026 .cq-hub .text-amber-400 { color: var(--cq-label); }
+html.cq2026 .cq-hub .rounded-full.bg-gradient-to-r { background: var(--cq-accent); }
+html.cq2026 .cq-hub .absolute.blur-3xl,
+html.cq2026 .cq-hub [class*="blur-2xl"] { display: none; }
+
+/* ── .cq-adapt: legacy content → theme colours ──────────────────────────
+   Put on a modal/panel built only for white backgrounds (instead of
+   ios-sheet-light) and it follows the 2026 theme, dark or light. */
+html.cq2026 .cq-adapt { color: var(--cq-label); }
+html.cq2026 .cq-adapt :is(.bg-white, .bg-yellow-50, .bg-amber-50, .bg-slate-50) { background-color: var(--cq-surface); }
+html.cq2026 .cq-adapt :is(.bg-slate-100, .bg-yellow-100, .bg-amber-100, [class*="bg-yellow-200"], [class*="bg-pink-100"], [class*="bg-indigo-100"], [class*="bg-emerald-100"]) { background-color: var(--cq-surface-2); }
+html.cq2026 .cq-adapt :is(.text-slate-900, .text-slate-800, .text-slate-700, .text-indigo-900, .text-indigo-950, .text-amber-950, .text-emerald-950) { color: var(--cq-label); }
+html.cq2026 .cq-adapt :is(.text-slate-600, .text-slate-500, .text-slate-400, .text-pink-600, .text-pink-700, .text-amber-700, .text-amber-800) { color: var(--cq-label-2); }
+html.cq2026 .cq-adapt :is([class*="border-slate-"], [class*="border-yellow-"], [class*="border-pink-"], [class*="border-amber-"], [class*="border-indigo-"], [class*="border-emerald-3"]) { border-color: var(--cq-line); }
+html.cq2026 .cq-adapt :is(input, textarea, select) { background: var(--cq-surface-2) !important; color: var(--cq-label) !important; -webkit-text-fill-color: var(--cq-label) !important; border-color: var(--cq-line) !important; color-scheme: inherit !important; }

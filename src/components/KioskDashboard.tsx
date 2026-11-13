@@ -883,6 +883,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                   ? theme.kioskCardItemDone
                                   : isTimeLocked
                                   ? 'bg-black/30 border-amber-500/30 opacity-80'
+                                  : isCq2026 && isExpiringSoon
+                                  ? `${theme.kioskCardItemBg} !border-[var(--cq-due)]/60`
                                   : isUrgent
                                   ? 'bg-gradient-to-r from-rose-950/90 via-amber-950/80 to-rose-950/90 border-rose-400 shadow-xl shadow-rose-500/30 ring-2 ring-rose-400/80 animate-pulse'
                                   : isExpiringSoon
@@ -908,7 +910,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                               )}
 
                               <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                                <span className={`text-2xl sm:text-3xl shrink-0 ${isExpiringSoon ? 'animate-bounce' : ''}`}>
+                                <span className={`cq-emoji text-2xl sm:text-3xl shrink-0 ${isExpiringSoon && !isCq2026 ? 'animate-bounce' : ''}`}>
                                   {chore.icon || '⭐'}
                                 </span>
                                 <div className="min-w-0 flex-1">
@@ -918,15 +920,21 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                     </div>
                                     {isExpiringSoon && (
                                       <span
-                                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-md shrink-0 ${
-                                          isUrgent
+                                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full shrink-0 ${
+                                          isCq2026
+                                            ? 'text-[12px] font-semibold bg-[var(--cq-due)]/15 text-[var(--cq-due)]'
+                                            : 'text-[10px] font-black uppercase tracking-wider shadow-md'
+                                        } ${
+                                          isCq2026
+                                            ? ''
+                                            : isUrgent
                                             ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white animate-bounce'
                                             : 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950'
                                         }`}
                                         title={`Window closes at ${timeStatus.endTimeFormatted} (${timeStatus.minutesRemaining}m remaining)`}
                                       >
                                         <Hourglass className="w-3 h-3 text-current" />
-                                        <span>{isUrgent ? '⚡ URGENT' : '⚡ PRIORITY'}: {timeStatus.expirationBadgeText}</span>
+                                        <span>{isCq2026 ? `Due · ${timeStatus.expirationBadgeText}` : `${isUrgent ? '⚡ URGENT' : '⚡ PRIORITY'}: ${timeStatus.expirationBadgeText}`}</span>
                                       </span>
                                     )}
                                   </div>

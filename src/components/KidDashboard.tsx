@@ -391,7 +391,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
 
           {/* Bottom Row: Action Cards (Snacks, Brain Teaser, Reading Log, and Leader Clipboard) */}
-          <div className={`grid grid-cols-1 ${isThisKidLeader ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'} gap-3 sm:gap-4 pt-1 sm:pt-2`}>
+          <div className={`cq-tiles grid grid-cols-1 ${isThisKidLeader ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'} gap-3 sm:gap-4 pt-1 sm:pt-2`}>
             {/* Card 1: Snacks */}
             {onOpenSnackRequest && (
               <button
@@ -672,7 +672,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
       )}
 
       {/* Level, Badges & Rewards Hub (Balanced 2-Card Layout - Zero Dead Space) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+      <div className="cq-hub grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         {/* Card 1: Level, Star Bank, Next Rank & Reward Store (7 cols on desktop) */}
         <div className="lg:col-span-7 bg-indigo-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 text-white relative overflow-hidden shadow-xl flex flex-col justify-between">
           <div className="relative z-10 space-y-4">

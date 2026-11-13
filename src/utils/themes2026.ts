@@ -130,3 +130,7 @@ export const CQ2026_THEMES: Record<Cq2026ThemeId, AppThemeConfig> = {
   'cq-sorbet': make('cq-sorbet', 'Sorbet', 'Light · for Playful style', 'Soft peach with a bright pink accent.', '🍧', ['#FFF4EE', '#FFFFFF', '#E8437A'], false, 'light'),
   'cq-green': make('cq-green', 'Midnight Green', 'Dark · team colours', 'Midnight green with a silver accent.', '🏈', ['#041618', '#0B2A2E', '#A5ACAF'], true, 'sports'),
 };
+
+/** True when a 2026 theme is applied to the page (for components without a theme prop). */
+export const isCq2026Active = (): boolean =>
+  typeof document !== 'undefined' && document.documentElement.classList.contains('cq2026');

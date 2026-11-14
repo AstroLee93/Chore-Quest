@@ -431,3 +431,22 @@ html.cq2026[data-cq-style="minimal"] {
   --cq-accent-soft: rgb(127 127 127 / 0.14);
   --cq-on-accent: var(--cq-ground);
 }
+
+/* ── Kiosk wallpaper: wall sits on a photo/scene, cards become frosted glass ── */
+html.cq2026 .cq-wall-photo {
+  background: transparent !important;
+  --cq-surface: rgb(18 20 26 / 0.48);
+  --cq-surface-2: rgb(255 255 255 / 0.12);
+  --cq-line: rgb(255 255 255 / 0.14);
+  --cq-label-2: #C4C8D0;
+  --cq-label-3: #A3A8B3;
+}
+html.cq2026 .cq-wall-photo [class*="bg-[var(--cq-surface)]"],
+html.cq2026 .cq-wall-photo [class*="bg-[var(--cq-surface-2)]"],
+html.cq2026 .cq-wall-photo .cq-card {
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  backdrop-filter: blur(22px) saturate(1.4);
+}
+html.cq2026 .cq-wall-photo .cq-num,
+html.cq2026 .cq-wall-photo h1,
+html.cq2026 .cq-wall-photo h2 { text-shadow: 0 1px 12px rgb(0 0 0 / 0.35); }

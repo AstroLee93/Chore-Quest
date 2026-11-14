@@ -34,6 +34,7 @@ const LeaderClipboardModal = React.lazy(() => import('./LeaderClipboardModal').t
 import { getGradeLevelInfo, getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
 import { isBirthdayToday, getBirthdayConfig } from '../utils/birthday';
 import { BirthdayCelebrationModal } from './BirthdayCelebrationModal';
+import { KioskWallpaper } from './KioskWallpaper';
 import {
   isReadingCompletedToday,
   findReadingChore,
@@ -341,6 +342,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
     return count;
   }, [database.kids, database.chores, completedChoreSet, categoryMap, todayStr, currentMinuteTime]);
 
+  const wallpaperOn = isCq2026 && !!database.settings.kioskWallpaper;
+
   const handleCheerMvp = useCallback(() => {
     sound.playStarEarned();
     fireConfetti({
@@ -350,7 +353,14 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   }, []);
 
   return (
-    <div className={`min-h-screen ${theme.kioskBg} flex flex-col ${isCq2026 ? 'p-5 sm:p-10' : 'p-4 sm:p-6'} select-none overflow-x-hidden font-sans transition-colors duration-300`}>
+    <div className={`min-h-screen ${theme.kioskBg} flex flex-col ${isCq2026 ? 'p-5 sm:p-10' : 'p-4 sm:p-6'} select-none overflow-x-hidden font-sans transition-colors duration-300 ${wallpaperOn ? 'relative isolate cq-wall-photo cq-kiosk-dark' : ''}`}>
+      {wallpaperOn && (
+        <KioskWallpaper
+          value={database.settings.kioskWallpaper!}
+          dim={database.settings.kioskWallpaperDim ?? 45}
+          slideshowMins={database.settings.kioskWallpaperSlideshowMins ?? 10}
+        />
+      )}
 
       {/* ═══ 2026 ambient wall (mockup "Wall · Ambient") ═══ */}
       {isCq2026 && (() => {

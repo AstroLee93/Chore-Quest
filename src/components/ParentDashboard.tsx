@@ -116,6 +116,7 @@ import {
   DEFAULT_BIRTHDAY_CONFIG,
 } from '../utils/birthday';
 import { BirthdayCelebrationModal } from './BirthdayCelebrationModal';
+import { KioskWallpaperPicker } from './KioskWallpaperPicker';
 
 interface ParentDashboardProps {
   database: FamilyDatabase;
@@ -4124,6 +4125,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                   Set to "Off" to prevent losing progress while adding groceries, planning meals, or viewing missions.
                 </p>
               </div>
+
+              <KioskWallpaperPicker
+                value={settingsForm.kioskWallpaper}
+                dim={settingsForm.kioskWallpaperDim ?? 45}
+                slideshowMins={settingsForm.kioskWallpaperSlideshowMins ?? 10}
+                parentPin={database.settings.parentPin}
+                onChange={(patch) => setSettingsForm((f) => ({ ...f, ...patch }))}
+              />
             </div>
 
             {/* Brain Teaser & Educational Settings (Admin Determined Points) */}

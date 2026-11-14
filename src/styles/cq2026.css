@@ -450,3 +450,7 @@ html.cq2026 .cq-wall-photo .cq-card {
 html.cq2026 .cq-wall-photo .cq-num,
 html.cq2026 .cq-wall-photo h1,
 html.cq2026 .cq-wall-photo h2 { text-shadow: 0 1px 12px rgb(0 0 0 / 0.35); }
+
+/* Kiosk wall: kid cards always side by side from tablet width up (iPad portrait 810px). */
+.cq-wall-kids { grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); }
+@media (min-width: 640px) { .cq-wall-kids { grid-template-columns: repeat(var(--kids), minmax(0, 1fr)); } }

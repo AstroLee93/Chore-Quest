@@ -4131,7 +4131,11 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
                 dim={settingsForm.kioskWallpaperDim ?? 45}
                 slideshowMins={settingsForm.kioskWallpaperSlideshowMins ?? 10}
                 parentPin={database.settings.parentPin}
-                onChange={(patch) => setSettingsForm((f) => ({ ...f, ...patch }))}
+                onChange={(patch) => {
+                  // Applies straight away (no need to scroll down to Save).
+                  setSettingsForm((f) => ({ ...f, ...patch }));
+                  onUpdateDatabase({ ...database, settings: { ...database.settings, ...patch } });
+                }}
               />
             </div>
 

@@ -111,7 +111,7 @@ export const KioskWallpaperPicker: React.FC<Props> = ({ value = '', dim = 45, sl
             className="w-full mt-1 accent-indigo-500" />
         </label>
       )}
-      <p className="text-[10px] text-slate-400 font-bold">Shows on the kiosk wall with any 2026 theme. Cards turn to frosted glass over the picture.</p>
+      <p className="text-[10px] text-slate-400 font-bold">Applies to the kiosk wall right away (2026 themes). Cards turn to frosted glass over the picture.</p>
     </div>
   );
 };

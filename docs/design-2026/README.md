@@ -110,3 +110,12 @@ original look):
    Groceries, Pantry) and `KitchenWall.tsx` on the kiosk. The original
    menu/grocery modals open from "More tools" for presets, recipe editing,
    receipts, prices and printing.
+
+## Kiosk wall additions
+
+- **Wallpapers** (Parent settings → Kiosk wallpaper): six built-in scenes, your
+  own photos from the camera roll (stored in `data/wallpapers`, parent PIN
+  required), or a slideshow; a darken slider keeps the wall readable.
+- **Tablet fit:** kid cards stay side by side from 640px wide, so an iPad (9th
+  gen) shows every kid without scrolling in portrait or landscape.
+- **Profile icons** sit inside each kid's progress ring.

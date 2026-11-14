@@ -34,6 +34,7 @@ const LeaderClipboardModal = React.lazy(() => import('./LeaderClipboardModal').t
 import { getGradeLevelInfo, getDailyTeasersAnsweredToday, getSubjectInfo } from '../utils/brainTeasers';
 import { isBirthdayToday, getBirthdayConfig } from '../utils/birthday';
 import { BirthdayCelebrationModal } from './BirthdayCelebrationModal';
+import { KioskWallpaper } from './KioskWallpaper';
 import {
   isReadingCompletedToday,
   findReadingChore,
@@ -341,6 +342,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
     return count;
   }, [database.kids, database.chores, completedChoreSet, categoryMap, todayStr, currentMinuteTime]);
 
+  const wallpaperOn = isCq2026 && !!database.settings.kioskWallpaper;
+
   const handleCheerMvp = useCallback(() => {
     sound.playStarEarned();
     fireConfetti({
@@ -350,7 +353,14 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   }, []);
 
   return (
-    <div className={`min-h-screen ${theme.kioskBg} flex flex-col ${isCq2026 ? 'p-5 sm:p-10' : 'p-4 sm:p-6'} select-none overflow-x-hidden font-sans transition-colors duration-300`}>
+    <div className={`min-h-screen ${theme.kioskBg} flex flex-col ${isCq2026 ? 'p-4 sm:p-6 xl:p-10' : 'p-4 sm:p-6'} select-none overflow-x-hidden font-sans transition-colors duration-300 ${wallpaperOn ? 'relative isolate cq-wall-photo cq-kiosk-dark' : ''}`}>
+      {wallpaperOn && (
+        <KioskWallpaper
+          value={database.settings.kioskWallpaper!}
+          dim={database.settings.kioskWallpaperDim ?? 45}
+          slideshowMins={database.settings.kioskWallpaperSlideshowMins ?? 10}
+        />
+      )}
 
       {/* ═══ 2026 ambient wall (mockup "Wall · Ambient") ═══ */}
       {isCq2026 && (() => {
@@ -380,11 +390,11 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
 
         return (
           <div className="flex-1 flex flex-col gap-5 text-[var(--cq-label)] font-sans">
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)] gap-6 flex-1">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(250px,290px)_minmax(0,1fr)] xl:grid-cols-[minmax(300px,380px)_minmax(0,1fr)] gap-5 xl:gap-6 flex-1">
               {/* Left: clock, weather, coming up, family goal */}
-              <aside className="flex flex-col gap-6 lg:pt-2">
+              <aside className="grid sm:grid-cols-2 lg:flex lg:flex-col gap-5 xl:gap-6 lg:pt-2">
                 <div className="flex flex-col gap-1">
-                  <span className="cq-num leading-[0.95] font-extralight tracking-[-0.05em] text-[88px] sm:text-[112px]">
+                  <span className="cq-num leading-[0.95] font-extralight tracking-[-0.05em] text-[76px] sm:text-[88px] xl:text-[112px]">
                     {timeParts[0]}<span className="text-[28px] tracking-normal font-light text-[var(--cq-label-2)] ml-2">{timeParts[1] || ''}</span>
                   </span>
                   <span className="text-[20px] text-[var(--cq-label-2)]">{currentMinuteTime.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
@@ -409,7 +419,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                 </section>
 
                 <button type="button" onClick={() => { sound.playTap(); setIsGoalModalOpen(true); }}
-                  className="lg:mt-auto text-left flex flex-col gap-2.5 p-5 rounded-[22px] bg-[var(--cq-surface)] border border-[var(--cq-line)] cursor-pointer">
+                  className="sm:col-span-2 lg:mt-auto text-left flex flex-col gap-2.5 p-5 rounded-[22px] bg-[var(--cq-surface)] border border-[var(--cq-line)] cursor-pointer">
                   <span className="flex justify-between items-baseline gap-3">
                     <span className="text-[17px] font-semibold truncate">{goalInfo.goal.title}</span>
                     <span className="text-[15px] text-[var(--cq-label-2)] whitespace-nowrap">{goalInfo.isReached ? 'Unlocked!' : `${goalInfo.remaining} to go`}</span>
@@ -421,7 +431,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               </aside>
 
               {/* Kid columns */}
-              <main className="grid gap-4 sm:gap-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 210px), 1fr))' }}>
+              <main className={`grid gap-3 xl:gap-5 content-start ${kidStats.length <= 4 ? 'cq-wall-kids' : ''}`} style={kidStats.length <= 4 ? ({ '--kids': kidStats.length } as React.CSSProperties) : { gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 210px), 1fr))' }}>
                 {kidStats.map(({ kid, kidChores, completedCount, totalChores, isMvp }) => {
                   const color = kid.color || '#5B8CFF';
                   const isBday = !!kid.birthdate && isBirthdayToday(kid.birthdate, todayStr);
@@ -445,27 +455,29 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                   ];
                   return (
                     <section key={kid.id} aria-label={kid.name}
-                      className="relative flex flex-col gap-5 p-6 rounded-[28px] bg-[var(--cq-surface)] border border-[var(--cq-line)]"
+                      className="relative min-w-0 flex flex-col gap-4 xl:gap-5 p-4 xl:p-6 rounded-[24px] xl:rounded-[28px] bg-[var(--cq-surface)] border border-[var(--cq-line)]"
                       style={isMvp ? { borderColor: `color-mix(in srgb, ${color} 55%, transparent)` } : undefined}>
                       <div className="absolute top-3 right-3">
                         <ActionMenu id={`kiosk-kid-menu-${kid.id}`} label={`${kid.name} options`} icon={<MoreHorizontal className="w-4 h-4" />} items={menuItems} />
                       </div>
                       <button type="button" onClick={() => { sound.playTap(); setSelectedKidForPin(kid); }}
                         className="flex flex-col items-center gap-3 cursor-pointer" aria-label={`${kid.name}: ${completedCount} of ${totalChores} done. Open with PIN`}>
-                        <span className="relative w-[150px] h-[150px]">
+                        <span className="relative w-[116px] h-[116px] xl:w-[150px] xl:h-[150px]">
                           <svg aria-hidden="true" viewBox="0 0 150 150" className="absolute inset-0 w-full h-full -rotate-90">
                             <circle cx="75" cy="75" r="66" fill="none" stroke={color} strokeOpacity="0.16" strokeWidth="12" />
                             <circle cx="75" cy="75" r="66" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
                               strokeDasharray={ringDash(totalChores ? completedCount / totalChores : 1, 66)} style={{ transition: 'stroke-dasharray 0.7s cubic-bezier(0.16,1,0.3,1)' }} />
                           </svg>
-                          <span className="absolute inset-0 flex items-center justify-center text-[40px] font-light cq-num tracking-[-0.03em]">
-                            {completedCount}<span className="text-[var(--cq-label-3)]">/{totalChores}</span>
+                          <span className="absolute inset-[18%] rounded-full flex items-center justify-center text-[44px] xl:text-[58px] leading-none cq-emoji"
+                            style={{ background: `color-mix(in srgb, ${color} 18%, transparent)` }}>
+                            {kid.avatar || initials(kid.name)}
                           </span>
                           {(isMvp || isBday) && <Crown className="absolute -top-1 right-2 w-7 h-7 text-amber-400 fill-amber-400" aria-hidden="true" />}
                         </span>
                         <span className="flex flex-col items-center gap-0.5">
-                          <span className="text-[26px] font-semibold tracking-[-0.01em]">{kid.name}</span>
-                          <span className="text-[15px] text-[var(--cq-label-2)]">{kid.stars} pts · {kid.streakDays || 0}-day streak</span>
+                          <span className="text-[22px] xl:text-[26px] font-semibold tracking-[-0.01em] truncate max-w-full">{kid.name}</span>
+                          <span className="text-[15px] xl:text-[17px] cq-num"><span className="font-semibold">{completedCount}</span><span className="text-[var(--cq-label-2)]"> of {totalChores} done</span></span>
+                          <span className="text-[13px] xl:text-[15px] text-[var(--cq-label-2)] text-center">{kid.stars} pts · {kid.streakDays || 0}-day streak</span>
                         </span>
                       </button>
                       <div className="h-px bg-[var(--cq-line)]" />
@@ -484,9 +496,11 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                                 style={{ border: '2px solid var(--cq-label-3)', opacity: locked ? 0.5 : 1 }}>
                                 {locked && <Lock className="w-3 h-3 text-[var(--cq-label-3)]" />}
                               </button>
-                              <span className={`flex-1 text-[17px] truncate ${locked ? 'text-[var(--cq-label-3)]' : ''}`}>{c.title}</span>
-                              <span className="text-[14px] font-semibold whitespace-nowrap cq-num" style={{ color: due ? 'var(--cq-due)' : 'var(--cq-label-3)' }}>
+                              <span className="flex-1 min-w-0 flex flex-col xl:flex-row xl:items-center xl:gap-3">
+                              <span className={`flex-1 min-w-0 text-[15px] xl:text-[17px] leading-tight line-clamp-2 xl:truncate ${locked ? 'text-[var(--cq-label-3)]' : ''}`}>{c.title}</span>
+                              <span className="text-[12px] xl:text-[14px] font-semibold whitespace-nowrap cq-num" style={{ color: due ? 'var(--cq-due)' : 'var(--cq-label-3)' }}>
                                 {due ? w.expirationBadgeText : locked ? (w.formattedRange?.split('–')[0]?.split('-')[0]?.trim() || 'Later') : pts > 0 ? `+${pts}` : 'Routine'}
+                              </span>
                               </span>
                             </div>
                           );
@@ -503,7 +517,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
             <footer className="flex flex-wrap items-center gap-2.5">
               <button type="button" className={pill} onClick={() => { sound.playTap(); if (onOpenMenu) onOpenMenu(); else setIsMenuModalOpen(true); }}>
                 <UtensilsCrossed className="w-4 h-4 text-[var(--cq-label-2)]" />
-                <span className="text-[var(--cq-label-2)]">Tonight</span> <span className="truncate max-w-[220px]">{todayMenuPlan?.mainDish || 'Not planned'}</span>
+                <span className="text-[var(--cq-label-2)]">Tonight</span> <span className="truncate max-w-[140px] xl:max-w-[220px]">{todayMenuPlan?.mainDish || 'Not planned'}</span>
               </button>
               {bountyChores.length > 0 && (
                 <button type="button" className={pill} onClick={() => { sound.playTap(); setIsBountyBoardOpen(true); }}>
@@ -520,7 +534,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               <button type="button" className={pill} onClick={handleToggleFullscreen} aria-label={isFullscreen ? 'Exit full screen' : 'Full screen'}>
                 {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
               </button>
-              <span className="flex items-center gap-2 text-[13px] text-[var(--cq-label-3)]">
+              <span className="hidden xl:flex items-center gap-2 text-[13px] text-[var(--cq-label-3)]">
                 <Lock className="w-3.5 h-3.5" /> Locked to wall mode
               </span>
               <button type="button" className={pill} onClick={() => { sound.playTap(); setIsExitPinOpen(true); }}>

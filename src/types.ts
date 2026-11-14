@@ -366,6 +366,10 @@ export interface AppSettings {
   savedCalendarIcsUrl?: string;
   kioskTheme?: string;
   kioskTimeout?: KioskTimeoutOption;
+  /** Kiosk wall background (2026 themes): '' / undefined = plain, 'preset:<id>', a photo URL, or 'slideshow'. */
+  kioskWallpaper?: string;
+  kioskWallpaperDim?: number; // 0–80, % darkening behind the wall for readability (default 45)
+  kioskWallpaperSlideshowMins?: number; // minutes per photo in slideshow mode (default 10)
   snackStarTiers?: SnackStarTiers;
   customSnackStarOverrides?: Record<string, number>; // Individual snack item star cost overrides
   calendarColorMode?: CalendarColorCodeMode;

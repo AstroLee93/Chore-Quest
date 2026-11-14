@@ -2159,6 +2159,62 @@ app.post('/api/chorequest/sync', async (req, res) => {
   }
 });
 
+// --- Kiosk wallpapers (photos uploaded from parent settings) ---
+// Stored as files in data/wallpapers so the shared database stays small.
+const WALLPAPER_DIR = path.join(DATA_DIR, 'wallpapers');
+const WALLPAPER_EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+
+app.get('/api/wallpapers', async (req, res) => {
+  try {
+    const files = fs.existsSync(WALLPAPER_DIR) ? await fs.promises.readdir(WALLPAPER_DIR) : [];
+    res.json({ wallpapers: files.filter((f) => /^[\w-]+\.(jpg|png|webp)$/.test(f)).sort().map((f) => `/api/wallpapers/${f}`) });
+  } catch {
+    res.json({ wallpapers: [] });
+  }
+});
+
+app.post('/api/wallpapers', async (req, res) => {
+  const pin = String(req.body?.pin || '');
+  if (pin !== String(currentDatabase.settings?.parentPin || '')) {
+    res.status(403).json({ error: 'Parent PIN required' });
+    return;
+  }
+  const m = String(req.body?.dataUrl || '').match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) {
+    res.status(400).json({ error: 'Expected a JPEG, PNG or WebP image' });
+    return;
+  }
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length > 15 * 1024 * 1024) {
+    res.status(413).json({ error: 'Image is too large' });
+    return;
+  }
+  await fs.promises.mkdir(WALLPAPER_DIR, { recursive: true });
+  const name = `wp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${WALLPAPER_EXT[m[1]]}`;
+  await fs.promises.writeFile(path.join(WALLPAPER_DIR, name), buf);
+  res.json({ url: `/api/wallpapers/${name}` });
+});
+
+app.get('/api/wallpapers/:file', (req, res) => {
+  const f = req.params.file;
+  if (!/^[\w-]+\.(jpg|png|webp)$/.test(f)) { res.status(404).end(); return; }
+  const p = path.join(WALLPAPER_DIR, f);
+  if (!fs.existsSync(p)) { res.status(404).end(); return; }
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.sendFile(p);
+});
+
+app.delete('/api/wallpapers/:file', async (req, res) => {
+  const f = req.params.file;
+  if (String(req.headers['x-parent-pin'] || '') !== String(currentDatabase.settings?.parentPin || '')) {
+    res.status(403).json({ error: 'Parent PIN required' });
+    return;
+  }
+  if (!/^[\w-]+\.(jpg|png|webp)$/.test(f)) { res.status(404).end(); return; }
+  await fs.promises.rm(path.join(WALLPAPER_DIR, f), { force: true });
+  res.json({ success: true });
+});
+
 // --- Server Lifecycle & Vite Middleware ---
 
 async function start() {

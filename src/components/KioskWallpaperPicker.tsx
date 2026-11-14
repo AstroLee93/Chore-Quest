@@ -10,11 +10,12 @@ interface Props {
   value?: string;
   dim?: number;
   slideshowMins?: number;
+  cardOpacity?: number;
   parentPin: string;
-  onChange: (patch: { kioskWallpaper?: string; kioskWallpaperDim?: number; kioskWallpaperSlideshowMins?: number }) => void;
+  onChange: (patch: { kioskWallpaper?: string; kioskWallpaperDim?: number; kioskWallpaperSlideshowMins?: number; kioskCardOpacity?: number }) => void;
 }
 
-export const KioskWallpaperPicker: React.FC<Props> = ({ value = '', dim = 45, slideshowMins = 10, parentPin, onChange }) => {
+export const KioskWallpaperPicker: React.FC<Props> = ({ value = '', dim = 25, slideshowMins = 10, cardOpacity = 35, parentPin, onChange }) => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -109,6 +110,14 @@ export const KioskWallpaperPicker: React.FC<Props> = ({ value = '', dim = 45, sl
           Darken for readability: {dim}%
           <input type="range" min={0} max={80} step={5} value={dim} onChange={(e) => onChange({ kioskWallpaperDim: Number(e.target.value) })}
             className="w-full mt-1 accent-indigo-500" />
+        </label>
+      )}
+      {value && (
+        <label className="block text-xs font-bold text-slate-600">
+          Kid card visibility: {cardOpacity === 0 ? 'clear glass' : cardOpacity >= 100 ? 'solid' : `${cardOpacity}%`}
+          <input type="range" min={0} max={100} step={5} value={cardOpacity} onChange={(e) => onChange({ kioskCardOpacity: Number(e.target.value) })}
+            className="w-full mt-1 accent-indigo-500" aria-label="Kid card visibility" />
+          <span className="flex justify-between text-[10px] text-slate-400"><span>See more wallpaper</span><span>Solid cards</span></span>
         </label>
       )}
       <p className="text-[10px] text-slate-400 font-bold">Applies to the kiosk wall right away (2026 themes). Cards turn to frosted glass over the picture.</p>

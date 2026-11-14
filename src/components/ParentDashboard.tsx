@@ -4128,7 +4128,8 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
 
               <KioskWallpaperPicker
                 value={settingsForm.kioskWallpaper}
-                dim={settingsForm.kioskWallpaperDim ?? 45}
+                dim={settingsForm.kioskWallpaperDim ?? 25}
+                cardOpacity={settingsForm.kioskCardOpacity ?? 35}
                 slideshowMins={settingsForm.kioskWallpaperSlideshowMins ?? 10}
                 parentPin={database.settings.parentPin}
                 onChange={(patch) => {

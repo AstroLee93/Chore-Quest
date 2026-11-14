@@ -353,11 +353,12 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   }, []);
 
   return (
-    <div className={`min-h-screen ${theme.kioskBg} flex flex-col ${isCq2026 ? 'p-4 sm:p-6 xl:p-10' : 'p-4 sm:p-6'} select-none overflow-x-hidden font-sans transition-colors duration-300 ${wallpaperOn ? 'relative isolate cq-wall-photo cq-kiosk-dark' : ''}`}>
+    <div className={`min-h-screen ${theme.kioskBg} flex flex-col ${isCq2026 ? 'p-4 sm:p-6 xl:p-10' : 'p-4 sm:p-6'} select-none overflow-x-hidden font-sans transition-colors duration-300 ${wallpaperOn ? 'relative isolate cq-wall-photo cq-kiosk-dark' : ''}`}
+      style={wallpaperOn ? ({ '--cq-card-alpha': (database.settings.kioskCardOpacity ?? 35) / 100 } as React.CSSProperties) : undefined}>
       {wallpaperOn && (
         <KioskWallpaper
           value={database.settings.kioskWallpaper!}
-          dim={database.settings.kioskWallpaperDim ?? 45}
+          dim={database.settings.kioskWallpaperDim ?? 25}
           slideshowMins={database.settings.kioskWallpaperSlideshowMins ?? 10}
         />
       )}

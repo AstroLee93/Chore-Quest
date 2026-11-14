@@ -84,6 +84,13 @@ the wall when idle. The redesign only makes that state visible.
 
 ## Build status
 
+Verified against the production build (`npm run build && npm start`) on an
+emulated iPhone and a 1280×800 kiosk: every mockup screen — Family Today
+(with the "Needs you" inbox), Kid's day (Balanced and Minimal), Savings,
+Rewards, All done for today, the ambient wall, the wall kid session, the
+Kitchen screens and the kitchen wall board — is implemented on 2026 themes.
+
+
 All five build steps are done on 2026 themes (the 8 older themes keep their
 original look):
 

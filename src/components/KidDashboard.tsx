@@ -29,6 +29,9 @@ import {
 } from '../utils/reading';
 import { GoalTracker } from './KidCoin/GoalTracker';
 import { ringDash } from '../utils/progress';
+import { getKioskTimeoutMs } from '../utils/storage';
+import { isCq2026Theme } from '../utils/themes2026';
+import { CelebrateMoment } from './CelebrateMoment';
 import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getBountyChores } from '../utils/storage';
 import { calculateKidBadges } from '../utils/badges';
 import { getSeasonalWeatherForDate, EVENT_CATEGORIES, WEATHER_CONDITIONS } from '../utils/calendar';
@@ -86,6 +89,10 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
 }) => {
   const safeSettings = settings || database?.settings || ({} as AppSettings);
   const theme = APP_THEMES[currentTheme] || APP_THEMES[DEFAULT_THEME_ID];
+  const isCq2026 = isCq2026Theme(currentTheme);
+  const kidStyle = kid.uiStyle || 'balanced';
+  const [showCelebrate, setShowCelebrate] = useState(false);
+  const wallMode = isCq2026 && isKioskKidSession;
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -286,10 +293,122 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
     );
   }
 
+  // 2026: full-screen "All done for today" once per kid per day
+  useEffect(() => {
+    if (!isCq2026 || !isAllComplete || totalTasksCount === 0) return;
+    const key = `cq-celebrated-${kid.id}-${todayStr}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, '1');
+    } catch {
+      /* storage unavailable: still celebrate */
+    }
+    setShowCelebrate(true);
+  }, [isCq2026, isAllComplete, totalTasksCount, kid.id, todayStr]);
+
   return (
     <div className="max-w-7xl mx-auto px-1 sm:px-8 py-1.5 sm:py-8 flex flex-col gap-4 sm:gap-6 animate-fade-in w-full">
-      {/* Family Goal Banner if database is provided */}
-      {database && (
+
+      {/* ═══ 2026 wall kid session (mockup "Wall · Kid session") ═══ */}
+      {wallMode && (() => {
+        const lastDone = (logs || [])
+          .filter((l) => l.kidId === kid.id && l.date === todayStr && l.status === 'completed')
+          .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))[0];
+        const lastChore = lastDone ? chores.find((c) => c.id === lastDone.choreId) : undefined;
+        const lastPts = lastChore ? (Number(lastChore.stars) || 0) + (Number(lastChore.bountyBonusStars) || 0) : 0;
+        const idleMs = getKioskTimeoutMs(settings?.kioskTimeout);
+        const color = kid.color || 'var(--cq-accent)';
+        const sections = [
+          { id: 'morning', label: 'Morning' },
+          { id: 'afternoon', label: 'Afternoon' },
+          { id: 'evening', label: 'Evening' },
+          { id: 'anytime', label: 'Anytime' },
+        ];
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-[400px_minmax(0,1fr)] gap-8 text-[var(--cq-label)] px-4 sm:px-6 py-6">
+            <aside className="flex flex-col gap-6">
+              {onReturnToKiosk && (
+                <button type="button" onClick={() => { sound.playTap(); onReturnToKiosk(); }}
+                  className="self-start min-h-[52px] pl-3.5 pr-5 rounded-full bg-[var(--cq-surface)] border border-[var(--cq-line)] text-[18px] font-medium flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform">
+                  <ChevronRight className="w-5 h-5 rotate-180" /> Done — back to the wall
+                </button>
+              )}
+              <div className="flex items-center gap-6">
+                <div className="relative w-[150px] h-[150px] shrink-0">
+                  <svg viewBox="0 0 150 150" className="absolute inset-0 w-full h-full -rotate-90" role="img" aria-label={`${completedTasksCount} of ${todaysChores.length} done`}>
+                    <circle cx="75" cy="75" r="66" fill="none" stroke={color} strokeOpacity="0.16" strokeWidth="12" />
+                    <circle cx="75" cy="75" r="66" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
+                      strokeDasharray={ringDash(todaysChores.length ? completedTasksCount / todaysChores.length : 1, 66)}
+                      style={{ transition: 'stroke-dasharray 0.7s cubic-bezier(0.16,1,0.3,1)' }} />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-[40px] font-light cq-num">
+                    {completedTasksCount}<span className="text-[var(--cq-label-3)]">/{todaysChores.length}</span>
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1 min-w-0">
+                  <h1 className="m-0 text-[40px] font-bold tracking-[-0.02em] leading-tight truncate">{kid.name}</h1>
+                  <span className="text-[18px] text-[var(--cq-label-2)]">{kid.stars} pts · {kid.streakDays || 0}-day streak</span>
+                </div>
+              </div>
+              {lastChore && (
+                <div className="flex items-center gap-3 px-4 py-4 rounded-[18px] border"
+                  style={{ background: 'color-mix(in srgb, var(--cq-done) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--cq-done) 22%, transparent)' }}>
+                  <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--cq-done)', color: 'var(--cq-ground)' }}>
+                    <CheckCircle2 className="w-5 h-5" strokeWidth={2.5} />
+                  </span>
+                  <span className="text-[17px]"><span className="font-semibold">{lastChore.title}</span>{lastPts > 0 ? ` · +${lastPts} pts` : ''}</span>
+                </div>
+              )}
+              <div className="lg:mt-auto flex flex-col gap-2 p-4 rounded-[18px] bg-[var(--cq-surface)] border border-[var(--cq-line)]">
+                <span className="flex items-center gap-2 text-[15px] text-[var(--cq-label-2)]">
+                  <Shield className="w-4 h-4" /> Kid session · settings hidden
+                </span>
+                <span className="text-[13px] text-[var(--cq-label-3)]">
+                  {idleMs ? `Returns to the wall after ${Math.round(idleMs / 60000)} min idle` : 'Tap Done to return to the wall'}
+                </span>
+              </div>
+            </aside>
+
+            <main className="flex flex-col gap-6">
+              {sections.map((section) => {
+                const sectionChores = todaysChores.filter((c) =>
+                  section.id === 'anytime'
+                    ? !c.timeOfDay || !['morning', 'afternoon', 'evening'].includes(c.timeOfDay)
+                    : c.timeOfDay === section.id
+                );
+                if (!sectionChores.length) return null;
+                return (
+                  <section key={section.id} className="flex flex-col gap-2.5" aria-labelledby={`wall-${section.id}`}>
+                    <h2 id={`wall-${section.id}`} className="m-0 px-1.5 text-[15px] font-semibold uppercase tracking-[0.08em] text-[var(--cq-label-2)]">{section.label}</h2>
+                    <div className="rounded-[24px] bg-[var(--cq-surface)] border border-[var(--cq-line)] overflow-hidden">
+                      {sectionChores.map((chore, rowIdx) => (
+                        <ChoreCard
+                          key={chore.id}
+                          variant="wall"
+                          divider={rowIdx > 0}
+                          chore={chore}
+                          category={categories.find((c) => c.id === chore.categoryId)}
+                          log={logMap.get(chore.id)}
+                          isBirthdayPassAvailable={isBirthday && bdayConfig.enabled && bdayConfig.freeChorePassEnabled}
+                          onToggleComplete={onToggleCompleteChore}
+                          onOpenSkipModal={(c) => setSkipModalChore(c)}
+                          onUndo={onUndoChoreStatus}
+                          onStartTimer={(c) => setActiveTimerChore(c)}
+                          onOpenReadingLog={() => { setIsReadingLogOpen(true); setIsBrainTeaserOpen(false); setIsBadgeModalOpen(false); }}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </main>
+          </div>
+        );
+      })()}
+
+      {!wallMode && (<>
+      {/* Family Goal Banner if database is provided (2026: on the family Today screen) */}
+      {database && !isCq2026 && (
         <FamilyGoalBanner
           database={database}
           currentTheme={currentTheme}
@@ -337,7 +456,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
       >
           {/* 2026 hero: progress ring + name + today's numbers */}
           <div className="flex items-center gap-5 sm:gap-7">
-            <div className="relative w-28 h-28 sm:w-32 sm:h-32 shrink-0">
+            <div className={`relative w-28 h-28 sm:w-32 sm:h-32 shrink-0 ${isCq2026 && kidStyle === 'minimal' ? 'hidden' : ''}`}>
               <svg viewBox="0 0 112 112" className="absolute inset-0 w-full h-full -rotate-90" role="img" aria-label={`${completedTasksCount} of ${todaysChores.length} done today`}>
                 <circle cx="56" cy="56" r="48" fill="none" stroke={kid.color || 'var(--cq-accent, #5B8CFF)'} strokeOpacity="0.16" strokeWidth="10" />
                 <circle
@@ -362,6 +481,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 <h1 className="text-[28px] sm:text-[34px] font-bold tracking-[-0.02em] text-slate-900 dark:text-white leading-tight">
                   {kid.name}
                 </h1>
+                {isCq2026 && <span className="w-full -mt-1 text-[13px] text-[var(--cq-label-2)]">Level {getKidLevelInfo(kid.stars).level} · {getKidLevelInfo(kid.stars).title}</span>}
                 {isBirthday && bdayConfig.enabled && (
                   <button
                     type="button"
@@ -382,16 +502,48 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                   <span className="text-[19px] sm:text-[22px] font-medium cq-num text-slate-900 dark:text-white">{(kid.stars ?? 0).toLocaleString()}</span>
                   <span className="text-[12px] text-slate-500 dark:text-slate-400">{starsEarnedToday > 0 ? `+${starsEarnedToday} today` : 'Points'}</span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[19px] sm:text-[22px] font-medium cq-num text-slate-900 dark:text-white">{todayWeather?.tempHigh ?? 72}°</span>
-                  <span className="text-[12px] text-slate-500 dark:text-slate-400">{formatDateDisplay(todayStr).split(',')[0]}</span>
-                </div>
+                {isCq2026 && settings?.kidCoinEnabled !== false ? (
+                  <div className="flex flex-col">
+                    <span className="text-[19px] sm:text-[22px] font-medium cq-num text-slate-900 dark:text-white">{'$' + (((kid.goals || []).reduce((a, g) => a + (Number(g.currentSaved) || 0), 0)) + (kid.kidCoinBalance || 0)).toFixed(2)}</span>
+                    <span className="text-[12px] text-slate-500 dark:text-slate-400">Saved</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    <span className="text-[19px] sm:text-[22px] font-medium cq-num text-slate-900 dark:text-white">{todayWeather?.tempHigh ?? 72}°</span>
+                    <span className="text-[12px] text-slate-500 dark:text-slate-400">{formatDateDisplay(todayStr).split(',')[0]}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
+          {/* Minimal style: slim progress bar instead of the ring (mockup KidMinimal) */}
+          {isCq2026 && kidStyle === 'minimal' && (
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between text-[13px] text-[var(--cq-label-2)]">
+                <span>{completedTasksCount} of {todaysChores.length} done</span>
+                <span className="cq-num">{todaysChores.length ? Math.round((completedTasksCount / todaysChores.length) * 100) : 100}%</span>
+              </div>
+              <div className="h-1 rounded-full bg-[var(--cq-line)] overflow-hidden">
+                <div className="h-full rounded-full bg-[var(--cq-label)]" style={{ width: `${todaysChores.length ? (completedTasksCount / todaysChores.length) * 100 : 100}%` }} />
+              </div>
+            </div>
+          )}
+
           {/* Bottom Row: Action Cards (Snacks, Brain Teaser, Reading Log, and Leader Clipboard) */}
           <div className={`cq-tiles grid grid-cols-1 ${isThisKidLeader ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'} gap-3 sm:gap-4 pt-1 sm:pt-2`}>
+            {isCq2026 && (
+              <button id="btn-kid-badges" type="button" onClick={() => { sound.playTap(); setSelectedBadgeModalId(kidBadges[0]?.badge.id || null); setIsBadgeModalOpen(true); setIsBrainTeaserOpen(false); setIsReadingLogOpen(false); }}>
+                <div className="flex items-center justify-center shrink-0"><Award className="w-5 h-5" /></div>
+                <div className="min-w-0 flex-1"><div>Badges</div><div>{kidBadges.filter((b) => b.isUnlocked).length} of {kidBadges.length}</div></div>
+              </button>
+            )}
+            {isCq2026 && (
+              <button id="btn-kid-roulette" type="button" onClick={() => { sound.playTap(); setIsWheelOpen(true); }}>
+                <div className="flex items-center justify-center shrink-0"><RotateCw className="w-5 h-5" /></div>
+                <div className="min-w-0 flex-1"><div>Roulette</div><div>Surprise me</div></div>
+              </button>
+            )}
             {/* Card 1: Snacks */}
             {onOpenSnackRequest && (
               <button
@@ -671,8 +823,8 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
         </div>
       )}
 
-      {/* Level, Badges & Rewards Hub (Balanced 2-Card Layout - Zero Dead Space) */}
-      <div className="cq-hub grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+      {/* Level, Badges & Rewards Hub (Balanced 2-Card Layout - Zero Dead Space) — hidden on 2026 themes */}
+      <div className="cq-hub cq-hide-2026 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         {/* Card 1: Level, Star Bank, Next Rank & Reward Store (7 cols on desktop) */}
         <div className="lg:col-span-7 bg-indigo-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 text-white relative overflow-hidden shadow-xl flex flex-col justify-between">
           <div className="relative z-10 space-y-4">
@@ -878,6 +1030,19 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
         )}
 
+        {isCq2026 && showCelebrate && (
+          <CelebrateMoment
+            kidName={kid.name}
+            done={totalTasksCount}
+            pointsToday={starsEarnedToday}
+            streakDays={kid.streakDays || 0}
+            savedToday={(kid.transactions || []).filter((t) => t.type !== 'withdrawal' && (t.date || '').slice(0, 10) === todayStr).reduce((a, t) => a + t.amount, 0)}
+            playful={kidStyle === 'playful'}
+            onSeeRewards={() => { setShowCelebrate(false); onOpenRewardStore(); }}
+            onClose={() => setShowCelebrate(false)}
+          />
+        )}
+
         {/* All done for today — the one deliberately celebratory moment (2026 design) */}
         {isAllComplete && totalTasksCount > 0 && (
           <section
@@ -952,7 +1117,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
         {!isBrainTeaserOpen && !isReadingLogOpen && !isBadgeModalOpen && (
           <>
             {/* Kid-Coin Gamified Savings Mission & Cosmic Rocket Goal Track */}
-            {settings?.kidCoinEnabled !== false && database && (
+            {settings?.kidCoinEnabled !== false && database && !isCq2026 && (
               <GoalTracker
                 kid={kid}
                 database={database}
@@ -965,8 +1130,8 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
               />
             )}
 
-        {/* Filters: Categories and Time of Day */}
-        <div className="flex flex-col gap-3">
+        {/* Filters: Categories and Time of Day (2026: replaced by the timeline sections) */}
+        <div className="cq-hide-2026 flex flex-col gap-3">
           {/* Category chips & Chore Roulette (horizontally scrolling, iOS filter-chip style) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none snap-x">
             <button
@@ -1075,8 +1240,8 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                       {doneCount} of {sectionChores.length}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {sectionChores.map((chore) => {
+                  <div className={isCq2026 ? 'cq-card overflow-hidden' : 'grid grid-cols-1 md:grid-cols-2 gap-3'}>
+                    {sectionChores.map((chore, rowIdx) => {
                       const category = categories.find((c) => c.id === chore.categoryId);
                       const log = logMap.get(chore.id);
                       const otherKidClaimLog = chore.isBounty
@@ -1091,6 +1256,8 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                       return (
                         <ChoreCard
                           key={chore.id}
+                          variant={isCq2026 ? 'row' : 'card'}
+                          divider={isCq2026 && rowIdx > 0}
                           chore={chore}
                           category={category}
                           log={log}
@@ -1115,17 +1282,38 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
         )}
 
+        {isCq2026 && (() => {
+          const nextReward = rewards
+            .filter((r) => r.isActive && r.starCost > (kid.stars ?? 0))
+            .sort((a, b) => a.starCost - b.starCost)[0];
+          const affordable = rewards.filter((r) => r.isActive && r.starCost <= (kid.stars ?? 0)).length;
+          if (!nextReward && !affordable) return null;
+          return (
+            <button type="button" onClick={() => { sound.playTap(); onOpenRewardStore(); }}
+              className="flex items-center gap-3 min-h-[52px] px-4 rounded-[18px] text-left cursor-pointer border"
+              style={{ background: 'var(--cq-accent-soft)', borderColor: 'color-mix(in srgb, var(--cq-accent) 30%, transparent)' }}>
+              <Gift className="w-5 h-5 shrink-0" style={{ color: 'var(--cq-accent-text)' }} />
+              <span className="flex-1 text-[15px] text-[var(--cq-label)]">
+                {nextReward
+                  ? <><span className="font-semibold">{nextReward.starCost - (kid.stars ?? 0)} points</span> to {nextReward.title}</>
+                  : <><span className="font-semibold">{affordable} reward{affordable === 1 ? '' : 's'}</span> you can get now</>}
+              </span>
+              <ChevronRight className="w-[18px] h-[18px]" style={{ color: 'var(--cq-accent-text)' }} />
+            </button>
+          );
+        })()}
+
         {/* Western Bounty Board (Extra Credit Missions) */}
         {bountyChores.length > 0 && (
-          <div className="mt-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className={isCq2026 ? 'mt-2 flex flex-col gap-2' : 'mt-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 shadow-sm'}>
+            <div className={`flex ${isCq2026 ? 'items-center' : 'flex-col sm:flex-row sm:items-center mb-4'} justify-between gap-3`}>
               <div className="flex items-center gap-2.5">
-                <span className="text-3xl">🤠</span>
+                {!isCq2026 && <span className="text-3xl">🤠</span>}
                 <div>
-                  <h3 className="text-base sm:text-lg font-black text-amber-950 font-serif">
-                    The Bounty Board
+                  <h3 className={isCq2026 ? 'cq-eyebrow text-[13px] font-semibold uppercase tracking-[0.06em] px-1' : 'text-base sm:text-lg font-black text-amber-950 font-serif'}>
+                    {isCq2026 ? 'Bounties' : 'The Bounty Board'}
                   </h3>
-                  <p className="text-xs font-medium text-amber-800">
+                  <p className={isCq2026 ? 'hidden' : 'text-xs font-medium text-amber-800'}>
                     High-reward contracts! Complete these for bonus star points anytime.
                   </p>
                 </div>
@@ -1138,28 +1326,30 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                       sound.playTap();
                       setIsBountyBoardOpen(true);
                     }}
-                    className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs font-serif flex items-center gap-1.5 shadow-sm border border-amber-600 transition-all cursor-pointer"
+                    className={isCq2026 ? 'min-h-[32px] px-3 rounded-full bg-[var(--cq-surface-2)] border border-[var(--cq-line)] text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer' : 'px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs font-serif flex items-center gap-1.5 shadow-sm border border-amber-600 transition-all cursor-pointer'}
                   >
-                    <span>📜 Wanted Board</span>
+                    <span>{isCq2026 ? 'See all' : '📜 Wanted Board'}</span>
                     <span className="px-1.5 py-0.2 rounded-full bg-slate-950 text-amber-300 text-[10px] font-black">
                       {bountyChores.length}
                     </span>
                   </button>
                 )}
-                <span className="px-3 py-1 rounded-full bg-amber-200 text-amber-900 font-black text-xs">
+                <span className={isCq2026 ? 'hidden' : 'px-3 py-1 rounded-full bg-amber-200 text-amber-900 font-black text-xs'}>
                   {bountyChores.length} Available
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {bountyChores.map((bounty) => {
+            <div className={isCq2026 ? 'cq-card overflow-hidden' : 'grid grid-cols-1 md:grid-cols-2 gap-3'}>
+              {bountyChores.map((bounty, bountyIdx) => {
                 const category = categories.find((c) => c.id === bounty.categoryId);
                 const log = logMap.get(bounty.id);
 
                 return (
                   <ChoreCard
                     key={`bounty-${bounty.id}`}
+                    variant={isCq2026 ? 'row' : 'card'}
+                    divider={isCq2026 && bountyIdx > 0}
                     chore={bounty}
                     category={category}
                     log={log}
@@ -1193,6 +1383,8 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
             </button>
           </div>
         )}
+
+      </>)}
 
       {/* Auxiliary Modals wrapped in local Suspense so dashboard never blanks out */}
       <React.Suspense fallback={null}>

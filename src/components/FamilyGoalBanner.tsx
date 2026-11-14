@@ -3,6 +3,7 @@ import { fireConfetti } from '../utils/confetti';
 import { FamilyDatabase } from '../types';
 import { getFamilyWeeklyGoalProgress } from '../utils/storage';
 import { sound } from '../utils/sound';
+import { isCq2026Active } from '../utils/themes2026';
 import { AppThemeId, APP_THEMES, DEFAULT_THEME_ID } from '../utils/theme';
 
 interface FamilyGoalBannerProps {
@@ -34,6 +35,30 @@ export const FamilyGoalBanner: React.FC<FamilyGoalBannerProps> = ({
       mode: 'celebration',
     });
   };
+
+  if (isCq2026Active()) {
+    return (
+      <section
+        id="family-goal-banner"
+        aria-label="Family goal"
+        onClick={onEditGoal ? () => { sound.playTap(); onEditGoal(); } : isReached ? handleCelebrate : undefined}
+        className={`w-full rounded-[20px] bg-[var(--cq-surface)] border border-[var(--cq-line)] px-[18px] py-4 flex flex-col gap-3 ${onEditGoal || isReached ? 'cursor-pointer' : ''} ${className}`}
+      >
+        <div className="flex justify-between items-baseline gap-3">
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--cq-label-2)]">Family goal</span>
+            <span className="text-[17px] font-semibold text-[var(--cq-label)] truncate">{goal.title}</span>
+          </div>
+          <span className="text-[15px] text-[var(--cq-label-2)] whitespace-nowrap">
+            {isReached ? <span className="font-semibold" style={{ color: 'var(--cq-done)' }}>Unlocked!</span> : <><span className="font-semibold text-[var(--cq-label)] cq-num">{remaining}</span> to go</>}
+          </span>
+        </div>
+        <div className="h-1.5 rounded-full bg-[var(--cq-line)] overflow-hidden" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label="Family goal progress">
+          <div className="h-full rounded-full" style={{ width: `${Math.max(2, percent)}%`, background: isReached ? 'var(--cq-done)' : 'var(--cq-accent)', transition: 'width 0.6s cubic-bezier(0.16,1,0.3,1)' }} />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div

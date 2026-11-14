@@ -5,7 +5,7 @@
  * On the family home: Today · Calendar · Dinners · Groceries.
  * Shown on 2026 themes outside parent mode; it only calls existing App handlers.
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { CircleCheck, CalendarDays, Gift, Wallet, UtensilsCrossed, ShoppingCart } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { haptic } from '../utils/haptics';
@@ -38,6 +38,17 @@ const LABELS: Record<TabId, string> = {
 };
 
 export const TabBar: React.FC<TabBarProps> = ({ hasActiveKid, active, showSavings = true, onSelect }) => {
+  // Step aside while any full-screen sheet / pop-up is open (mockups show the
+  // bar only on main screens, and it must never cover a sheet's buttons).
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  useEffect(() => {
+    const check = () => setOverlayOpen(!!document.querySelector('.fixed.inset-0, [aria-modal="true"]'));
+    check();
+    const mo = new MutationObserver(check);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
+
   const tabs: TabId[] = hasActiveKid
     ? (['today', 'calendar', 'rewards', ...(showSavings ? ['savings'] : [])] as TabId[])
     : ['today', 'calendar', 'dinners', 'groceries'];
@@ -45,7 +56,8 @@ export const TabBar: React.FC<TabBarProps> = ({ hasActiveKid, active, showSaving
   return (
     <nav
       aria-label="Main"
-      className="cq-tabbar fixed z-[55] left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[440px] h-16 rounded-full px-2 grid items-center"
+      aria-hidden={overlayOpen || undefined}
+      className={`cq-tabbar fixed z-[55] left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[440px] h-16 rounded-full px-2 grid items-center transition-opacity duration-200 ${overlayOpen ? 'opacity-0 pointer-events-none' : ''}`}
       style={{
         bottom: 'calc(16px + var(--safe-bottom, 0px))',
         gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,

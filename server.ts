@@ -1938,6 +1938,87 @@ app.get('/api/retail-samples', (req, res) => {
 });
 
 // 13. AI Retail Database & Barcode/SKU/Item# Lookup Endpoint
+/** A real product-page URL on a supported store, plus the code it carries. */
+function productPageInfo(url: string): { retailer: string; code: string } | null {
+  let m: RegExpMatchArray | null;
+  if ((m = url.match(/bestbuy\.com\/site\/(?:[^/?#]+\/)?(\d{6,8})\.p/i))) return { retailer: 'Best Buy', code: m[1] };
+  if ((m = url.match(/amazon\.com\/(?:[^?#]*\/)?(?:dp|gp\/product)\/(B0[A-Z0-9]{8})/i))) return { retailer: 'Amazon', code: m[1].toUpperCase() };
+  if ((m = url.match(/target\.com\/p\/[^?#]*\/-\/A-(\d+)/i))) return { retailer: 'Target', code: m[1] };
+  if ((m = url.match(/walmart\.com\/ip\/(?:[^/?#]+\/)?(\d{5,})/i))) return { retailer: 'Walmart', code: m[1] };
+  if ((m = url.match(/microcenter\.com\/product\/(\d+)/i))) return { retailer: 'Micro Center', code: m[1] };
+  if ((m = url.match(/lego\.com\/[a-z-]+\/product\/[^?#]*?-(\d{4,6})(?:[?#/]|$)/i))) return { retailer: 'LEGO', code: m[1] };
+  if (/apple\.com\/(?:[a-z-]+\/)?shop\/(?:buy|product)\//i.test(url)) return { retailer: 'Apple', code: url.split(/[?#]/)[0].split('/').filter(Boolean).pop() || 'apple' };
+  return null;
+}
+
+// Kid-friendly search by name: up to 4 real products, each tied to a store product page.
+app.post('/api/retail-search', async (req, res) => {
+  const query = String(req.body?.query || '').trim().slice(0, 120);
+  if (query.length < 3) {
+    res.status(400).json({ success: false, message: 'Type a few more letters.' });
+    return;
+  }
+  const ai = getGenAI();
+  if (!ai || isGeminiQuotaExhausted()) {
+    res.status(503).json({ success: false, message: 'Product search is not set up yet. Ask a parent to add a Gemini key.' });
+    return;
+  }
+  const prompt = `A child is choosing a savings goal and typed: "${query}".
+Use Google Search to find up to 4 real products that match, sold at Best Buy, Amazon, Target, Walmart, Micro Center, Apple, or LEGO.
+Each one needs the store's product page URL (for example https://www.bestbuy.com/site/<name>/<sku>.p?skuId=<sku> or https://www.amazon.com/<name>/dp/<ASIN>) and its current price in USD.
+Only include products that are suitable for a child to save for. Do not invent URLs.
+Reply with ONLY one line of JSON, no markdown:
+{"products": [{"title": "full product name", "retailer": "store", "price": 49.99, "url": "product page URL"}]}`;
+  try {
+    const response = await callGeminiWithFallback(
+      ai,
+      (modelName) => ai.models.generateContent({ model: modelName, contents: prompt, config: { tools: [{ googleSearch: {} }], temperature: 0 } }),
+      ['gemini-flash-latest', 'gemini-3.1-flash-lite'],
+    );
+    const text = (response.text || '').trim();
+    const json = text.match(/\{[\s\S]*"products"[\s\S]*\}/)?.[0];
+    const list: any[] = json ? (JSON.parse(json).products || []) : [];
+    const seen = new Set<string>();
+    const products = list.flatMap((p) => {
+      const url = String(p?.url || '');
+      const info = productPageInfo(url);
+      if (!info || !p?.title) return [];
+      const key = `${info.retailer}:${info.code}`;
+      if (seen.has(key)) return [];
+      seen.add(key);
+      const title = String(p.title).length >= 6 ? String(p.title) : (titleFromProductUrl(url) || String(p.title));
+      const cls = classifyProductDetails(title, info.retailer);
+      const price = parsePrice(String(p.price ?? ''));
+      return [{
+        id: `goal-search-${info.code}`,
+        title,
+        name: title,
+        retailer: info.retailer,
+        category: cls.category,
+        icon: cls.icon,
+        targetCost: Number((price ?? cls.defaultCost).toFixed(2)),
+        currentCost: Number((price ?? cls.defaultCost).toFixed(2)),
+        sku: info.code,
+        itemNumber: `${info.retailer} ${info.code}`,
+        productUrl: url,
+        description: `Found on ${info.retailer}.`,
+        specs: [`Store: ${info.retailer}`, `Item: ${info.code}`, price ? `Price: $${price.toFixed(2)} (from search results)` : 'Price: not listed'],
+        confidence: 'high',
+        priceNeedsCheck: true,
+      }];
+    }).slice(0, 4);
+    console.log(`[Retail Search] "${query}" -> ${products.length} of ${list.length} answers had a real product page`);
+    if (!products.length) {
+      res.status(404).json({ success: false, message: `Couldn't find "${query}" at the stores. Try other words, like the brand and what it is.` });
+      return;
+    }
+    res.json({ success: true, source: 'search', products });
+  } catch (e: any) {
+    console.warn('[Retail Search] failed:', e?.message || e);
+    res.status(502).json({ success: false, message: 'Search is busy right now. Try again in a minute.' });
+  }
+});
+
 app.post('/api/retail-lookup', async (req, res) => {
   try {
     const { query = '', retailer = 'all', codeType = 'auto' } = req.body;

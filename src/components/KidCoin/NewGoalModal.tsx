@@ -76,6 +76,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
   const [lookupQuery, setLookupQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<any | null>(null);
+  const [searchChoices, setSearchChoices] = useState<any[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchSource, setSearchSource] = useState<string | null>(null);
 
@@ -175,6 +176,16 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
 
   if (!isOpen) return null;
 
+  const showProduct = (prod: any, source: string) => {
+    setSearchResult(prod);
+    setSearchSource(source);
+    setEditTitle(prod.title || prod.name || '');
+    setEditCost(String(prod.targetCost || prod.currentCost || 29.99));
+    setEditRetailer(prod.retailer || 'Retail Store');
+    setEditCategory(prod.category || 'Dream Reward');
+    setIsEditingResult(false);
+  };
+
   // Perform AI & Retail Database Lookup
   const handlePerformLookup = async (queryText?: string, retailerFilter?: string) => {
     const q = (queryText !== undefined ? queryText : lookupQuery).trim();
@@ -188,9 +199,42 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
     setIsSearching(true);
     setSearchError(null);
     setSearchResult(null);
+    setSearchChoices([]);
     setIsEditingResult(false);
 
+    const looksLikeCode = /https?:\/\/|\.com\//i.test(q) || /^(B0[A-Z0-9]{8}|[\d\s-]{6,14})$/i.test(q);
+
     try {
+      // Typed a name: look in the built-in catalog and search the stores at the same time,
+      // then let the kid pick from the real products found.
+      if (!looksLikeCode) {
+        const [lookup, search] = await Promise.all([
+          fetch('/api/retail-lookup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q, retailer: r }) })
+            .then((x) => x.json()).catch(() => null),
+          fetch('/api/retail-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q }) })
+            .then((x) => x.json()).catch(() => null),
+        ]);
+        const choices: any[] = [];
+        const seen = new Set<string>();
+        for (const prod of [lookup?.success ? lookup.product : null, ...((search?.success && search.products) || [])]) {
+          if (!prod) continue;
+          const key = String(prod.sku || prod.title).toUpperCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          choices.push(prod);
+        }
+        if (choices.length === 1) {
+          showProduct(choices[0], lookup?.success ? lookup.source : 'search');
+          sound.playCoinSound();
+        } else if (choices.length > 1) {
+          setSearchChoices(choices.slice(0, 5));
+          sound.playTap();
+        } else {
+          setSearchError(search?.message || lookup?.message || `Couldn't find "${q}". Try other words, like the brand and what it is.`);
+        }
+        return;
+      }
+
       const resp = await fetch('/api/retail-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -451,7 +495,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                           handlePerformLookup();
                         }
                       }}
-                      placeholder="e.g. 6619147 (Lenovo), 6522854 (PS5), 207-00-0199 (Target), 045496883386 (UPC)"
+                      placeholder="What do you want? e.g. lego star wars ship, or an item number"
                       className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 font-mono"
                     />
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -524,13 +568,39 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                     <div className="font-bold">Lookup Unsuccessful</div>
                     <p className="mt-0.5 text-rose-700 dark:text-rose-400 text-[11px]">{searchError}</p>
                     <p className="mt-1.5 text-rose-700 dark:text-rose-400 text-[11px]">
-                      <span className="font-bold">Tip:</span> in the Best Buy or Amazon app, open the item, tap <span className="font-bold">Share → Copy link</span>, and paste the link here. Links always import the right item.
+                      <span className="font-bold">Tip:</span> type what it is and the brand (like "lego star wars ship"), or the item number from the box or store tag. Grown-ups can also paste a store link.
                     </p>
                   </div>
                 </div>
               )}
 
               {/* Enriched Search Result Card */}
+              {searchChoices.length > 0 && !searchResult && (
+                <div className="space-y-2" aria-label="Pick your item">
+                  <div className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Which one do you want?</div>
+                  {searchChoices.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { showProduct(p, 'search'); sound.playCoinSound(); }}
+                      className="w-full min-h-[64px] text-left flex items-center gap-3 p-3.5 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-indigo-400 active:scale-[0.99] transition cursor-pointer"
+                    >
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-bold text-sm text-slate-900 dark:text-white line-clamp-2">{p.title}</span>
+                        <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{p.retailer}</span>
+                      </span>
+                      <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">${Number(p.targetCost).toFixed(2)}</span>
+                    </button>
+                  ))}
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Not here? Try other words, like the brand and what it is.</p>
+                </div>
+              )}
+
+              {searchResult && searchChoices.length > 0 && (
+                <button type="button" onClick={() => setSearchResult(null)}
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 underline cursor-pointer">← Back to the choices</button>
+              )}
+
               {searchResult && (
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/50 dark:from-slate-800/80 dark:via-slate-800/40 dark:to-indigo-950/30 border-2 border-indigo-300 dark:border-indigo-700 shadow-md space-y-3">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -545,7 +615,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                           </span>
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                             <ShieldCheck className="w-3.5 h-3.5" />
-                            <span>Verified Retail MSRP</span>
+                            <span>{searchResult.priceNeedsCheck ? 'Found at the store · price from search' : 'Verified Retail MSRP'}</span>
                           </span>
                           {searchSource === 'gemini-ai' && (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">

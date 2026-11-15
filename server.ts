@@ -1697,6 +1697,103 @@ async function lookupBarcodeLive(barcode: string): Promise<{
  * Searches live retail indexes for codes (Best Buy SKU, Target DPCI, Amazon ASIN)
  * when AI quota limits are reached, extracting verified product titles directly.
  */
+// --- Direct store lookups (real product data, no guessing) ---
+interface StoreLookup { title: string; retailer: string; cost?: number; image?: string; url: string; modelNumber?: string; upc?: string }
+
+const decodeHtml = (s: string) => s
+  .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n))).replace(/\s+/g, ' ').trim();
+
+async function fetchText(url: string, timeoutMs = 8000): Promise<{ status: number; text: string } | null> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { signal: controller.signal, headers: { 'Accept-Language': 'en-US,en;q=0.9' } });
+    const text = await r.text();
+    console.log(`[Retail Lookup] ${new URL(url).hostname} -> HTTP ${r.status} (${text.length} bytes)`);
+    return { status: r.status, text };
+  } catch (e: any) {
+    console.log(`[Retail Lookup] ${new URL(url).hostname} -> failed: ${e?.name === 'AbortError' ? 'timed out' : e?.message || e}`);
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+const parsePrice = (s?: string | null) => {
+  if (!s) return undefined;
+  const v = parseFloat(String(s).replace(/[^0-9.]/g, ''));
+  return isFinite(v) && v > 0 && v < 50000 ? v : undefined;
+};
+
+/** Amazon product page by ASIN. Returns null when Amazon shows a robot check or no product. */
+async function lookupAmazonAsin(asin: string): Promise<StoreLookup | null> {
+  const url = `https://www.amazon.com/dp/${asin.toUpperCase()}`;
+  const page = await fetchText(url);
+  if (!page || page.status !== 200 || /validateCaptcha|Robot Check|api-services-support@amazon/i.test(page.text)) return null;
+  const html = page.text;
+  const title = decodeHtml((html.match(/<span[^>]*id="productTitle"[^>]*>([\s\S]*?)<\/span>/i)?.[1] || '').replace(/<[^>]+>/g, ''));
+  if (title.length < 4) return null;
+  const cost =
+    parsePrice(html.match(/"priceAmount"\s*:\s*([0-9.]+)/)?.[1]) ??
+    parsePrice(html.match(/class="a-price[^"]*"[^>]*>\s*<span class="a-offscreen">\s*\$([0-9.,]+)/)?.[1]) ??
+    parsePrice(html.match(/id="priceblock_(?:our|deal)price"[^>]*>\s*\$([0-9.,]+)/)?.[1]);
+  const image = html.match(/"hiRes"\s*:\s*"(https:[^"]+)"/)?.[1] || html.match(/id="landingImage"[^>]*src="(https:[^"]+)"/)?.[1];
+  return { title, retailer: 'Amazon', cost, image, url };
+}
+
+/** Best Buy SKU: official Products API when BESTBUY_API_KEY is set, otherwise the product page. */
+async function lookupBestBuySku(sku: string): Promise<StoreLookup | null> {
+  const key = process.env.BESTBUY_API_KEY;
+  if (key) {
+    const r = await fetchText(`https://api.bestbuy.com/v1/products/${sku}.json?apiKey=${encodeURIComponent(key)}&show=name,salePrice,regularPrice,url,image,modelNumber,upc`);
+    if (r && r.status === 200) {
+      try {
+        const j = JSON.parse(r.text);
+        if (j?.name) return { title: j.name, retailer: 'Best Buy', cost: j.salePrice ?? j.regularPrice, image: j.image, url: j.url || `https://www.bestbuy.com/site/${sku}.p?skuId=${sku}`, modelNumber: j.modelNumber, upc: j.upc };
+      } catch {}
+    }
+  }
+  const url = `https://www.bestbuy.com/site/${sku}.p?skuId=${sku}`;
+  const page = await fetchText(url, 6000);
+  if (!page || page.status !== 200) return null;
+  const html = page.text;
+  const og = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1] || html.match(/<title>([^<]+)<\/title>/i)?.[1] || '';
+  const title = decodeHtml(og).replace(/\s*[-|]\s*Best Buy\s*$/i, '');
+  if (title.length < 4 || /^Best Buy/i.test(title)) return null;
+  const cost = parsePrice(html.match(/"currentPrice"\s*:\s*([0-9.]+)/)?.[1]) ?? parsePrice(html.match(/"price"\s*:\s*"?([0-9.]+)/)?.[1]);
+  const image = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)?.[1];
+  return { title, retailer: 'Best Buy', cost, image, url, modelNumber: html.match(/"model"\s*:\s*"([^"]+)"/)?.[1] };
+}
+
+/** Ask Gemini with Google Search grounding; it must say not-found instead of guessing. */
+async function lookupWithGroundedAI(code: string, retailer: string): Promise<StoreLookup | null> {
+  const ai = getGenAI();
+  if (!ai || isGeminiQuotaExhausted()) return null;
+  const store = retailer && retailer !== 'all' ? retailer : (/^B0/i.test(code) ? 'Amazon' : /^\d{7}$/.test(code) ? 'Best Buy' : 'any major US store');
+  const prompt = `Use Google Search to find the exact product sold at ${store} under the item code "${code}" (Best Buy SKU, Amazon ASIN, Target DPCI, Walmart item ID, or UPC).
+Only answer if a search result clearly ties this exact code to the product. Do not guess or pick a similar product.
+Reply with ONLY one line of JSON, no markdown:
+{"found": true, "title": "...", "retailer": "...", "price": 123.45, "url": "https://...", "modelNumber": "..."}
+or, if you cannot confirm it: {"found": false}`;
+  try {
+    const response = await callGeminiWithFallback(
+      ai,
+      (modelName) => ai.models.generateContent({ model: modelName, contents: prompt, config: { tools: [{ googleSearch: {} }], temperature: 0 } }),
+      ['gemini-flash-latest', 'gemini-3.1-flash-lite'],
+    );
+    const text = (response.text || '').trim();
+    const json = text.match(/\{[\s\S]*\}/)?.[0];
+    if (!json) return null;
+    const j = JSON.parse(json);
+    if (!j.found || !j.title) return null;
+    return { title: String(j.title), retailer: String(j.retailer || store), cost: parsePrice(String(j.price ?? '')), url: String(j.url || ''), modelNumber: j.modelNumber };
+  } catch (e: any) {
+    console.warn('[Retail Lookup] Grounded AI lookup failed:', e?.message || e);
+    return null;
+  }
+}
+
 async function lookupRetailCodeWeb(cleanQuery: string, retailerHint?: string): Promise<{
   title: string;
   retailer: string;
@@ -1812,6 +1909,49 @@ app.post('/api/retail-lookup', async (req, res) => {
       return;
     }
 
+    // 2. Real store lookups for Amazon ASINs and Best Buy SKUs (also pulled out of pasted links).
+    const fromUrl = cleanQuery.match(/(?:\/dp\/|\/gp\/product\/)(B0[A-Z0-9]{8})/i)?.[1]
+      || cleanQuery.match(/[?&]skuId=(\d{6,8})/i)?.[1]
+      || cleanQuery.match(/bestbuy\.com\/site\/[^?]*?\/(\d{6,8})\.p/i)?.[1];
+    const code = (fromUrl || cleanQuery).replace(/\s+/g, '').toUpperCase();
+    const wantAmazon = /^B0[A-Z0-9]{8}$/.test(code);
+    const wantBestBuy = /^\d{7}$/.test(code) && !/target|walmart|amazon/i.test(String(retailer));
+    if (wantAmazon || wantBestBuy) {
+      const live = (wantAmazon ? await lookupAmazonAsin(code) : await lookupBestBuySku(code)) || await lookupWithGroundedAI(code, retailer);
+      if (live) {
+        const cls = classifyProductDetails(live.title, live.retailer);
+        const hasPrice = typeof live.cost === 'number';
+        const cost = Number((hasPrice ? live.cost! : cls.defaultCost).toFixed(2));
+        const kind = wantAmazon ? 'ASIN' : 'SKU';
+        res.json({
+          success: true,
+          source: 'live-store',
+          product: {
+            id: `goal-live-${Date.now()}`,
+            name: live.title,
+            title: live.title,
+            retailer: live.retailer,
+            category: cls.category,
+            icon: cls.icon,
+            currentCost: cost,
+            targetCost: cost,
+            sku: code,
+            barcode: live.upc || '',
+            itemNumber: `${live.retailer} ${kind} ${code}`,
+            modelNumber: live.modelNumber || '',
+            imageUrl: live.image,
+            productUrl: live.url,
+            description: `Found on ${live.retailer} (${kind} ${code}).`,
+            specs: [`Store: ${live.retailer}`, `${kind}: ${code}`, hasPrice ? `Price: $${cost.toFixed(2)}` : 'Price not listed: check and edit it'],
+            whyKidsLoveIt: 'Finish chores to save up for it!',
+            confidence: hasPrice ? 'verified' : 'high',
+            verifiedDate: `${live.retailer} product page`,
+          },
+        });
+        return;
+      }
+    }
+
     // 2. Check if user pasted a direct store link (Best Buy, Amazon, Target, Walmart, Micro Center)
     if (cleanQuery.includes('http://') || cleanQuery.includes('https://') || cleanQuery.includes('.com/')) {
       const urlParsed = parseStoreProductUrl(cleanQuery);
@@ -1920,143 +2060,10 @@ app.post('/api/retail-lookup', async (req, res) => {
       }
     }
 
-    // 5. Call Gemini AI model with multi-model fallback cascade to identify product
-    const ai = getGenAI();
-    if (ai && !isGeminiQuotaExhausted()) {
-      try {
-        const prompt = `You are a precision retail product identification expert and AI product database engine.
-Look up this product identifier from major retailers (Best Buy, Target, Amazon, Walmart, Micro Center, Apple, LEGO):
-Query/Code: "${cleanQuery}"
-Specific Retailer Filter: "${retailer && retailer !== 'all' ? retailer : 'Any / Auto-detect'}"
-Code Type Hint: "${codeType || 'auto (could be SKU, Barcode/UPC, Item#, ASIN, DPCI, or Model#)'}"
-
-CRITICAL ANTI-HALLUCINATION INSTRUCTIONS:
-1. NEVER substitute or return an unrelated product. Do NOT default to a Nintendo Switch, PlayStation, or Laptop unless the user explicitly searched for it.
-2. The user queried specifically for: "${cleanQuery}".
-   - If this is Best Buy SKU "6560934", it is the DJI - Osmo Pocket 3 Creator Combo 3-Axis Stabilized 4K Vlog Camera (Category: "Cameras & Video", Icon: "Camera", Price: $669.99).
-   - If this is Best Buy SKU "6560933", it is the DJI - Osmo Pocket 3 3-Axis Stabilized 4K Vlog Camera (Category: "Cameras & Video", Icon: "Camera", Price: $519.99).
-   - If this is Best Buy SKU "6553412", it is the GoPro - HERO12 Black Action Camera (Category: "Cameras & Video", Icon: "Camera", Price: $349.99).
-   - If this is Best Buy SKU "6619147", it is the Lenovo IdeaPad Slim 3x Copilot+ PC 15.3" Touchscreen Laptop (Snapdragon X 2025, 16GB RAM, 256GB SSD, Luna Grey).
-   - If this is Best Buy SKU "6506246", it is the Frigidaire 36" 25.6 Cu. Ft. Side-by-Side Refrigerator Stainless Steel.
-   - If this is Amazon ASIN "B076VB5JFQ", it is the TOSHIBA Countertop Microwave Oven 1.2 Cu.Ft 1000W.
-   - If this product is a digital camera, vlogging camera, action camera, or gimbal, category MUST be "Cameras & Video" and icon MUST be "Camera" (or "Video"). NEVER classify a camera as "Laptop" or "Tech & PC"!
-   - If this is a 7-digit Best Buy SKU, deduce the real commercial product with high factual precision.
-   - If this is a Target DPCI, Amazon ASIN, Walmart Item ID, or 12-digit UPC barcode, deduce the real matching product.
-3. The returned "sku" and "itemNumber" in the JSON MUST be "${cleanQuery}". NEVER return a different SKU.
-4. Accurate Pricing: Determine accurate commercial MSRP / retail selling price in USD.
-5. If the exact SKU is unknown, extrapolate the most plausible real consumer electronics, camera, appliance, or retail product corresponding to that code format.
-
-Return STRICTLY a JSON object with:
-- "title": string (official clean product name)
-- "targetCost": number (e.g. 669.99)
-- "retailer": string (e.g. "Best Buy", "Target", "Amazon", "Walmart", "Micro Center", "Apple", "LEGO")
-- "category": string (one of "Cameras & Video", "Tech & PC", "Gaming", "Appliances", "Electronics", "Audio", "Toys & LEGO", "Sports & Outdoors", "Fashion & Clothes")
-- "sku": "${cleanQuery}"
-- "barcode": string (12-digit UPC if known, or plausible barcode)
-- "itemNumber": "${cleanQuery}"
-- "modelNumber": string (manufacturer model number)
-- "icon": string (one of "Camera", "Video", "Laptop", "Gamepad2", "Tv", "Boxes", "Headphones", "Bike", "Tablet", "Coins", "Sparkles", "Smartphone", "Watch")
-- "description": string (concise 1-2 sentence kid-friendly description)
-- "specs": array of 3 concise strings highlighting key features
-- "whyKidsLoveIt": string (fun sentence explaining why kids want to save for it)
-- "confidence": "verified" | "high" | "estimated"
-
-Return STRICTLY JSON.`;
-
-        const response = await callGeminiWithFallback(
-          ai,
-          async (modelName) => {
-            return await ai.models.generateContent({
-              model: modelName,
-              contents: prompt,
-              config: {
-                responseMimeType: 'application/json',
-                temperature: 0.1, // Low temperature for maximum factual consistency
-              },
-            });
-          },
-          ['gemini-3.1-flash-lite', 'gemini-flash-latest']
-        );
-
-        const text = response.text?.trim() || '';
-        if (text) {
-          const cleanedJson = text.replace(/```json\s*/gi, '').replace(/```\s*$/g, '').trim();
-          const parsed = JSON.parse(cleanedJson);
-          const rawItem = Array.isArray(parsed) ? parsed[0] : parsed;
-
-          if (rawItem && (rawItem.title || rawItem.name)) {
-            const rawCost = rawItem.targetCost ?? rawItem.currentCost ?? rawItem.price ?? rawItem.cost ?? 99.99;
-            const cost = typeof rawCost === 'number' ? rawCost : parseFloat(String(rawCost).replace(/[^0-9.]/g, ''));
-
-            // Anti-hallucination sanity check: If query wasn't Nintendo Switch, ensure AI did not inject a false Switch hallucination
-            const queryLower = cleanQuery.toLowerCase();
-            const titleLower = String(rawItem.title || rawItem.name || '').toLowerCase();
-            const isSwitchQuery = queryLower.includes('switch') || queryLower.includes('nintendo') || queryLower.includes('joycon') || queryLower.includes('oled') || queryLower === '6470924' || queryLower === '207-00-0199' || queryLower === '045496883386';
-
-            if (titleLower.includes('switch') && !isSwitchQuery) {
-              console.warn(`[Retail Lookup] Suppressed false Nintendo Switch hallucination for query: "${cleanQuery}"`);
-            } else {
-              // Re-classify through local classifier to fix any AI misclassification (e.g. camera classified as laptop)
-              const titleText = rawItem.title || rawItem.name;
-              const classification = classifyProductDetails(titleText, rawItem.retailer);
-              const finalCat = (classification.isSpecificMatch) ? classification.category : (rawItem.category || classification.category);
-              const finalIcon = (classification.isSpecificMatch) ? classification.icon : (rawItem.icon || classification.icon);
-
-              // Sanity clamp: Prevent SKU numbers from being passed as absurd millions of dollars
-              const safeCost = (isNaN(cost) || cost <= 0) ? classification.defaultCost : (cost > 15000 ? classification.defaultCost : cost);
-              res.json({
-                success: true,
-                source: 'gemini-ai',
-                product: {
-                  ...rawItem,
-                  title: titleText,
-                  category: finalCat,
-                  icon: finalIcon,
-                  targetCost: Number(safeCost.toFixed(2)),
-                  sku: cleanQuery,
-                  itemNumber: rawItem.itemNumber || cleanQuery,
-                  id: `goal-ai-${Date.now()}`,
-                },
-              });
-              return;
-            }
-          }
-        }
-      } catch (aiErr: any) {
-        console.warn('[Server] Gemini retail lookup error, falling back to local database or synthesis:', aiErr?.message || aiErr);
-      }
-    }
-
-    // 6. If local match found, return it
-    if (localMatch) {
-      const matchCost = Number(localMatch.currentCost.toFixed(2));
-      res.json({
-        success: true,
-        source: 'local-database',
-        product: {
-          ...localMatch,
-          targetCost: matchCost,
-          currentCost: matchCost,
-          title: localMatch.name,
-          confidence: 'verified',
-        },
-      });
-      return;
-    }
-
-    // 7. Intelligent offline synthesis fallback: guarantees zero failure even during offline/503 spikes
-    const syntheticProduct = synthesizeOfflineProduct(cleanQuery, retailer);
-    const synthCost = Number(syntheticProduct.currentCost.toFixed(2));
-    res.json({
-      success: true,
-      source: 'offline-synthesized',
-      product: {
-        ...syntheticProduct,
-        targetCost: synthCost,
-        currentCost: synthCost,
-        title: syntheticProduct.name,
-        confidence: 'estimated',
-      },
+    // 5. Nothing could confirm this code. Say so instead of inventing a product.
+    res.status(404).json({
+      success: false,
+      message: `Couldn't find "${cleanQuery}" at the store. Check the number, paste the product's web link instead, or create the goal yourself with "Custom goal".`,
     });
   } catch (error: any) {
     console.error('[Server] Retail lookup error:', error);

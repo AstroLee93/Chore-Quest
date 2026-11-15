@@ -4,7 +4,6 @@ import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
-import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
 import { FamilyDatabase, GradeLevel } from './src/types';
 import { DEFAULT_SEED_DATA } from './src/utils/storage';
@@ -1767,64 +1766,6 @@ async function lookupBestBuySku(sku: string): Promise<StoreLookup | null> {
   return { title, retailer: 'Best Buy', cost, image, url, modelNumber: html.match(/"model"\s*:\s*"([^"]+)"/)?.[1] };
 }
 
-/**
- * Claude (Anthropic API) with its web search tool, limited to retailer sites.
- * Used first when ANTHROPIC_API_KEY is set; the model must say not-found instead of guessing.
- */
-const RETAIL_DOMAINS = ['bestbuy.com', 'amazon.com', 'target.com', 'walmart.com', 'microcenter.com', 'apple.com', 'lego.com'];
-let anthropicClient: Anthropic | null = null;
-const getAnthropic = () => {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
-  return (anthropicClient ??= new Anthropic());
-};
-
-async function lookupWithClaude(code: string, retailer: string): Promise<StoreLookup | null> {
-  const client = getAnthropic();
-  if (!client) return null;
-  const store = retailer && retailer !== 'all' ? retailer : (/^B0/i.test(code) ? 'Amazon' : /^\d{7}$/.test(code) ? 'Best Buy' : 'any major US store');
-  const messages: Anthropic.Beta.BetaMessageParam[] = [{
-    role: 'user',
-    content: `Find the exact product sold at ${store} under the item code "${code}" (Best Buy SKU, Amazon ASIN, Target DPCI, Walmart item ID, or UPC). Search the store's site.
-Only answer if a result clearly ties this exact code to the product; never pick a similar product.
-Finish with ONLY one line of JSON, no markdown:
-{"found": true, "title": "...", "retailer": "...", "price": 123.45, "url": "https://...", "modelNumber": "..."}
-or, if you cannot confirm it: {"found": false}`,
-  }];
-  try {
-    // Server tools can pause a long turn (pause_turn); resend to let it continue.
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const response = await client.beta.messages.create({
-        model: process.env.ANTHROPIC_RETAIL_MODEL || 'claude-opus-5-5',
-        max_tokens: 4000,
-        output_config: { effort: 'low' },
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
-        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 4, allowed_domains: RETAIL_DOMAINS }],
-        messages,
-      });
-      if (response.stop_reason === 'pause_turn') {
-        messages.push({ role: 'assistant', content: response.content });
-        continue;
-      }
-      if (response.stop_reason === 'refusal') return null;
-      const text = response.content.filter((b) => b.type === 'text').map((b) => (b as Anthropic.Beta.BetaTextBlock).text).join('\n');
-      const json = text.match(/\{[^{}]*"found"[^{}]*\}/g)?.pop();
-      if (!json) return null;
-      const j = JSON.parse(json);
-      if (!j.found || !j.title) return null;
-      console.log(`[Retail Lookup] Claude found "${j.title}" for ${code}`);
-      return { title: String(j.title), retailer: String(j.retailer || store), cost: parsePrice(String(j.price ?? '')), url: String(j.url || ''), modelNumber: j.modelNumber };
-    }
-    return null;
-  } catch (e: any) {
-    if (e instanceof Anthropic.AuthenticationError) console.warn('[Retail Lookup] Claude: ANTHROPIC_API_KEY was rejected');
-    else if (e instanceof Anthropic.RateLimitError) console.warn('[Retail Lookup] Claude: rate limited, falling back');
-    else if (e instanceof Anthropic.APIError) console.warn(`[Retail Lookup] Claude API error ${e.status}: ${e.message}`);
-    else console.warn('[Retail Lookup] Claude lookup failed:', e?.message || e);
-    return null;
-  }
-}
-
 /** Ask Gemini with Google Search grounding; it must say not-found instead of guessing. */
 async function lookupWithGroundedAI(code: string, retailer: string): Promise<StoreLookup | null> {
   const ai = getGenAI();
@@ -1976,7 +1917,7 @@ app.post('/api/retail-lookup', async (req, res) => {
     const wantAmazon = /^B0[A-Z0-9]{8}$/.test(code);
     const wantBestBuy = /^\d{7}$/.test(code) && !/target|walmart|amazon/i.test(String(retailer));
     if (wantAmazon || wantBestBuy) {
-      const live = (wantAmazon ? await lookupAmazonAsin(code) : await lookupBestBuySku(code)) || await lookupWithClaude(code, retailer) || await lookupWithGroundedAI(code, retailer);
+      const live = (wantAmazon ? await lookupAmazonAsin(code) : await lookupBestBuySku(code)) || await lookupWithGroundedAI(code, retailer);
       if (live) {
         const cls = classifyProductDetails(live.title, live.retailer);
         const hasPrice = typeof live.cost === 'number';

@@ -168,9 +168,25 @@ interface GoalIconProps {
   icon?: string;
   className?: string;
   fallback?: string;
+  imageUrl?: string;
 }
 
-export const GoalIcon: React.FC<GoalIconProps> = ({ icon, className = 'w-5 h-5', fallback = '🎯' }) => {
+export const GoalIcon: React.FC<GoalIconProps> = ({ icon, className = 'w-5 h-5', fallback = '🎯', imageUrl }) => {
+  const [photoFailed, setPhotoFailed] = React.useState(false);
+  React.useEffect(() => setPhotoFailed(false), [imageUrl]);
+  if (imageUrl && !photoFailed) {
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        className={`${className} object-contain rounded-md bg-white`}
+        onError={() => setPhotoFailed(true)}
+        onLoad={(e) => { if ((e.currentTarget as HTMLImageElement).naturalWidth < 10) setPhotoFailed(true); }}
+      />
+    );
+  }
   if (!icon || !icon.trim()) {
     return <span className="select-none text-xl leading-none">{fallback}</span>;
   }

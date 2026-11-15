@@ -34,6 +34,7 @@ export interface SavingsGoal {
   description?: string;
   whyKidsLoveIt?: string;
   productUrl?: string;
+  imageUrl?: string; // product photo from the store (Best Buy API / Amazon image by ASIN)
   confidence?: 'verified' | 'high' | 'estimated';
 }
 

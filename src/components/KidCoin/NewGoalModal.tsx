@@ -291,6 +291,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
       description: product.description,
       whyKidsLoveIt: product.whyKidsLoveIt,
       productUrl: product.productUrl,
+      imageUrl: product.imageUrl,
       confidence: product.confidence || 'verified',
       milestones: generateDefaultMilestones(cost, reallocated),
     };
@@ -605,8 +606,8 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/50 dark:from-slate-800/80 dark:via-slate-800/40 dark:to-indigo-950/30 border-2 border-indigo-300 dark:border-indigo-700 shadow-md space-y-3">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-2xl text-indigo-600 shadow-sm shrink-0">
-                        <GoalIcon icon={searchResult.icon || 'Gamepad2'} className="w-7 h-7" />
+                      <div className={`${searchResult.imageUrl ? 'w-24 h-24 p-1.5 bg-white' : 'w-12 h-12 bg-white dark:bg-slate-900'} rounded-2xl border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-2xl text-indigo-600 shadow-sm shrink-0 overflow-hidden`}>
+                        <GoalIcon icon={searchResult.icon || 'Gamepad2'} imageUrl={searchResult.imageUrl} className={searchResult.imageUrl ? 'w-full h-full' : 'w-7 h-7'} />
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">

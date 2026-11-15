@@ -386,7 +386,7 @@ export const ParentSavingsManagement: React.FC<ParentSavingsManagementProps> = (
                   <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <GoalIcon icon={primaryGoal.icon} className="w-4 h-4 text-amber-500" />
+                        <GoalIcon icon={primaryGoal.icon} imageUrl={primaryGoal.imageUrl} className="w-4 h-4 text-amber-500" />
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                           {primaryGoal.title}
                         </span>

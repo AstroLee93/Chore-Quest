@@ -1745,12 +1745,13 @@ async function lookupAmazonAsin(asin: string): Promise<StoreLookup | null> {
 /** Best Buy SKU: official Products API when BESTBUY_API_KEY is set, otherwise the product page. */
 async function lookupBestBuySku(sku: string): Promise<StoreLookup | null> {
   const key = process.env.BESTBUY_API_KEY;
+  if (!key) console.log('[Retail Lookup] BESTBUY_API_KEY is not set: Best Buy SKUs fall back to search. Get a free key at developer.bestbuy.com for exact names, prices and photos.');
   if (key) {
-    const r = await fetchText(`https://api.bestbuy.com/v1/products/${sku}.json?apiKey=${encodeURIComponent(key)}&show=name,salePrice,regularPrice,url,image,modelNumber,upc`);
+    const r = await fetchText(`https://api.bestbuy.com/v1/products/${sku}.json?apiKey=${encodeURIComponent(key)}&show=name,salePrice,regularPrice,url,image,largeFrontImage,modelNumber,upc`);
     if (r && r.status === 200) {
       try {
         const j = JSON.parse(r.text);
-        if (j?.name) return { title: j.name, retailer: 'Best Buy', cost: j.salePrice ?? j.regularPrice, image: j.image, url: j.url || `https://www.bestbuy.com/site/${sku}.p?skuId=${sku}`, modelNumber: j.modelNumber, upc: j.upc };
+        if (j?.name) return { title: j.name, retailer: 'Best Buy', cost: j.salePrice ?? j.regularPrice, image: j.largeFrontImage || j.image, url: j.url || `https://www.bestbuy.com/site/${sku}.p?skuId=${sku}`, modelNumber: j.modelNumber, upc: j.upc };
       } catch {}
     }
   }
@@ -2090,7 +2091,8 @@ app.post('/api/retail-lookup', async (req, res) => {
             barcode: live.upc || '',
             itemNumber: `${live.retailer} ${kind} ${code}`,
             modelNumber: live.modelNumber || '',
-            imageUrl: live.image,
+            // Amazon serves a product photo by ASIN on its image server; the app hides it if it is a blank placeholder.
+            imageUrl: live.image || (wantAmazon ? `https://images-na.ssl-images-amazon.com/images/P/${code}.01.L.jpg` : undefined),
             productUrl: live.url,
             description: `Found on ${live.retailer} (${kind} ${code}).`,
             specs: [`Store: ${live.retailer}`, `${kind}: ${code}`, hasPrice ? `Price: $${cost.toFixed(2)}${live.priceFromSearch ? ' (from search results)' : ''}` : 'Price not listed: check and edit it'],

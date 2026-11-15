@@ -162,7 +162,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="cq-icon-tile w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center text-white shadow-md shadow-orange-500/20 text-xl font-black shrink-0">
-            <GoalIcon icon={primaryGoal.icon} className="w-6 h-6 text-white" />
+            <GoalIcon icon={primaryGoal.icon} imageUrl={primaryGoal.imageUrl} className="w-6 h-6 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -247,7 +247,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
                     : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                 }`}
               >
-                <GoalIcon icon={g.icon} className="w-3.5 h-3.5" />
+                <GoalIcon icon={g.icon} imageUrl={g.imageUrl} className="w-3.5 h-3.5" />
                 <span className="truncate max-w-[130px]">{g.title}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-md ${

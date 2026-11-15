@@ -246,7 +246,7 @@ export const RocketTakeoffModal: React.FC<RocketTakeoffModalProps> = ({
                   className="flex flex-col items-center justify-center z-10 p-4"
                 >
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center shadow-lg shadow-amber-500/40 text-3xl mb-2">
-                    <GoalIcon icon={goal.icon} className="w-8 h-8 text-white" />
+                    <GoalIcon icon={goal.icon} imageUrl={goal.imageUrl} className="w-8 h-8 text-white" />
                   </div>
                   <div className="flex items-center gap-1.5 text-amber-400 font-black text-lg">
                     <Trophy className="w-5 h-5" />

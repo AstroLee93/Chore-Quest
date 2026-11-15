@@ -331,7 +331,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
                           }`}
                         >
-                          <GoalIcon icon={g.icon} className="w-3.5 h-3.5" />
+                          <GoalIcon icon={g.icon} imageUrl={g.imageUrl} className="w-3.5 h-3.5" />
                           <span>{g.title}</span>
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
                             isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'

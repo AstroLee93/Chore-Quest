@@ -206,6 +206,7 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
         setEditCost(String(prod.targetCost || prod.currentCost || 29.99));
         setEditRetailer(prod.retailer || 'Retail Store');
         setEditCategory(prod.category || 'Dream Reward');
+        if (prod.priceNeedsCheck) setIsEditingResult(true);
         sound.playCoinSound();
       } else {
         setSearchError(data.message || `No product found matching "${q}". Try checking the code digits.`);
@@ -522,6 +523,9 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                   <div>
                     <div className="font-bold">Lookup Unsuccessful</div>
                     <p className="mt-0.5 text-rose-700 dark:text-rose-400 text-[11px]">{searchError}</p>
+                    <p className="mt-1.5 text-rose-700 dark:text-rose-400 text-[11px]">
+                      <span className="font-bold">Tip:</span> in the Best Buy or Amazon app, open the item, tap <span className="font-bold">Share → Copy link</span>, and paste the link here. Links always import the right item.
+                    </p>
                   </div>
                 </div>
               )}
@@ -587,6 +591,10 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                           {searchResult.barcode && <span>• UPC: {searchResult.barcode}</span>}
                           {searchResult.itemNumber && <span>• Item: {searchResult.itemNumber}</span>}
                         </div>
+                        {searchResult.productUrl && (
+                          <a href={searchResult.productUrl} target="_blank" rel="noopener noreferrer"
+                            className="inline-block mt-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 underline">View on {searchResult.retailer || 'store'} site</a>
+                        )}
                       </div>
                     </div>
 
@@ -595,6 +603,9 @@ export const NewGoalModal: React.FC<NewGoalModalProps> = ({
                         ${Number(isEditingResult && editCost ? parseFloat(editCost) || 0 : (searchResult.targetCost || searchResult.currentCost || 0)).toFixed(2)}
                       </div>
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Target MSRP</span>
+                      {searchResult.priceNeedsCheck && (
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 text-right max-w-[160px]">Check this price against the store and edit it if needed</span>
+                      )}
 
                       <button
                         type="button"

@@ -1698,7 +1698,7 @@ async function lookupBarcodeLive(barcode: string): Promise<{
  * when AI quota limits are reached, extracting verified product titles directly.
  */
 // --- Direct store lookups (real product data, no guessing) ---
-interface StoreLookup { title: string; retailer: string; cost?: number; image?: string; url: string; modelNumber?: string; upc?: string }
+interface StoreLookup { title: string; retailer: string; cost?: number; image?: string; url: string; modelNumber?: string; upc?: string; priceFromSearch?: boolean }
 
 const decodeHtml = (s: string) => s
   .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
@@ -1766,16 +1766,48 @@ async function lookupBestBuySku(sku: string): Promise<StoreLookup | null> {
   return { title, retailer: 'Best Buy', cost, image, url, modelNumber: html.match(/"model"\s*:\s*"([^"]+)"/)?.[1] };
 }
 
-/** Ask Gemini with Google Search grounding; it must say not-found instead of guessing. */
+/** Title from a store product URL's slug, e.g. bestbuy.com/site/apple-airpods-4/6643857.p → "Apple Airpods 4". */
+function titleFromProductUrl(url: string): string | null {
+  const slug =
+    url.match(/bestbuy\.com\/site\/([^/?#]+)\/\d{6,8}\.p/i)?.[1] ||
+    url.match(/amazon\.com\/([^/?#]+)\/dp\/B0[A-Z0-9]{8}/i)?.[1] ||
+    url.match(/target\.com\/p\/([^/?#]+)\/-\/A-\d+/i)?.[1] ||
+    url.match(/walmart\.com\/ip\/([^/?#]+)\/\d+/i)?.[1];
+  if (!slug || slug.length < 4 || /^(dp|gp)$/i.test(slug)) return null;
+  return decodeURIComponent(slug).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+    .replace(/\b([a-z])/g, (m) => m.toUpperCase());
+}
+
+/** The product page URL must carry the exact code, which is how Best Buy and Amazon build their links. */
+function urlMatchesCode(url: string, code: string): boolean {
+  const u = url.toUpperCase();
+  const c = code.toUpperCase();
+  if (/^B0[A-Z0-9]{8}$/.test(c)) return u.includes(`/DP/${c}`) || u.includes(`/GP/PRODUCT/${c}`);
+  if (/^\d{6,8}$/.test(c)) return new RegExp(`(/${c}\\.P|SKUID=${c}\\b|/${c}(?:[/?#]|$))`).test(u);
+  return u.includes(c.replace(/-/g, ''));
+}
+
+/**
+ * Gemini (free tier) with Google Search grounding. Its answer is only accepted when the
+ * product-page URL it cites contains the exact code, and when a store URL carries the
+ * product name, that name wins over the model's wording.
+ */
 async function lookupWithGroundedAI(code: string, retailer: string): Promise<StoreLookup | null> {
   const ai = getGenAI();
   if (!ai || isGeminiQuotaExhausted()) return null;
-  const store = retailer && retailer !== 'all' ? retailer : (/^B0/i.test(code) ? 'Amazon' : /^\d{7}$/.test(code) ? 'Best Buy' : 'any major US store');
-  const prompt = `Use Google Search to find the exact product sold at ${store} under the item code "${code}" (Best Buy SKU, Amazon ASIN, Target DPCI, Walmart item ID, or UPC).
-Only answer if a search result clearly ties this exact code to the product. Do not guess or pick a similar product.
+  const isAsin = /^B0[A-Z0-9]{8}$/i.test(code);
+  const store = retailer && retailer !== 'all' ? retailer : (isAsin ? 'Amazon' : /^\d{7}$/.test(code) ? 'Best Buy' : 'any major US store');
+  const urlHint = isAsin
+    ? `The Amazon product page URL looks like https://www.amazon.com/<product-name>/dp/${code}`
+    : /^\d{7}$/.test(code)
+      ? `The Best Buy product page URL looks like https://www.bestbuy.com/site/<product-name>/${code}.p?skuId=${code}`
+      : 'Give the product page URL from the store.';
+  const prompt = `Use Google Search to find the product sold at ${store} under item code "${code}". Try searches such as "${code}", "${store} ${code}" and "${isAsin ? 'ASIN' : 'SKU'} ${code}".
+${urlHint}
+Only answer with a product if a search result shows this exact code for it. Never substitute a similar product.
 Reply with ONLY one line of JSON, no markdown:
-{"found": true, "title": "...", "retailer": "...", "price": 123.45, "url": "https://...", "modelNumber": "..."}
-or, if you cannot confirm it: {"found": false}`;
+{"found": true, "title": "full product name", "retailer": "store", "price": 123.45, "url": "product page URL containing ${code}", "modelNumber": "..."}
+If you cannot confirm it: {"found": false}`;
   try {
     const response = await callGeminiWithFallback(
       ai,
@@ -1783,13 +1815,38 @@ or, if you cannot confirm it: {"found": false}`;
       ['gemini-flash-latest', 'gemini-3.1-flash-lite'],
     );
     const text = (response.text || '').trim();
-    const json = text.match(/\{[\s\S]*\}/)?.[0];
-    if (!json) return null;
+    const sources = (response.candidates?.[0]?.groundingMetadata?.groundingChunks || [])
+      .map((c: any) => `${c.web?.title || ''} ${c.web?.uri || ''}`.trim());
+    const json = text.match(/\{[^{}]*"found"[^{}]*\}/g)?.pop();
+    if (!json) {
+      console.log(`[Retail Lookup] Gemini gave no JSON for ${code}: ${text.slice(0, 160)}`);
+      return null;
+    }
     const j = JSON.parse(json);
-    if (!j.found || !j.title) return null;
-    return { title: String(j.title), retailer: String(j.retailer || store), cost: parsePrice(String(j.price ?? '')), url: String(j.url || ''), modelNumber: j.modelNumber };
+    if (!j.found || !j.title) {
+      console.log(`[Retail Lookup] Gemini could not confirm ${code} (${sources.length} sources searched)`);
+      return null;
+    }
+    const url = String(j.url || '');
+    // Accept only when the cited product URL (or a search result title) carries the exact code.
+    const codeInSources = sources.some((s: string) => s.toUpperCase().includes(code.toUpperCase()));
+    if (!urlMatchesCode(url, code) && !codeInSources) {
+      console.log(`[Retail Lookup] Rejected Gemini answer for ${code}: "${j.title}" (${url || 'no URL'}) is not tied to the code`);
+      return null;
+    }
+    const slugTitle = urlMatchesCode(url, code) ? titleFromProductUrl(url) : null;
+    const title = String(j.title).length >= 6 ? String(j.title) : (slugTitle || String(j.title));
+    console.log(`[Retail Lookup] Gemini verified ${code} -> "${title}" ${url}`);
+    return {
+      title,
+      retailer: String(j.retailer || store),
+      cost: parsePrice(String(j.price ?? '')),
+      url: urlMatchesCode(url, code) ? url : (isAsin ? `https://www.amazon.com/dp/${code}` : `https://www.bestbuy.com/site/${code}.p?skuId=${code}`),
+      modelNumber: j.modelNumber,
+      priceFromSearch: true,
+    };
   } catch (e: any) {
-    console.warn('[Retail Lookup] Grounded AI lookup failed:', e?.message || e);
+    console.warn('[Retail Lookup] Gemini lookup failed:', e?.message || e);
     return null;
   }
 }
@@ -1892,7 +1949,19 @@ app.post('/api/retail-lookup', async (req, res) => {
     }
 
     // 1. First check local verified database for instant exact matches
-    const localMatch = lookupRetailProductLocal(cleanQuery, retailer);
+    // Built-in catalog: fuzzy name matching is fine for typed names, but a pasted link or an item
+    // code must match an exact SKU/ASIN/UPC, never a similar-sounding product.
+    const isLink = /https?:\/\/|\.com\//i.test(cleanQuery);
+    const linkCode = isLink
+      ? (cleanQuery.match(/(?:\/dp\/|\/gp\/product\/)(B0[A-Z0-9]{8})/i)?.[1] || cleanQuery.match(/[?&]skuId=(\d{6,8})/i)?.[1] || cleanQuery.match(/\/(\d{6,8})\.p/i)?.[1])
+      : undefined;
+    const isCodeQuery = isLink || /^(B0[A-Z0-9]{8}|[\d\s-]{6,14})$/i.test(cleanQuery);
+    const localCandidate = isLink ? (linkCode ? lookupRetailProductLocal(linkCode, retailer) : null) : lookupRetailProductLocal(cleanQuery, retailer);
+    const codeOf = (v?: string) => String(v || '').toUpperCase().replace(/[-_#\s]/g, '');
+    const wanted = codeOf(linkCode || cleanQuery);
+    const localMatch = localCandidate && (!isCodeQuery || [localCandidate.sku, localCandidate.barcode, localCandidate.itemNumber].some((v) => codeOf(v) === wanted || (codeOf(v).replace(/^0+/, '') === wanted.replace(/^0+/, '') && wanted.length >= 8)))
+      ? localCandidate
+      : null;
     if (localMatch) {
       const matchCost = Number(localMatch.currentCost.toFixed(2));
       res.json({
@@ -1921,6 +1990,7 @@ app.post('/api/retail-lookup', async (req, res) => {
       if (live) {
         const cls = classifyProductDetails(live.title, live.retailer);
         const hasPrice = typeof live.cost === 'number';
+        const priceNeedsCheck = !hasPrice || !!live.priceFromSearch;
         const cost = Number((hasPrice ? live.cost! : cls.defaultCost).toFixed(2));
         const kind = wantAmazon ? 'ASIN' : 'SKU';
         res.json({
@@ -1942,9 +2012,10 @@ app.post('/api/retail-lookup', async (req, res) => {
             imageUrl: live.image,
             productUrl: live.url,
             description: `Found on ${live.retailer} (${kind} ${code}).`,
-            specs: [`Store: ${live.retailer}`, `${kind}: ${code}`, hasPrice ? `Price: $${cost.toFixed(2)}` : 'Price not listed: check and edit it'],
+            specs: [`Store: ${live.retailer}`, `${kind}: ${code}`, hasPrice ? `Price: $${cost.toFixed(2)}${live.priceFromSearch ? ' (from search results)' : ''}` : 'Price not listed: check and edit it'],
+            priceNeedsCheck,
             whyKidsLoveIt: 'Finish chores to save up for it!',
-            confidence: hasPrice ? 'verified' : 'high',
+            confidence: priceNeedsCheck ? 'high' : 'verified',
             verifiedDate: `${live.retailer} product page`,
           },
         });
@@ -1977,9 +2048,10 @@ app.post('/api/retail-lookup', async (req, res) => {
             specs: [
               `Direct Retailer: ${urlParsed.retailer}`,
               `SKU/ID: ${urlParsed.sku}`,
-              `MSRP / Current Retail: $${cost.toFixed(2)}`,
+              'Price: not on the link, enter the store price',
             ],
             whyKidsLoveIt: 'An awesome item to save for!',
+            priceNeedsCheck: true,
             confidence: 'high',
             verifiedDate: `${urlParsed.retailer} Link Verified`,
             productUrl: cleanQuery.startsWith('http') ? cleanQuery : `https://${cleanQuery}`,

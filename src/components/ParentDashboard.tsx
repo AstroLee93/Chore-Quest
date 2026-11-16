@@ -1,3 +1,4 @@
+import { VERSION_LABEL, builtOn } from '../version';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Shield,
@@ -4070,6 +4071,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({
           <form onSubmit={handleSaveSettings} className="bg-white p-2.5 sm:p-6 rounded-none sm:rounded-2xl border-x-0 border-y sm:border-2 border-indigo-400 shadow-none sm:shadow-2xs space-y-2.5 sm:space-y-4">
             <div>
               <h3 className="font-black text-slate-800 text-xs sm:text-base">System & Security Settings</h3>
+              <p className="text-xs text-slate-500 font-bold" id="cq-version">ChoreQuest {VERSION_LABEL}{builtOn() ? ` · built ${builtOn()}` : ''}</p>
               <p className="hidden sm:block text-xs text-slate-500 font-bold">Configure parent passcodes, family title, and reward policies.</p>
             </div>
 

@@ -1593,6 +1593,22 @@ app.delete('/api/wallpapers/:file', async (req, res) => {
   res.json({ success: true });
 });
 
+// --- Version: which build is running (written by the Vite build to dist/version.json) ---
+app.get('/api/version', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  try {
+    const info = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'dist', 'version.json'), 'utf8'));
+    res.json({ app: 'ChoreQuest', ...info });
+  } catch {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
+      res.json({ app: 'ChoreQuest', version: pkg.version, commit: 'unknown', builtAt: null, note: 'dev server (not a production build)' });
+    } catch {
+      res.json({ app: 'ChoreQuest', version: 'unknown' });
+    }
+  }
+});
+
 // --- Family Wish Catalog: product photos and the optional Best Buy lookup ---
 const WISH_PHOTO_DIR = path.join(DATA_DIR, 'wish-photos');
 const WISH_FILE_RE = /^[\w-]+\.(jpg|png|webp)$/;

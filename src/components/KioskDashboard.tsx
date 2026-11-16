@@ -1,3 +1,4 @@
+import { VERSION_LABEL, builtOn } from '../version';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Maximize, Minimize, X, Trophy, Flame, Star, Check, Sparkles, Clock, Calendar as CalendarIcon, Volume2, VolumeX, Shield, Timer, Target, UtensilsCrossed, Lock, Hourglass, AlertTriangle, Crown, MoreHorizontal, CloudRain, Snowflake, Cloud, Sun, ScrollText, Video } from 'lucide-react';
 import { fireConfetti } from '../utils/confetti';
@@ -552,6 +553,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
               <span className="hidden xl:flex items-center gap-2 text-[13px] text-[var(--cq-label-3)]">
                 <Lock className="w-3.5 h-3.5" /> Locked to wall mode
               </span>
+              <span className="text-[12px] text-[var(--cq-label-3)] cq-num" title={`ChoreQuest ${VERSION_LABEL}${builtOn() ? `, built ${builtOn()}` : ''}`}>{VERSION_LABEL}</span>
               <button type="button" className={pill} onClick={() => { sound.playTap(); setIsExitPinOpen(true); }}>
                 Exit · parent PIN
               </button>

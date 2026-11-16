@@ -1,3 +1,4 @@
+import { VERSION_LABEL } from '../version';
 import React, { useState, useMemo, useEffect } from 'react';
 import { Sparkles, Flame, Star, Gift, CheckCircle2, ChevronRight, Filter, Calendar, Award, Trophy, MapPin, Clock, RotateCw, Target, Timer, Home, Sun, Brain, BookOpen, ClipboardList, Users, Shield, CheckSquare, Crown, Cake } from 'lucide-react';
 import { KidProfile, ChoreItem, ChoreCategory, ChoreLog, AppSettings, RewardItem, CalendarEvent, FamilyDatabase } from '../types';
@@ -399,6 +400,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 <span className="flex items-center gap-2 text-[15px] text-[var(--cq-label-2)]">
                   <Shield className="w-4 h-4" /> Kid session · settings hidden
                 </span>
+                <span className="text-[12px] text-[var(--cq-label-3)] cq-num">ChoreQuest {VERSION_LABEL}</span>
                 <span className="text-[13px] text-[var(--cq-label-3)]">
                   {idleMs ? `Returns to the wall after ${Math.round(idleMs / 60000)} min idle` : 'Tap Done to return to the wall'}
                 </span>

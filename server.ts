@@ -7,7 +7,6 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { FamilyDatabase, GradeLevel } from './src/types';
 import { DEFAULT_SEED_DATA } from './src/utils/storage';
-import { POPULAR_RETAIL_DATABASE, lookupRetailProductLocal, synthesizeOfflineProduct, classifyProductDetails } from './src/lib/retailCatalog';
 import { BrainTeaser, BRAIN_TEASERS_CATALOG } from './src/utils/brainTeasersData';
 
 dotenv.config();
@@ -831,99 +830,6 @@ Important Rules:
   }
 });
 
-// --- Kid-Coin Financial Engine & Verified Wishlist Catalog ---
-
-export const VERIFIED_ITEMS = [
-  {
-    id: 'ps5-slim',
-    name: 'PlayStation 5 Slim Console',
-    category: 'Gaming',
-    currentCost: 499.99,
-    retailer: 'Official Retailers (Sony / Best Buy)',
-    verifiedDate: '2025-Q1 MSRP Checked',
-    icon: 'Gamepad2',
-    description: 'Ultra-high speed SSD, ray tracing, 4K gaming, DualSense wireless controller included.',
-  },
-  {
-    id: 'switch-oled',
-    name: 'Nintendo Switch - OLED Model',
-    category: 'Gaming',
-    currentCost: 349.99,
-    retailer: 'Nintendo Store / Target',
-    verifiedDate: '2025 MSRP Checked',
-    icon: 'Tv',
-    description: '7-inch vibrant OLED screen, wide adjustable stand, enhanced audio, portable handheld.',
-  },
-  {
-    id: 'lego-millennium-falcon',
-    name: 'LEGO Star Wars Millennium Falcon',
-    category: 'Toys & LEGO',
-    currentCost: 169.99,
-    retailer: 'LEGO Shop / Amazon',
-    verifiedDate: '2025 MSRP Checked',
-    icon: 'Boxes',
-    description: '1,351 pieces, opening cockpit, rotating gun turrets, 7 Star Wars minifigures.',
-  },
-  {
-    id: 'airpods-4',
-    name: 'Apple AirPods 4',
-    category: 'Audio',
-    currentCost: 129.00,
-    retailer: 'Apple Store',
-    verifiedDate: '2025 MSRP Checked',
-    icon: 'Headphones',
-    description: 'Personalized Spatial Audio with dynamic head tracking, USB-C charging case.',
-  },
-  {
-    id: 'electric-scooter',
-    name: 'Segway Ninebot eKickScooter for Kids',
-    category: 'Outdoors',
-    currentCost: 229.99,
-    retailer: 'Segway Official',
-    verifiedDate: '2025 MSRP Checked',
-    icon: 'Bike',
-    description: 'Safe speed limiters (10 mph max), ambient underglow lights, dual braking system.',
-  },
-  {
-    id: 'ipad-10th-gen',
-    name: 'Apple iPad 10th Gen (64GB)',
-    category: 'Electronics',
-    currentCost: 349.00,
-    retailer: 'Apple / Authorized Resellers',
-    verifiedDate: '2025 MSRP Checked',
-    icon: 'Tablet',
-    description: '10.9-inch Liquid Retina display, A14 Bionic chip, Apple Pencil support for drawing & games.',
-  },
-  {
-    id: 'roblox-10k',
-    name: '10,000 Robux Digital Gift Card',
-    category: 'Digital / Gaming',
-    currentCost: 99.99,
-    retailer: 'Roblox Official Store',
-    verifiedDate: '2025 MSRP Checked',
-    icon: 'Coins',
-    description: 'Virtual currency to customize your in-game avatar and unlock exclusive special items.',
-  },
-  {
-    id: 'bmx-bike',
-    name: 'Mongoose Legion Freestyle 20" BMX',
-    category: 'Sports',
-    currentCost: 189.99,
-    retailer: 'Bicycle Specialists',
-    verifiedDate: '2025 MSRP Checked',
-    icon: 'Sparkles',
-    description: 'Hi-Ten steel frame, 2.3-inch tires, 25x9T gearing, aluminum U-brake for park riding.',
-  },
-];
-
-// 11. Kid-Coin Verified items catalog
-app.get('/api/verified-items', (req, res) => {
-  res.json({
-    items: VERIFIED_ITEMS,
-    updatedAt: new Date().toISOString(),
-  });
-});
-
 // 12. Personalized financial tips and milestone coaching via Gemini
 app.post('/api/tips', async (req, res) => {
   try {
@@ -1539,534 +1445,6 @@ Respond in strict JSON with no surrounding text or markdown ticks:
   }
 });
 
-// Helper: Direct store link parser (Best Buy, Amazon, Target, Walmart, Micro Center)
-function parseStoreProductUrl(rawUrl: string): {
-  title: string;
-  retailer: string;
-  sku: string;
-  category: string;
-  icon: string;
-  cost?: number;
-} | null {
-  try {
-    let urlString = rawUrl.trim();
-    if (!urlString.startsWith('http://') && !urlString.startsWith('https://')) {
-      urlString = `https://${urlString}`;
-    }
-    const urlObj = new URL(urlString);
-    const host = urlObj.hostname.toLowerCase();
-
-    // 1. Best Buy URLs
-    if (host.includes('bestbuy.com')) {
-      const skuMatch = urlObj.pathname.match(/\/site\/([^/]+)\/(\d+)\.p/) || urlString.match(/[?&]skuId=(\d+)/);
-      const titleSlug = skuMatch ? skuMatch[1] : '';
-      const sku = skuMatch ? (skuMatch[2] || skuMatch[1]) : '';
-      const cleanTitle = titleSlug
-        ? titleSlug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-        : 'Best Buy Item';
-      const classification = classifyProductDetails(cleanTitle, 'Best Buy');
-      return {
-        title: cleanTitle,
-        retailer: 'Best Buy',
-        sku: sku || 'Best Buy Link',
-        category: classification.category,
-        icon: classification.icon,
-        cost: classification.defaultCost,
-      };
-    }
-
-    // 2. Amazon URLs
-    if (host.includes('amazon.com')) {
-      const asinMatch = urlObj.pathname.match(/\/dp\/([A-Z0-9]{10})/i) || urlObj.pathname.match(/\/gp\/product\/([A-Z0-9]{10})/i);
-      const slugMatch = urlObj.pathname.match(/\/([^/]+)\/dp\//);
-      const asin = asinMatch ? asinMatch[1] : '';
-      const cleanTitle = slugMatch && slugMatch[1] !== 'dp'
-        ? slugMatch[1].replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-        : (asin ? `Amazon Product (${asin})` : 'Amazon Product');
-      const classification = classifyProductDetails(cleanTitle, 'Amazon');
-      return {
-        title: cleanTitle,
-        retailer: 'Amazon',
-        sku: asin || 'Amazon Link',
-        category: classification.category,
-        icon: classification.icon,
-        cost: classification.defaultCost,
-      };
-    }
-
-    // 3. Target URLs
-    if (host.includes('target.com')) {
-      const dpciMatch = urlObj.pathname.match(/\/-\/A-(\d+)/);
-      const slugMatch = urlObj.pathname.match(/\/p\/([^/]+)\//);
-      const cleanTitle = slugMatch
-        ? slugMatch[1].replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-        : 'Target Product';
-      const classification = classifyProductDetails(cleanTitle, 'Target');
-      return {
-        title: cleanTitle,
-        retailer: 'Target',
-        sku: dpciMatch ? dpciMatch[1] : 'Target Link',
-        category: classification.category,
-        icon: classification.icon,
-        cost: classification.defaultCost,
-      };
-    }
-
-    // 4. Walmart URLs
-    if (host.includes('walmart.com')) {
-      const itemMatch = urlObj.pathname.match(/\/ip\/([^/]+)\/(\d+)/);
-      const cleanTitle = itemMatch
-        ? itemMatch[1].replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-        : 'Walmart Product';
-      const classification = classifyProductDetails(cleanTitle, 'Walmart');
-      return {
-        title: cleanTitle,
-        retailer: 'Walmart',
-        sku: itemMatch ? itemMatch[2] : 'Walmart Link',
-        category: classification.category,
-        icon: classification.icon,
-        cost: classification.defaultCost,
-      };
-    }
-  } catch {}
-  return null;
-}
-
-/**
- * Direct live lookup against public barcode registries (UPCItemDB trial & open databases).
- * Resolves 8 to 14 digit UPC/EAN barcodes directly to real titles, brands, and prices without AI quota limits.
- */
-async function lookupBarcodeLive(barcode: string): Promise<{
-  title: string;
-  category: string;
-  targetCost: number;
-  retailer: string;
-  sku: string;
-  barcode: string;
-  description: string;
-  specs: string[];
-  icon: string;
-  source: string;
-} | null> {
-  const clean = barcode.replace(/[^0-9]/g, '');
-  if (clean.length < 8 || clean.length > 14) return null;
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
-    const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${clean}`, {
-      headers: { 'User-Agent': 'ChoreQuest/1.0' },
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const data: any = await res.json();
-      if (data.items && data.items.length > 0) {
-        const item = data.items[0];
-        const cost = item.lowest_recorded_price || item.highest_recorded_price || 39.99;
-        const brand = item.brand || 'Retail Store';
-        const classification = classifyProductDetails(item.title || '', brand);
-        const normCat = classification.category;
-        const icon = classification.icon;
-        const finalCost = cost > 0 ? cost : classification.defaultCost;
-
-        return {
-          title: item.title,
-          category: normCat,
-          targetCost: Number(finalCost.toFixed(2)),
-          retailer: brand,
-          sku: clean,
-          barcode: clean,
-          description: item.description || `Authentic verified product for barcode ${clean} from ${brand}.`,
-          specs: [
-            `Brand: ${brand}`,
-            `UPC Barcode: ${clean}`,
-            `Live Registry Verified Price: $${finalCost.toFixed(2)}`,
-          ],
-          icon,
-          source: 'live-upc-registry',
-        };
-      }
-    }
-  } catch {}
-  return null;
-}
-
-/**
- * Searches live retail indexes for codes (Best Buy SKU, Target DPCI, Amazon ASIN)
- * when AI quota limits are reached, extracting verified product titles directly.
- */
-async function lookupRetailCodeWeb(cleanQuery: string, retailerHint?: string): Promise<{
-  title: string;
-  retailer: string;
-  category: string;
-  icon: string;
-  cost?: number;
-  description: string;
-} | null> {
-  const isAsin = /^[A-Z0-9]{10}$/i.test(cleanQuery) && /^B0/i.test(cleanQuery);
-  const isDpci = /^\d{3}-?\d{2}-?\d{4}$/.test(cleanQuery);
-  const isBestBuySku = /^\d{6,8}$/.test(cleanQuery);
-
-  if (!isAsin && !isDpci && !isBestBuySku) return null;
-
-  let searchTerms = cleanQuery;
-  let targetRetailer = retailerHint && retailerHint !== 'all' ? retailerHint : 'Retail Store';
-
-  if (isAsin) {
-    searchTerms = `site:amazon.com/dp ${cleanQuery}`;
-    targetRetailer = 'Amazon';
-  } else if (isDpci) {
-    searchTerms = `Target DPCI ${cleanQuery}`;
-    targetRetailer = 'Target';
-  } else if (isBestBuySku) {
-    searchTerms = `Best Buy SKU ${cleanQuery}`;
-    targetRetailer = 'Best Buy';
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
-    const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchTerms)}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const html = await res.text();
-      const titleMatches = html.match(/<a class="result__url"[^>]*>[\s\S]*?<\/a>[\s\S]*?<h2 class="result__title">[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i);
-      if (titleMatches && titleMatches[1]) {
-        let cleanTitle = titleMatches[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#x27;/g, "'").trim();
-        cleanTitle = cleanTitle.replace(/ - (Best Buy|Target|Amazon\.com|Walmart).*$/i, '').trim();
-
-        if (cleanTitle.length > 5) {
-          const classification = classifyProductDetails(cleanTitle, targetRetailer);
-          let extractedCost = classification.defaultCost;
-          const priceMatches = html.match(/\$(\d{1,4}(?:\.\d{2})?)/g);
-          if (priceMatches && priceMatches.length > 0) {
-            for (const p of priceMatches) {
-              const val = parseFloat(p.replace('$', ''));
-              if (val > 10 && val < 10000) {
-                if (Math.abs(val - classification.defaultCost) < 150 || !classification.isSpecificMatch) {
-                  extractedCost = val;
-                  break;
-                }
-              }
-            }
-          }
-
-          return {
-            title: cleanTitle,
-            retailer: classification.detectedRetailer || targetRetailer,
-            category: classification.category,
-            icon: classification.icon,
-            cost: extractedCost,
-            description: `Product identified for ${targetRetailer} code ${cleanQuery}.`,
-          };
-        }
-      }
-    }
-  } catch {}
-  return null;
-}
-
-// 12. Retail Database Samples for popular stores (Amazon, Best Buy, Target, Walmart, Micro Center, Apple, LEGO)
-app.get('/api/retail-samples', (req, res) => {
-  res.json({
-    success: true,
-    stores: ['Amazon', 'Best Buy', 'Target', 'Walmart', 'Micro Center', 'Apple', 'LEGO', 'GameStop'],
-    samples: POPULAR_RETAIL_DATABASE,
-  });
-});
-
-// 13. AI Retail Database & Barcode/SKU/Item# Lookup Endpoint
-app.post('/api/retail-lookup', async (req, res) => {
-  try {
-    const { query = '', retailer = 'all', codeType = 'auto' } = req.body;
-    const cleanQuery = String(query).trim();
-
-    if (!cleanQuery) {
-      res.status(400).json({ success: false, message: 'Query is required.' });
-      return;
-    }
-
-    // 1. First check local verified database for instant exact matches
-    const localMatch = lookupRetailProductLocal(cleanQuery, retailer);
-    if (localMatch) {
-      const matchCost = Number(localMatch.currentCost.toFixed(2));
-      res.json({
-        success: true,
-        source: 'local-database',
-        product: {
-          ...localMatch,
-          targetCost: matchCost,
-          currentCost: matchCost,
-          title: localMatch.name,
-          confidence: 'verified',
-        },
-      });
-      return;
-    }
-
-    // 2. Check if user pasted a direct store link (Best Buy, Amazon, Target, Walmart, Micro Center)
-    if (cleanQuery.includes('http://') || cleanQuery.includes('https://') || cleanQuery.includes('.com/')) {
-      const urlParsed = parseStoreProductUrl(cleanQuery);
-      if (urlParsed) {
-        const cost = urlParsed.cost || 99.99;
-        res.json({
-          success: true,
-          source: 'store-link-parser',
-          product: {
-            id: `goal-url-${Date.now()}`,
-            name: urlParsed.title,
-            title: urlParsed.title,
-            retailer: urlParsed.retailer,
-            category: urlParsed.category,
-            currentCost: Number(cost.toFixed(2)),
-            targetCost: Number(cost.toFixed(2)),
-            sku: urlParsed.sku,
-            barcode: '045496883386',
-            itemNumber: `${urlParsed.retailer} Item`,
-            modelNumber: `MOD-${urlParsed.sku.slice(0, 8)}`,
-            icon: urlParsed.icon,
-            description: `Imported directly from official ${urlParsed.retailer} product link.`,
-            specs: [
-              `Direct Retailer: ${urlParsed.retailer}`,
-              `SKU/ID: ${urlParsed.sku}`,
-              `MSRP / Current Retail: $${cost.toFixed(2)}`,
-            ],
-            whyKidsLoveIt: 'An awesome item to save for!',
-            confidence: 'high',
-            verifiedDate: `${urlParsed.retailer} Link Verified`,
-            productUrl: cleanQuery.startsWith('http') ? cleanQuery : `https://${cleanQuery}`,
-          },
-        });
-        return;
-      }
-    }
-
-    // 3. Live Barcode lookup against public registries (UPCItemDB)
-    const isUpcNumber = /^\d{8,14}$/.test(cleanQuery.replace(/[-\s]/g, ''));
-    if (isUpcNumber) {
-      const liveBarcodeResult = await lookupBarcodeLive(cleanQuery);
-      if (liveBarcodeResult) {
-        res.json({
-          success: true,
-          source: 'live-upc-registry',
-          product: {
-            id: `goal-upc-${Date.now()}`,
-            name: liveBarcodeResult.title,
-            title: liveBarcodeResult.title,
-            retailer: liveBarcodeResult.retailer,
-            category: liveBarcodeResult.category,
-            currentCost: liveBarcodeResult.targetCost,
-            targetCost: liveBarcodeResult.targetCost,
-            sku: liveBarcodeResult.sku,
-            barcode: liveBarcodeResult.barcode,
-            itemNumber: `UPC #${liveBarcodeResult.barcode}`,
-            modelNumber: `MOD-${liveBarcodeResult.sku.slice(0, 6)}`,
-            icon: liveBarcodeResult.icon,
-            description: liveBarcodeResult.description,
-            specs: liveBarcodeResult.specs,
-            whyKidsLoveIt: 'A verified store barcode item ready for your savings journey!',
-            confidence: 'verified',
-            verifiedDate: 'Live UPC Global Registry Verified',
-          },
-        });
-        return;
-      }
-    }
-
-    // 4. Live Web Retail Resolver for Store SKUs, Amazon ASINs, Target DPCIs
-    const isAsin = /^[A-Z0-9]{10}$/i.test(cleanQuery) && /^B0/i.test(cleanQuery);
-    const isDpci = /^\d{3}-?\d{2}-?\d{4}$/.test(cleanQuery);
-    const isStoreSku = /^\d{6,8}$/.test(cleanQuery);
-    if (isAsin || isDpci || isStoreSku) {
-      const webResult = await lookupRetailCodeWeb(cleanQuery, retailer);
-      if (webResult && webResult.title && webResult.title.length > 3) {
-        const cost = webResult.cost || 59.99;
-        res.json({
-          success: true,
-          source: 'live-retail-index',
-          product: {
-            id: `goal-web-${Date.now()}`,
-            name: webResult.title,
-            title: webResult.title,
-            retailer: webResult.retailer,
-            category: webResult.category,
-            currentCost: Number(cost.toFixed(2)),
-            targetCost: Number(cost.toFixed(2)),
-            sku: cleanQuery,
-            barcode: isStoreSku ? cleanQuery : '045496883386',
-            itemNumber: `${webResult.retailer} Item #${cleanQuery}`,
-            modelNumber: `MOD-${cleanQuery.slice(0, 6)}`,
-            icon: webResult.icon,
-            description: webResult.description || `Real commercial product identified for ${webResult.retailer} code ${cleanQuery}.`,
-            specs: [
-              `Store: ${webResult.retailer}`,
-              `Code: ${cleanQuery}`,
-              `Live Index Estimated Price: $${cost.toFixed(2)} (Customizable)`,
-            ],
-            whyKidsLoveIt: 'Great choice! Earn dollars by finishing your chores to reach this goal.',
-            confidence: 'high',
-            verifiedDate: `${webResult.retailer} Live Product Match`,
-          },
-        });
-        return;
-      }
-    }
-
-    // 5. Call Gemini AI model with multi-model fallback cascade to identify product
-    const ai = getGenAI();
-    if (ai && !isGeminiQuotaExhausted()) {
-      try {
-        const prompt = `You are a precision retail product identification expert and AI product database engine.
-Look up this product identifier from major retailers (Best Buy, Target, Amazon, Walmart, Micro Center, Apple, LEGO):
-Query/Code: "${cleanQuery}"
-Specific Retailer Filter: "${retailer && retailer !== 'all' ? retailer : 'Any / Auto-detect'}"
-Code Type Hint: "${codeType || 'auto (could be SKU, Barcode/UPC, Item#, ASIN, DPCI, or Model#)'}"
-
-CRITICAL ANTI-HALLUCINATION INSTRUCTIONS:
-1. NEVER substitute or return an unrelated product. Do NOT default to a Nintendo Switch, PlayStation, or Laptop unless the user explicitly searched for it.
-2. The user queried specifically for: "${cleanQuery}".
-   - If this is Best Buy SKU "6560934", it is the DJI - Osmo Pocket 3 Creator Combo 3-Axis Stabilized 4K Vlog Camera (Category: "Cameras & Video", Icon: "Camera", Price: $669.99).
-   - If this is Best Buy SKU "6560933", it is the DJI - Osmo Pocket 3 3-Axis Stabilized 4K Vlog Camera (Category: "Cameras & Video", Icon: "Camera", Price: $519.99).
-   - If this is Best Buy SKU "6553412", it is the GoPro - HERO12 Black Action Camera (Category: "Cameras & Video", Icon: "Camera", Price: $349.99).
-   - If this is Best Buy SKU "6619147", it is the Lenovo IdeaPad Slim 3x Copilot+ PC 15.3" Touchscreen Laptop (Snapdragon X 2025, 16GB RAM, 256GB SSD, Luna Grey).
-   - If this is Best Buy SKU "6506246", it is the Frigidaire 36" 25.6 Cu. Ft. Side-by-Side Refrigerator Stainless Steel.
-   - If this is Amazon ASIN "B076VB5JFQ", it is the TOSHIBA Countertop Microwave Oven 1.2 Cu.Ft 1000W.
-   - If this product is a digital camera, vlogging camera, action camera, or gimbal, category MUST be "Cameras & Video" and icon MUST be "Camera" (or "Video"). NEVER classify a camera as "Laptop" or "Tech & PC"!
-   - If this is a 7-digit Best Buy SKU, deduce the real commercial product with high factual precision.
-   - If this is a Target DPCI, Amazon ASIN, Walmart Item ID, or 12-digit UPC barcode, deduce the real matching product.
-3. The returned "sku" and "itemNumber" in the JSON MUST be "${cleanQuery}". NEVER return a different SKU.
-4. Accurate Pricing: Determine accurate commercial MSRP / retail selling price in USD.
-5. If the exact SKU is unknown, extrapolate the most plausible real consumer electronics, camera, appliance, or retail product corresponding to that code format.
-
-Return STRICTLY a JSON object with:
-- "title": string (official clean product name)
-- "targetCost": number (e.g. 669.99)
-- "retailer": string (e.g. "Best Buy", "Target", "Amazon", "Walmart", "Micro Center", "Apple", "LEGO")
-- "category": string (one of "Cameras & Video", "Tech & PC", "Gaming", "Appliances", "Electronics", "Audio", "Toys & LEGO", "Sports & Outdoors", "Fashion & Clothes")
-- "sku": "${cleanQuery}"
-- "barcode": string (12-digit UPC if known, or plausible barcode)
-- "itemNumber": "${cleanQuery}"
-- "modelNumber": string (manufacturer model number)
-- "icon": string (one of "Camera", "Video", "Laptop", "Gamepad2", "Tv", "Boxes", "Headphones", "Bike", "Tablet", "Coins", "Sparkles", "Smartphone", "Watch")
-- "description": string (concise 1-2 sentence kid-friendly description)
-- "specs": array of 3 concise strings highlighting key features
-- "whyKidsLoveIt": string (fun sentence explaining why kids want to save for it)
-- "confidence": "verified" | "high" | "estimated"
-
-Return STRICTLY JSON.`;
-
-        const response = await callGeminiWithFallback(
-          ai,
-          async (modelName) => {
-            return await ai.models.generateContent({
-              model: modelName,
-              contents: prompt,
-              config: {
-                responseMimeType: 'application/json',
-                temperature: 0.1, // Low temperature for maximum factual consistency
-              },
-            });
-          },
-          ['gemini-3.1-flash-lite', 'gemini-flash-latest']
-        );
-
-        const text = response.text?.trim() || '';
-        if (text) {
-          const cleanedJson = text.replace(/```json\s*/gi, '').replace(/```\s*$/g, '').trim();
-          const parsed = JSON.parse(cleanedJson);
-          const rawItem = Array.isArray(parsed) ? parsed[0] : parsed;
-
-          if (rawItem && (rawItem.title || rawItem.name)) {
-            const rawCost = rawItem.targetCost ?? rawItem.currentCost ?? rawItem.price ?? rawItem.cost ?? 99.99;
-            const cost = typeof rawCost === 'number' ? rawCost : parseFloat(String(rawCost).replace(/[^0-9.]/g, ''));
-
-            // Anti-hallucination sanity check: If query wasn't Nintendo Switch, ensure AI did not inject a false Switch hallucination
-            const queryLower = cleanQuery.toLowerCase();
-            const titleLower = String(rawItem.title || rawItem.name || '').toLowerCase();
-            const isSwitchQuery = queryLower.includes('switch') || queryLower.includes('nintendo') || queryLower.includes('joycon') || queryLower.includes('oled') || queryLower === '6470924' || queryLower === '207-00-0199' || queryLower === '045496883386';
-
-            if (titleLower.includes('switch') && !isSwitchQuery) {
-              console.warn(`[Retail Lookup] Suppressed false Nintendo Switch hallucination for query: "${cleanQuery}"`);
-            } else {
-              // Re-classify through local classifier to fix any AI misclassification (e.g. camera classified as laptop)
-              const titleText = rawItem.title || rawItem.name;
-              const classification = classifyProductDetails(titleText, rawItem.retailer);
-              const finalCat = (classification.isSpecificMatch) ? classification.category : (rawItem.category || classification.category);
-              const finalIcon = (classification.isSpecificMatch) ? classification.icon : (rawItem.icon || classification.icon);
-
-              // Sanity clamp: Prevent SKU numbers from being passed as absurd millions of dollars
-              const safeCost = (isNaN(cost) || cost <= 0) ? classification.defaultCost : (cost > 15000 ? classification.defaultCost : cost);
-              res.json({
-                success: true,
-                source: 'gemini-ai',
-                product: {
-                  ...rawItem,
-                  title: titleText,
-                  category: finalCat,
-                  icon: finalIcon,
-                  targetCost: Number(safeCost.toFixed(2)),
-                  sku: cleanQuery,
-                  itemNumber: rawItem.itemNumber || cleanQuery,
-                  id: `goal-ai-${Date.now()}`,
-                },
-              });
-              return;
-            }
-          }
-        }
-      } catch (aiErr: any) {
-        console.warn('[Server] Gemini retail lookup error, falling back to local database or synthesis:', aiErr?.message || aiErr);
-      }
-    }
-
-    // 6. If local match found, return it
-    if (localMatch) {
-      const matchCost = Number(localMatch.currentCost.toFixed(2));
-      res.json({
-        success: true,
-        source: 'local-database',
-        product: {
-          ...localMatch,
-          targetCost: matchCost,
-          currentCost: matchCost,
-          title: localMatch.name,
-          confidence: 'verified',
-        },
-      });
-      return;
-    }
-
-    // 7. Intelligent offline synthesis fallback: guarantees zero failure even during offline/503 spikes
-    const syntheticProduct = synthesizeOfflineProduct(cleanQuery, retailer);
-    const synthCost = Number(syntheticProduct.currentCost.toFixed(2));
-    res.json({
-      success: true,
-      source: 'offline-synthesized',
-      product: {
-        ...syntheticProduct,
-        targetCost: synthCost,
-        currentCost: synthCost,
-        title: syntheticProduct.name,
-        confidence: 'estimated',
-      },
-    });
-  } catch (error: any) {
-    console.error('[Server] Retail lookup error:', error);
-    res.status(500).json({
-      success: false,
-      message: error?.message || 'Failed to lookup retail product',
-    });
-  }
-});
-
 // Chore-Quest Sample Database Endpoint for KidCoin cross-sync
 app.get('/api/chorequest/sample-db', (req, res) => {
   res.json({
@@ -2213,6 +1591,72 @@ app.delete('/api/wallpapers/:file', async (req, res) => {
   if (!/^[\w-]+\.(jpg|png|webp)$/.test(f)) { res.status(404).end(); return; }
   await fs.promises.rm(path.join(WALLPAPER_DIR, f), { force: true });
   res.json({ success: true });
+});
+
+// --- Family Wish Catalog: product photos and the optional Best Buy lookup ---
+const WISH_PHOTO_DIR = path.join(DATA_DIR, 'wish-photos');
+const WISH_FILE_RE = /^[\w-]+\.(jpg|png|webp)$/;
+
+app.post('/api/wish-photos', async (req, res) => {
+  if (String(req.body?.pin || '') !== String(currentDatabase.settings?.parentPin || '')) {
+    res.status(403).json({ error: 'Parent PIN required' });
+    return;
+  }
+  const m = String(req.body?.dataUrl || '').match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) {
+    res.status(400).json({ error: 'Expected a JPEG, PNG or WebP image' });
+    return;
+  }
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length > 8 * 1024 * 1024) {
+    res.status(413).json({ error: 'Image is too large' });
+    return;
+  }
+  await fs.promises.mkdir(WISH_PHOTO_DIR, { recursive: true });
+  const name = `wish-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${WALLPAPER_EXT[m[1]]}`;
+  await fs.promises.writeFile(path.join(WISH_PHOTO_DIR, name), buf);
+  res.json({ url: `/api/wish-photos/${name}` });
+});
+
+app.get('/api/wish-photos/:file', (req, res) => {
+  const f = req.params.file;
+  const p = path.join(WISH_PHOTO_DIR, f);
+  if (!WISH_FILE_RE.test(f) || !fs.existsSync(p)) { res.status(404).end(); return; }
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.sendFile(p);
+});
+
+app.delete('/api/wish-photos/:file', async (req, res) => {
+  if (String(req.headers['x-parent-pin'] || '') !== String(currentDatabase.settings?.parentPin || '')) {
+    res.status(403).json({ error: 'Parent PIN required' });
+    return;
+  }
+  const f = req.params.file;
+  if (!WISH_FILE_RE.test(f)) { res.status(404).end(); return; }
+  await fs.promises.rm(path.join(WISH_PHOTO_DIR, f), { force: true });
+  res.json({ success: true });
+});
+
+// Best Buy's official Products API (free key at developer.bestbuy.com). Exact name,
+// price and photo for a SKU; no key means parents type the details themselves.
+app.get('/api/bestbuy/:sku', async (req, res) => {
+  const sku = String(req.params.sku || '');
+  const key = process.env.BESTBUY_API_KEY;
+  if (!/^\d{6,8}$/.test(sku)) { res.status(400).json({ found: false, reason: 'bad-sku' }); return; }
+  if (!key) { res.json({ found: false, reason: 'no-key' }); return; }
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 8000);
+  try {
+    const r = await fetch(`https://api.bestbuy.com/v1/products/${sku}.json?apiKey=${encodeURIComponent(key)}&show=sku,name,salePrice,regularPrice,url,image,largeFrontImage`, { signal: controller.signal });
+    if (!r.ok) { res.json({ found: false, reason: `http-${r.status}` }); return; }
+    const j: any = await r.json();
+    if (!j?.name) { res.json({ found: false, reason: 'not-found' }); return; }
+    res.json({ found: true, name: j.name, price: j.salePrice ?? j.regularPrice, photo: j.largeFrontImage || j.image, url: j.url });
+  } catch (e: any) {
+    res.json({ found: false, reason: e?.name === 'AbortError' ? 'timeout' : 'error' });
+  } finally {
+    clearTimeout(t);
+  }
 });
 
 // --- Server Lifecycle & Vite Middleware ---

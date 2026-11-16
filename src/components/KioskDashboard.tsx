@@ -35,6 +35,8 @@ import { getGradeLevelInfo, getDailyTeasersAnsweredToday, getSubjectInfo } from 
 import { isBirthdayToday, getBirthdayConfig } from '../utils/birthday';
 import { BirthdayCelebrationModal } from './BirthdayCelebrationModal';
 import { KioskWallpaper } from './KioskWallpaper';
+import { WishListScreen } from './Wish/WishListScreen';
+import { withPrimaryGoal } from '../utils/wishCatalog';
 import {
   isReadingCompletedToday,
   findReadingChore,
@@ -343,6 +345,8 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   }, [database.kids, database.chores, completedChoreSet, categoryMap, todayStr, currentMinuteTime]);
 
   const wallpaperOn = isCq2026 && !!database.settings.kioskWallpaper;
+  const [wishListKid, setWishListKid] = useState<KidProfile | null>(null);
+  const wishKid = wishListKid ? database.kids.find((k) => k.id === wishListKid.id) || null : null;
 
   const handleCheerMvp = useCallback(() => {
     sound.playStarEarned();
@@ -355,6 +359,15 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
   return (
     <div className={`min-h-screen ${theme.kioskBg} flex flex-col ${isCq2026 ? 'p-4 sm:p-6 xl:p-10' : 'p-4 sm:p-6'} select-none overflow-x-hidden font-sans transition-colors duration-300 ${wallpaperOn ? 'relative isolate cq-wall-photo cq-kiosk-dark' : ''}`}
       style={wallpaperOn ? ({ '--cq-card-alpha': (database.settings.kioskCardOpacity ?? 35) / 100 } as React.CSSProperties) : undefined}>
+      {wishKid && (
+        <WishListScreen
+          kid={wishKid}
+          database={database}
+          onClose={() => setWishListKid(null)}
+          onSaveGoal={(goal) => onUpdateDatabase({ ...database, kids: database.kids.map((k) => (k.id === wishKid.id ? withPrimaryGoal(k, goal) : k)) })}
+          onAskWish={(name) => onUpdateDatabase({ ...database, wishRequests: [...(database.wishRequests || []), { id: `wishreq-${Date.now()}`, kidId: wishKid.id, name, createdAt: new Date().toISOString() }] })}
+        />
+      )}
       {wallpaperOn && (
         <KioskWallpaper
           value={database.settings.kioskWallpaper!}
@@ -452,6 +465,7 @@ export const KioskDashboard: React.FC<KioskDashboardProps> = ({
                     { id: 'reading', label: 'Reading log', onClick: () => { setReadingLogKid(kid); setIsReadingLogOpen(true); } },
                     { id: 'teaser', label: 'Brain teaser', onClick: () => { setBrainTeaserKid(kid); setIsBrainTeaserOpen(true); } },
                     ...(isLeaderKid ? [{ id: 'clip', label: 'Leader clipboard', onClick: () => { setLeaderClipboardKid(kid); setIsLeaderClipboardOpen(true); } }] : []),
+                    ...(database.settings.kidCoinEnabled !== false ? [{ id: 'wishes', label: 'Wish List', onClick: () => setWishListKid(kid) }] : []),
                     { id: 'avatar', label: 'Avatar & colour', onClick: () => setEditingAvatarKid(kid) },
                   ];
                   return (

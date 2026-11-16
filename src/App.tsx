@@ -20,6 +20,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Home } from 'lucide-react';
 import { processAutomaticBirthdayStarGrants, isBirthdayToday, getBirthdayConfig } from './utils/birthday';
 import { BirthdayCelebrationModal } from './components/BirthdayCelebrationModal';
+import { IdleWarningPrompt } from './components/IdleWarningPrompt';
 
 // Code-split heavy secondary dashboards and modals for lightning-fast page loading & lower memory usage
 const ParentDashboard = React.lazy(() =>
@@ -65,6 +66,8 @@ export default function App() {
   const [isParentMode, setIsParentMode] = useState<boolean>(false);
   const [isKioskMode, setIsKioskMode] = useState<boolean>(() => getSavedKioskMode());
   const [isKioskKidSession, setIsKioskKidSession] = useState<boolean>(false);
+  // Seconds left on the "Still there?" warning before an idle return to the wall (null = not showing).
+  const [idleWarning, setIdleWarning] = useState<number | null>(null);
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
   const [isRewardStoreOpen, setIsRewardStoreOpen] = useState<boolean>(false);
   const [isKidCoinVaultOpen, setIsKidCoinVaultOpen] = useState<boolean>(false);
@@ -161,11 +164,11 @@ export default function App() {
     if (!isAtSubScreen) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
+    let warnInterval: ReturnType<typeof setInterval> | undefined;
     let lastActivityTime = 0;
+    const WARN_SECONDS = 20;
 
-    const resetTimer = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
+    const returnToWall = () => {
         if (isKioskMode) {
           // Auto return to home/kiosk selector in kiosk mode
           setActiveKidId(null);
@@ -188,7 +191,33 @@ export default function App() {
           // In standard mode, only deselect kid if idle, but NEVER force into kiosk mode!
           setActiveKidId(null);
         }
-      }, timeoutMs);
+    };
+
+    const stopWarning = () => {
+      if (warnInterval) clearInterval(warnInterval);
+      warnInterval = undefined;
+      setIdleWarning(null);
+    };
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      stopWarning();
+      timeoutId = setTimeout(() => {
+        // A kid with a chore timer open is off doing the chore: never send them back mid-chore.
+        if (document.querySelector('[data-idle-hold]')) {
+          resetTimer();
+          return;
+        }
+        // Warn first ("Still there?"), so a kid who is about to check something off isn't kicked out.
+        let left = WARN_SECONDS;
+        setIdleWarning(left);
+        warnInterval = setInterval(() => {
+          left -= 1;
+          if (document.querySelector('[data-idle-hold]')) { resetTimer(); return; }
+          if (left <= 0) { stopWarning(); returnToWall(); return; }
+          setIdleWarning(left);
+        }, 1000);
+      }, Math.max(1000, timeoutMs - WARN_SECONDS * 1000));
     };
 
     resetTimer();
@@ -201,13 +230,19 @@ export default function App() {
         resetTimer();
       }
     };
+    // Coming back to the app (e.g. from the camera after a photo-proof picture) counts as activity.
+    const handleVisibility = () => { if (document.visibilityState === 'visible') { lastActivityTime = 0; handleActivity(); } };
 
     const activityEvents = ['pointerdown', 'touchstart', 'keydown', 'click', 'input', 'mousemove', 'scroll'];
-    activityEvents.forEach((evt) => window.addEventListener(evt, handleActivity, { passive: true }));
+    activityEvents.forEach((evt) => window.addEventListener(evt, handleActivity, { passive: true, capture: true }));
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       clearTimeout(timeoutId);
-      activityEvents.forEach((evt) => window.removeEventListener(evt, handleActivity));
+      if (warnInterval) clearInterval(warnInterval);
+      setIdleWarning(null);
+      activityEvents.forEach((evt) => window.removeEventListener(evt, handleActivity, { capture: true }));
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [
     activeKidId,
@@ -538,6 +573,11 @@ export default function App() {
   }, []);
 
   // If Kiosk Mode is active
+  // Tapping the button is itself activity, which resets the idle timer and hides this.
+  const idlePrompt = idleWarning !== null ? (
+    <IdleWarningPrompt seconds={idleWarning} kidName={activeKid?.name} kidColor={activeKid?.color} onStay={() => setIdleWarning(null)} />
+  ) : null;
+
   if (isKioskMode) {
     if (isKioskKidSession && activeKid) {
       return (
@@ -548,6 +588,7 @@ export default function App() {
               : 'text-slate-800 selection:bg-sky-200 selection:text-slate-900'
           }`}
         >
+          {idlePrompt}
           {/* STRICT KIOSK KID SESSION HEADER: ONLY Return to Kiosk button, NO adult links */}
           {!isCq2026Theme(currentTheme) && <header
             className={`ios-navbar sticky top-0 z-40 pb-3.5 backdrop-blur-xl border-b flex items-center justify-between gap-3 ${
@@ -717,6 +758,7 @@ export default function App() {
 
     return (
       <div className={`min-h-screen ${themeConfig.kioskBg} font-sans pt-safe px-safe ${isCq2026Theme(currentTheme) && !themeConfig.isDark ? 'dark cq-kiosk-dark' : ''}`}>
+        {idlePrompt}
         <KioskDashboard
           database={database}
           currentTheme={currentTheme}
@@ -768,6 +810,7 @@ export default function App() {
           : 'text-slate-800 selection:bg-sky-200 selection:text-slate-900'
       }`}
     >
+      {idlePrompt}
       <Navbar
         settings={database.settings}
         activeKid={activeKid}
@@ -1072,6 +1115,7 @@ export default function App() {
               const updatedKids = database.kids.map((k) => (k.id === updatedKid.id ? updatedKid : k));
               handleUpdateDatabase({ ...database, kids: updatedKids });
             }}
+            onUpdateDatabase={handleUpdateDatabase}
           />
         )}
 

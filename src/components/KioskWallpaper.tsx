@@ -30,7 +30,7 @@ export const KioskWallpaper: React.FC<Props> = ({ value, dim, slideshowMins }) =
             <img key={p} src={p} alt="" className="absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms]"
               style={{ opacity: i === idx ? 1 : 0 }} loading={i === idx ? 'eager' : 'lazy'} />
           ))
-        : photo && <img src={photo} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+        : photo && <img src={photo} alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
       {/* Scrim: overall dim plus a stronger fade on the left where the clock sits. */}
       <div className="absolute inset-0" style={{
         background: `linear-gradient(90deg, rgba(0,0,0,${Math.min(0.9, dim / 100 + 0.12)}) 0%, rgba(0,0,0,${dim / 100}) 45%, rgba(0,0,0,${dim / 100}) 100%)`,

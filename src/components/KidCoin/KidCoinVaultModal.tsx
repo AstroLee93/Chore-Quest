@@ -8,7 +8,7 @@ import { generateDefaultMilestones } from '../../utils/kidCoin';
 import { RocketGoalTrack } from './RocketGoalTrack';
 import { RocketTakeoffModal } from './RocketTakeoffModal';
 import { CoachTips } from './CoachTips';
-import { NewGoalModal } from './NewGoalModal';
+import { WishListScreen } from '../Wish/WishListScreen';
 import { GoalIcon } from './GoalIcon';
 import {
   Coins,
@@ -33,6 +33,8 @@ interface KidCoinVaultModalProps {
   database: FamilyDatabase;
   onClose: () => void;
   onUpdateKid: (updatedKid: KidProfile) => void;
+  /** Needed for kids' "Ask for Something Else" wishes. */
+  onUpdateDatabase?: (db: FamilyDatabase) => void;
 }
 
 export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
@@ -41,6 +43,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
   database,
   onClose,
   onUpdateKid,
+  onUpdateDatabase,
 }) => {
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [showTakeoffModal, setShowTakeoffModal] = useState<boolean>(false);
@@ -642,12 +645,17 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
       )}
 
       {showNewGoalModal && (
-        <NewGoalModal
-          key="sub-new-goal-modal"
-          isOpen={showNewGoalModal}
+        <WishListScreen
+          key="sub-wish-list"
           kid={kid}
+          database={database}
           onClose={() => setShowNewGoalModal(false)}
           onSaveGoal={handleAddGoal}
+          onAskWish={(name: string) => {
+            if (!onUpdateDatabase) return;
+            const req = { id: `wishreq-${Date.now()}`, kidId: kid.id, name, createdAt: new Date().toISOString() };
+            onUpdateDatabase({ ...database, wishRequests: [...(database.wishRequests || []), req] });
+          }}
         />
       )}
     </>,

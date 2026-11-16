@@ -4,7 +4,7 @@ import { KidProfile, SavingsGoal, FamilyDatabase } from '../../types';
 import { RocketGoalTrack } from './RocketGoalTrack';
 import { RocketTakeoffModal } from './RocketTakeoffModal';
 import { KidCoinVaultModal } from './KidCoinVaultModal';
-import { NewGoalModal } from './NewGoalModal';
+import { WishListScreen } from '../Wish/WishListScreen';
 import { GoalIcon } from './GoalIcon';
 import { sound } from '../../utils/sound';
 import {
@@ -26,6 +26,7 @@ interface GoalTrackerProps {
   kid: KidProfile;
   database: FamilyDatabase;
   onUpdateKid: (updatedKid: KidProfile) => void;
+  onUpdateDatabase?: (db: FamilyDatabase) => void;
   compact?: boolean;
 }
 
@@ -33,6 +34,7 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
   kid,
   database,
   onUpdateKid,
+  onUpdateDatabase,
   compact = false,
 }) => {
   const [showVaultModal, setShowVaultModal] = useState(false);
@@ -141,12 +143,19 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
           <span>Launch Dream Goal {kid.totalSaved && Number(kid.totalSaved) > 0 ? `(Reallocate $${(Number(kid.totalSaved) || 0).toFixed(2)})` : ''}</span>
         </button>
 
-        <NewGoalModal
-          isOpen={showNewGoalModal}
-          kid={kid}
-          onClose={() => setShowNewGoalModal(false)}
-          onSaveGoal={handleSaveNewGoal}
-        />
+        {showNewGoalModal && (
+          <WishListScreen
+            kid={kid}
+            database={database}
+            onClose={() => setShowNewGoalModal(false)}
+            onSaveGoal={(g) => { handleSaveNewGoal(g); setShowNewGoalModal(false); }}
+            onAskWish={(name: string) => {
+            if (!onUpdateDatabase) return;
+            const req = { id: `wishreq-${Date.now()}`, kidId: kid.id, name, createdAt: new Date().toISOString() };
+            onUpdateDatabase({ ...database, wishRequests: [...(database.wishRequests || []), req] });
+          }}
+          />
+        )}
       </div>
     );
   }
@@ -355,15 +364,23 @@ export const GoalTracker: React.FC<GoalTrackerProps> = ({
         database={database}
         onClose={() => setShowVaultModal(false)}
         onUpdateKid={onUpdateKid}
+        onUpdateDatabase={onUpdateDatabase}
       />
 
       {/* New Goal Modal (accessible directly from tracker) */}
-      <NewGoalModal
-        isOpen={showNewGoalModal}
-        kid={kid}
-        onClose={() => setShowNewGoalModal(false)}
-        onSaveGoal={handleSaveNewGoal}
-      />
+      {showNewGoalModal && (
+          <WishListScreen
+            kid={kid}
+            database={database}
+            onClose={() => setShowNewGoalModal(false)}
+            onSaveGoal={(g) => { handleSaveNewGoal(g); setShowNewGoalModal(false); }}
+            onAskWish={(name: string) => {
+            if (!onUpdateDatabase) return;
+            const req = { id: `wishreq-${Date.now()}`, kidId: kid.id, name, createdAt: new Date().toISOString() };
+            onUpdateDatabase({ ...database, wishRequests: [...(database.wishRequests || []), req] });
+          }}
+          />
+        )}
 
       {/* Takeoff Celebration Modal */}
       <RocketTakeoffModal

@@ -245,15 +245,23 @@ export const RocketTakeoffModal: React.FC<RocketTakeoffModalProps> = ({
                   exit={{ opacity: 0 }}
                   className="flex flex-col items-center justify-center z-10 p-4"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center shadow-lg shadow-amber-500/40 text-3xl mb-2">
-                    <GoalIcon icon={goal.icon} className="w-8 h-8 text-white" />
+                  {goal.imageUrl ? (
+                    <div className="w-28 h-28 rounded-full bg-white p-3 mb-3 overflow-hidden"
+                      style={{ boxShadow: `0 0 0 6px ${kid?.color || '#FFB547'}, 0 0 0 16px ${(kid?.color || '#FFB547')}44` }}>
+                      <img src={goal.imageUrl} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center shadow-lg shadow-amber-500/40 text-3xl mb-2">
+                      <GoalIcon icon={goal.icon} className="w-8 h-8 text-white" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-amber-400 font-black text-2xl">
+                    <Trophy className="w-6 h-6" />
+                    <span>Great job, {kid?.name || 'Commander'}!</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-amber-400 font-black text-lg">
-                    <Trophy className="w-5 h-5" />
-                    <span>TOUCHDOWN COMPLETE!</span>
-                  </div>
-                  <p className="text-xs text-slate-300 mt-1 max-w-sm">
-                    Congratulations {kid?.name || 'Commander'}! Your rocket has touched down on {goal.title}!
+                  <p className="text-sm text-slate-300 mt-1 max-w-sm">
+                    You saved enough for {goal.title}. All those chores paid off.
+                    {goal.catalogItemId ? ' A grown-up will get it for you.' : ''}
                   </p>
                   <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold">
                     <Sparkles className="w-3.5 h-3.5" />

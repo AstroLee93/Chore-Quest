@@ -5,6 +5,7 @@ import { sound } from '../../utils/sound';
 import { KidCoinVaultModal } from '../KidCoin/KidCoinVaultModal';
 import { RocketGoalTrack } from '../KidCoin/RocketGoalTrack';
 import { GoalIcon } from '../KidCoin/GoalIcon';
+import { WishCatalogManager } from '../Wish/WishCatalogManager';
 import {
   Coins,
   ShieldCheck,
@@ -158,6 +159,9 @@ export const ParentSavingsManagement: React.FC<ParentSavingsManagementProps> = (
 
   return (
     <div className="space-y-6">
+      {/* Family Wish Catalog: items kids can pick as savings goals */}
+      <WishCatalogManager database={database} onUpdateDatabase={onUpdateDatabase} />
+
       {/* Top Banner */}
       <div className="p-5 rounded-3xl bg-gradient-to-r from-amber-500/15 via-indigo-500/10 to-transparent border border-amber-300 dark:border-amber-800 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
@@ -477,6 +481,7 @@ export const ParentSavingsManagement: React.FC<ParentSavingsManagementProps> = (
             onUpdateDatabase({ ...database, kids: updatedKids });
             setSelectedKidForVault(updatedKid);
           }}
+          onUpdateDatabase={onUpdateDatabase}
         />
       )}
     </div>

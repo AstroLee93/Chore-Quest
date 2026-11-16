@@ -35,6 +35,8 @@ export interface SavingsGoal {
   whyKidsLoveIt?: string;
   productUrl?: string;
   confidence?: 'verified' | 'high' | 'estimated';
+  imageUrl?: string; // product photo (Family Wish Catalog)
+  catalogItemId?: string; // WishCatalogItem this goal came from
 }
 
 export type KidCoinTransactionCategory =
@@ -144,6 +146,29 @@ export interface KidBookShelfItem {
   isFinished?: boolean;
   finishedAt?: string;
   totalMinutesRead?: number;
+}
+
+/** An item a parent added and verified for kids to save toward (Family Wish Catalog). */
+export interface WishCatalogItem {
+  id: string;
+  name: string;
+  store: string; // Best Buy, Amazon, Target, Walmart
+  code: string; // SKU / ASIN / item number read from the product link
+  url: string;
+  price: number;
+  photo?: string; // /api/wish-photos/… or a Best Buy image URL
+  forKidIds: string[]; // ['all'] or specific kid ids
+  priceCheckedAt: string; // YYYY-MM-DD
+  autoPrice?: boolean; // price kept current by Best Buy's API
+  addedAt: string;
+}
+
+/** Something a kid asked for from the wall that isn't in the catalog yet. */
+export interface WishRequest {
+  id: string;
+  kidId: string;
+  name: string;
+  createdAt: string;
 }
 
 export interface KidProfile {
@@ -371,6 +396,7 @@ export interface AppSettings {
   kioskWallpaperDim?: number; // 0–80, % darkening behind the wall for readability (default 45)
   kioskWallpaperSlideshowMins?: number;
   kioskCardOpacity?: number; // 0–100, how solid the kid cards are over a wallpaper (default 35)
+  wishGoalLimit?: number; // Family Wish Catalog: most a single kid goal can cost (default 150)
   snackStarTiers?: SnackStarTiers;
   customSnackStarOverrides?: Record<string, number>; // Individual snack item star cost overrides
   calendarColorMode?: CalendarColorCodeMode;
@@ -687,6 +713,8 @@ export interface FamilyDatabase {
   houseRules?: HouseRule[];
   ruleInfractions?: RuleInfractionLog[];
   lastBackupDate?: string;
+  wishCatalog?: WishCatalogItem[]; // Family Wish Catalog items kids can save toward
+  wishRequests?: WishRequest[]; // "Ask for something else" requests from the wall
 }
 
 export type AppDatabase = FamilyDatabase;

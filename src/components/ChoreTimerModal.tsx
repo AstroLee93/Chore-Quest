@@ -126,6 +126,9 @@ export const ChoreTimerModal: React.FC<ChoreTimerModalProps> = ({
 
   return (
     <div
+      // While a chore timer is open the kid is usually away doing the chore, so the
+      // app's idle return-to-wall waits (see App.tsx).
+      data-idle-hold="chore-timer"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
       onClick={onClose}
     >
@@ -135,6 +138,8 @@ export const ChoreTimerModal: React.FC<ChoreTimerModalProps> = ({
       >
         {/* Close Button */}
         <button
+          type="button"
+          aria-label="Close timer"
           onClick={() => {
             sound.playTap();
             onClose();

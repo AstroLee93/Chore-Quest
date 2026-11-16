@@ -30,6 +30,8 @@ import {
 import { GoalTracker } from './KidCoin/GoalTracker';
 import { ringDash } from '../utils/progress';
 import { getKioskTimeoutMs } from '../utils/storage';
+import { WishListScreen } from './Wish/WishListScreen';
+import { primaryGoalOf, withPrimaryGoal } from '../utils/wishCatalog';
 import { isCq2026Theme } from '../utils/themes2026';
 import { CelebrateMoment } from './CelebrateMoment';
 import { getTodayDateString, formatDateDisplay, isChoreScheduledForDate, isChoreAssignedToKid, getKidLevelInfo, getBountyChores } from '../utils/storage';
@@ -92,6 +94,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const isCq2026 = isCq2026Theme(currentTheme);
   const kidStyle = kid.uiStyle || 'balanced';
   const [showCelebrate, setShowCelebrate] = useState(false);
+  const [showWishList, setShowWishList] = useState(false);
   const wallMode = isCq2026 && isKioskKidSession;
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
@@ -308,6 +311,15 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-1 sm:px-8 py-1.5 sm:py-8 flex flex-col gap-4 sm:gap-6 animate-fade-in w-full">
+      {showWishList && database && onUpdateDatabase && (
+        <WishListScreen
+          kid={kid}
+          database={database}
+          onClose={() => setShowWishList(false)}
+          onSaveGoal={(goal) => onUpdateDatabase({ ...database, kids: database.kids.map((k) => (k.id === kid.id ? withPrimaryGoal(k, goal) : k)) })}
+          onAskWish={(name) => onUpdateDatabase({ ...database, wishRequests: [...(database.wishRequests || []), { id: `wishreq-${Date.now()}`, kidId: kid.id, name, createdAt: new Date().toISOString() }] })}
+        />
+      )}
 
       {/* ═══ 2026 wall kid session (mockup "Wall · Kid session") ═══ */}
       {wallMode && (() => {
@@ -359,6 +371,30 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                   <span className="text-[17px]"><span className="font-semibold">{lastChore.title}</span>{lastPts > 0 ? ` · +${lastPts} pts` : ''}</span>
                 </div>
               )}
+              {database && onUpdateDatabase && settings?.kidCoinEnabled !== false && (() => {
+                const g = primaryGoalOf(kid);
+                const pct = g && g.targetCost > 0 ? Math.min(100, Math.round((g.currentSaved / g.targetCost) * 100)) : 0;
+                return (
+                  <button type="button" onClick={() => { sound.playTap(); setShowWishList(true); }}
+                    className="flex items-center gap-4 p-4 rounded-[18px] bg-[var(--cq-surface)] border border-[var(--cq-line)] text-left cursor-pointer active:scale-[0.98] transition-transform"
+                    aria-label={g ? `Wish List. Saving for ${g.title}, ${pct}% there` : 'Wish List. Pick something to save for'}>
+                    <span className="relative w-14 h-14 shrink-0">
+                      <svg viewBox="0 0 56 56" className="absolute inset-0 -rotate-90" aria-hidden="true">
+                        <circle cx="28" cy="28" r="24" fill="none" stroke={color} strokeOpacity="0.2" strokeWidth="6" />
+                        {pct > 0 && <circle cx="28" cy="28" r="24" fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(2 * Math.PI * 24 * pct) / 100} ${2 * Math.PI * 24}`} />}
+                      </svg>
+                      <span className="absolute inset-[9px] rounded-full bg-[#F4F5F7] overflow-hidden flex items-center justify-center text-[#6E7480]">
+                        {g?.imageUrl ? <img src={g.imageUrl} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" /> : <Gift className="w-5 h-5" />}
+                      </span>
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[17px] font-semibold">Wish List</span>
+                      <span className="block text-[15px] text-[var(--cq-label-2)] truncate">{g ? `${g.title} · ${pct}%` : 'Pick something to save for'}</span>
+                    </span>
+                    <ChevronRight className="w-5 h-5 text-[var(--cq-label-3)] shrink-0" />
+                  </button>
+                );
+              })()}
               <div className="lg:mt-auto flex flex-col gap-2 p-4 rounded-[18px] bg-[var(--cq-surface)] border border-[var(--cq-line)]">
                 <span className="flex items-center gap-2 text-[15px] text-[var(--cq-label-2)]">
                   <Shield className="w-4 h-4" /> Kid session · settings hidden
@@ -1127,6 +1163,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                     onUpdateDatabase({ ...database, kids: updatedKids });
                   }
                 }}
+                onUpdateDatabase={onUpdateDatabase}
               />
             )}
 

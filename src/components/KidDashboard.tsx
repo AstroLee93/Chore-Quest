@@ -55,6 +55,8 @@ interface KidDashboardProps {
   onUpdateDatabase?: (updated: FamilyDatabase) => void;
   currentTheme?: AppThemeId;
   isKioskKidSession?: boolean;
+  /** On the locked wall iPad: bigger chore rows with start-timer buttons. */
+  onWall?: boolean;
   onReturnToKiosk?: () => void;
   onToggleCompleteChore: (chore: ChoreItem) => void;
   onSkipChoreWithReason: (choreId: string, category: 'sick' | 'supplies' | 'time' | 'already_done' | 'need_help' | 'other', note: string) => void;
@@ -79,6 +81,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   onUpdateDatabase,
   currentTheme = DEFAULT_THEME_ID,
   isKioskKidSession = false,
+  onWall = false,
   onReturnToKiosk,
   onToggleCompleteChore,
   onSkipChoreWithReason,
@@ -96,7 +99,6 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
   const kidStyle = kid.uiStyle || 'balanced';
   const [showCelebrate, setShowCelebrate] = useState(false);
   const [showWishList, setShowWishList] = useState(false);
-  const wallMode = isCq2026 && isKioskKidSession;
   const todayStr = getTodayDateString();
   const todayWeather = getSeasonalWeatherForDate(todayStr);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -323,128 +325,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
       )}
 
       {/* ═══ 2026 wall kid session (mockup "Wall · Kid session") ═══ */}
-      {wallMode && (() => {
-        const lastDone = (logs || [])
-          .filter((l) => l.kidId === kid.id && l.date === todayStr && l.status === 'completed')
-          .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''))[0];
-        const lastChore = lastDone ? chores.find((c) => c.id === lastDone.choreId) : undefined;
-        const lastPts = lastChore ? (Number(lastChore.stars) || 0) + (Number(lastChore.bountyBonusStars) || 0) : 0;
-        const idleMs = getKioskTimeoutMs(settings?.kioskTimeout);
-        const color = kid.color || 'var(--cq-accent)';
-        const sections = [
-          { id: 'morning', label: 'Morning' },
-          { id: 'afternoon', label: 'Afternoon' },
-          { id: 'evening', label: 'Evening' },
-          { id: 'anytime', label: 'Anytime' },
-        ];
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-[400px_minmax(0,1fr)] gap-8 text-[var(--cq-label)] px-4 sm:px-6 py-6">
-            <aside className="flex flex-col gap-6">
-              {onReturnToKiosk && (
-                <button type="button" onClick={() => { sound.playTap(); onReturnToKiosk(); }}
-                  className="self-start min-h-[52px] pl-3.5 pr-5 rounded-full bg-[var(--cq-surface)] border border-[var(--cq-line)] text-[18px] font-medium flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform">
-                  <ChevronRight className="w-5 h-5 rotate-180" /> Done — back to the wall
-                </button>
-              )}
-              <div className="flex items-center gap-6">
-                <div className="relative w-[150px] h-[150px] shrink-0">
-                  <svg viewBox="0 0 150 150" className="absolute inset-0 w-full h-full -rotate-90" role="img" aria-label={`${completedTasksCount} of ${todaysChores.length} done`}>
-                    <circle cx="75" cy="75" r="66" fill="none" stroke={color} strokeOpacity="0.16" strokeWidth="12" />
-                    <circle cx="75" cy="75" r="66" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
-                      strokeDasharray={ringDash(todaysChores.length ? completedTasksCount / todaysChores.length : 1, 66)}
-                      style={{ transition: 'stroke-dasharray 0.7s cubic-bezier(0.16,1,0.3,1)' }} />
-                  </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-[40px] font-light cq-num">
-                    {completedTasksCount}<span className="text-[var(--cq-label-3)]">/{todaysChores.length}</span>
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 min-w-0">
-                  <h1 className="m-0 text-[40px] font-bold tracking-[-0.02em] leading-tight truncate">{kid.name}</h1>
-                  <span className="text-[18px] text-[var(--cq-label-2)]">{kid.stars} pts · {kid.streakDays || 0}-day streak</span>
-                </div>
-              </div>
-              {lastChore && (
-                <div className="flex items-center gap-3 px-4 py-4 rounded-[18px] border"
-                  style={{ background: 'color-mix(in srgb, var(--cq-done) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--cq-done) 22%, transparent)' }}>
-                  <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--cq-done)', color: 'var(--cq-ground)' }}>
-                    <CheckCircle2 className="w-5 h-5" strokeWidth={2.5} />
-                  </span>
-                  <span className="text-[17px]"><span className="font-semibold">{lastChore.title}</span>{lastPts > 0 ? ` · +${lastPts} pts` : ''}</span>
-                </div>
-              )}
-              {database && onUpdateDatabase && settings?.kidCoinEnabled !== false && (() => {
-                const g = primaryGoalOf(kid);
-                const pct = g && g.targetCost > 0 ? Math.min(100, Math.round((g.currentSaved / g.targetCost) * 100)) : 0;
-                return (
-                  <button type="button" onClick={() => { sound.playTap(); setShowWishList(true); }}
-                    className="flex items-center gap-4 p-4 rounded-[18px] bg-[var(--cq-surface)] border border-[var(--cq-line)] text-left cursor-pointer active:scale-[0.98] transition-transform"
-                    aria-label={g ? `Wish List. Saving for ${g.title}, ${pct}% there` : 'Wish List. Pick something to save for'}>
-                    <span className="relative w-14 h-14 shrink-0">
-                      <svg viewBox="0 0 56 56" className="absolute inset-0 -rotate-90" aria-hidden="true">
-                        <circle cx="28" cy="28" r="24" fill="none" stroke={color} strokeOpacity="0.2" strokeWidth="6" />
-                        {pct > 0 && <circle cx="28" cy="28" r="24" fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(2 * Math.PI * 24 * pct) / 100} ${2 * Math.PI * 24}`} />}
-                      </svg>
-                      <span className="absolute inset-[9px] rounded-full bg-[#F4F5F7] overflow-hidden flex items-center justify-center text-[#6E7480]">
-                        {g?.imageUrl ? <img src={g.imageUrl} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" /> : <Gift className="w-5 h-5" />}
-                      </span>
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-[17px] font-semibold">Wish List</span>
-                      <span className="block text-[15px] text-[var(--cq-label-2)] truncate">{g ? `${g.title} · ${pct}%` : 'Pick something to save for'}</span>
-                    </span>
-                    <ChevronRight className="w-5 h-5 text-[var(--cq-label-3)] shrink-0" />
-                  </button>
-                );
-              })()}
-              <div className="lg:mt-auto flex flex-col gap-2 p-4 rounded-[18px] bg-[var(--cq-surface)] border border-[var(--cq-line)]">
-                <span className="flex items-center gap-2 text-[15px] text-[var(--cq-label-2)]">
-                  <Shield className="w-4 h-4" /> Kid session · settings hidden
-                </span>
-                <span className="text-[12px] text-[var(--cq-label-3)] cq-num">ChoreQuest {VERSION_LABEL}</span>
-                <span className="text-[13px] text-[var(--cq-label-3)]">
-                  {idleMs ? `Returns to the wall after ${Math.round(idleMs / 60000)} min idle` : 'Tap Done to return to the wall'}
-                </span>
-              </div>
-            </aside>
-
-            <main className="flex flex-col gap-6">
-              {sections.map((section) => {
-                const sectionChores = todaysChores.filter((c) =>
-                  section.id === 'anytime'
-                    ? !c.timeOfDay || !['morning', 'afternoon', 'evening'].includes(c.timeOfDay)
-                    : c.timeOfDay === section.id
-                );
-                if (!sectionChores.length) return null;
-                return (
-                  <section key={section.id} className="flex flex-col gap-2.5" aria-labelledby={`wall-${section.id}`}>
-                    <h2 id={`wall-${section.id}`} className="m-0 px-1.5 text-[15px] font-semibold uppercase tracking-[0.08em] text-[var(--cq-label-2)]">{section.label}</h2>
-                    <div className="rounded-[24px] bg-[var(--cq-surface)] border border-[var(--cq-line)] overflow-hidden">
-                      {sectionChores.map((chore, rowIdx) => (
-                        <ChoreCard
-                          key={chore.id}
-                          variant="wall"
-                          divider={rowIdx > 0}
-                          chore={chore}
-                          category={categories.find((c) => c.id === chore.categoryId)}
-                          log={logMap.get(chore.id)}
-                          isBirthdayPassAvailable={isBirthday && bdayConfig.enabled && bdayConfig.freeChorePassEnabled}
-                          onToggleComplete={onToggleCompleteChore}
-                          onOpenSkipModal={(c) => setSkipModalChore(c)}
-                          onUndo={onUndoChoreStatus}
-                          onStartTimer={(c) => setActiveTimerChore(c)}
-                          onOpenReadingLog={() => { setIsReadingLogOpen(true); setIsBrainTeaserOpen(false); setIsBadgeModalOpen(false); }}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                );
-              })}
-            </main>
-          </div>
-        );
-      })()}
-
-      {!wallMode && (<>
+      <>
       {/* Family Goal Banner if database is provided (2026: on the family Today screen) */}
       {database && !isCq2026 && (
         <FamilyGoalBanner
@@ -582,6 +463,16 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 <div className="min-w-0 flex-1"><div>Roulette</div><div>Surprise me</div></div>
               </button>
             )}
+            {isCq2026 && database && onUpdateDatabase && settings?.kidCoinEnabled !== false && (() => {
+              const g = primaryGoalOf(kid);
+              const pct = g && g.targetCost > 0 ? Math.min(100, Math.round((g.currentSaved / g.targetCost) * 100)) : 0;
+              return (
+                <button id="btn-kid-wishlist" type="button" onClick={() => { sound.playTap(); setShowWishList(true); }}>
+                  <div className="flex items-center justify-center shrink-0"><Gift className="w-5 h-5" /></div>
+                  <div className="min-w-0 flex-1"><div>Wish List</div><div>{g ? `${pct}% · ${g.title}` : 'Pick a goal'}</div></div>
+                </button>
+              );
+            })()}
             {/* Card 1: Snacks */}
             {onOpenSnackRequest && (
               <button
@@ -1295,7 +1186,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                       return (
                         <ChoreCard
                           key={chore.id}
-                          variant={isCq2026 ? 'row' : 'card'}
+                          variant={isCq2026 ? (onWall ? 'wall' : 'row') : 'card'}
                           divider={isCq2026 && rowIdx > 0}
                           chore={chore}
                           category={category}
@@ -1387,7 +1278,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
                 return (
                   <ChoreCard
                     key={`bounty-${bounty.id}`}
-                    variant={isCq2026 ? 'row' : 'card'}
+                    variant={isCq2026 ? (onWall ? 'wall' : 'row') : 'card'}
                     divider={isCq2026 && bountyIdx > 0}
                     chore={bounty}
                     category={category}
@@ -1423,7 +1314,7 @@ export const KidDashboard: React.FC<KidDashboardProps> = ({
           </div>
         )}
 
-      </>)}
+      </>
 
       {/* Auxiliary Modals wrapped in local Suspense so dashboard never blanks out */}
       <React.Suspense fallback={null}>

@@ -9,6 +9,7 @@ import { RocketGoalTrack } from './RocketGoalTrack';
 import { RocketTakeoffModal } from './RocketTakeoffModal';
 import { CoachTips } from './CoachTips';
 import { WishListScreen } from '../Wish/WishListScreen';
+import { useParentGate } from '../ParentGate';
 import { GoalIcon } from './GoalIcon';
 import {
   Coins,
@@ -45,6 +46,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
   onUpdateKid,
   onUpdateDatabase,
 }) => {
+  const requireParent = useParentGate();
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [showTakeoffModal, setShowTakeoffModal] = useState<boolean>(false);
   const [showNewGoalModal, setShowNewGoalModal] = useState<boolean>(false);
@@ -202,6 +204,8 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
             </div>
 
             <button
+              type="button"
+              aria-label="Close savings"
               onClick={onClose}
               className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
@@ -475,7 +479,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
                         {[1, 2, 5, 10, 20].map((amt) => (
                           <button
                             key={amt}
-                            onClick={() => handleDepositToGoal(amt, `Added $${amt} from chore quest`)}
+                            onClick={() => requireParent(`Adding $${amt}`, () => handleDepositToGoal(amt, `Added $${amt} from chore quest`))}
                             className="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-amber-400 text-slate-800 dark:text-slate-100 text-xs font-black shadow-xs transition-transform active:scale-95 cursor-pointer"
                           >
                             +${amt}
@@ -496,7 +500,7 @@ export const KidCoinVaultModal: React.FC<KidCoinVaultModalProps> = ({
                             onClick={() => {
                               const amt = parseFloat(depositAmount);
                               if (!isNaN(amt) && amt > 0) {
-                                handleDepositToGoal(amt, depositNote);
+                                requireParent(`Adding $${amt.toFixed(2)}`, () => handleDepositToGoal(amt, depositNote));
                               }
                             }}
                             className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1"

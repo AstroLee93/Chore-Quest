@@ -37,6 +37,8 @@ interface NavbarProps {
   onOpenGoalManager?: () => void;
   onOpenVault?: () => void;
   onOpenHouseRules?: () => void;
+  /** Kid using their own screen on the locked wall: 'Done' goes back to the wall, no menu. */
+  wallSession?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -62,12 +64,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenGoalManager,
   onOpenVault,
   onOpenHouseRules,
+  wallSession = false,
 }) => {
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
 
   // 2026 family home has no top bar; its header's menu button opens this drawer.
   useEffect(() => {
-    const open = () => setIsMenuDrawerOpen(true);
+    const open = () => { if (!wallSession) setIsMenuDrawerOpen(true); };
     window.addEventListener('cq-open-menu', open);
     return () => window.removeEventListener('cq-open-menu', open);
   }, []);
@@ -93,10 +96,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="btn-back-to-kids"
                 onClick={() => { sound.playTap(); onSelectKid(null); }}
                 className="flex items-center -ml-2 pr-1 min-h-[44px] text-ios-blue text-[17px] tracking-[-0.41px] cursor-pointer active:opacity-50 transition-opacity shrink-0"
-                title="Switch Child Profile"
+                title={wallSession ? 'Back to the wall' : 'Switch Child Profile'}
               >
                 <ChevronLeft className="w-7 h-7 stroke-[2.25] -mr-0.5" />
-                <span>Family</span>
+                <span>{wallSession ? 'Done' : 'Family'}</span>
               </button>
             )}
 
@@ -172,9 +175,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* ── Right: Menu ──────────────────────────────────── */}
-          <div className="flex items-center shrink-0">
+          <div className={`flex items-center shrink-0 ${wallSession ? 'invisible' : ''}`} aria-hidden={wallSession || undefined}>
             <button
               id="btn-app-menu-toggle"
+              disabled={wallSession}
               onClick={() => { sound.playTap(); haptic('selection'); setIsMenuDrawerOpen(p => !p); }}
               className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-transform cursor-pointer active:scale-90 before:absolute before:-inset-1 before:content-[''] ${
                 isMenuDrawerOpen ? 'bg-fill-strong text-label' : 'glass-mid text-label'

@@ -21,6 +21,7 @@ import { Home } from 'lucide-react';
 import { processAutomaticBirthdayStarGrants, isBirthdayToday, getBirthdayConfig } from './utils/birthday';
 import { BirthdayCelebrationModal } from './components/BirthdayCelebrationModal';
 import { IdleWarningPrompt } from './components/IdleWarningPrompt';
+import { ParentGateProvider } from './components/ParentGate';
 
 // Code-split heavy secondary dashboards and modals for lightning-fast page loading & lower memory usage
 const ParentDashboard = React.lazy(() =>
@@ -281,6 +282,8 @@ export default function App() {
 
   // 2026 design: floating tab bar on 2026 themes outside parent mode
   const showTabBar = isCq2026Theme(currentTheme) && !isParentMode;
+  // A kid using their own screen on the locked wall iPad (kiosk mode).
+  const isWallKid = isKioskMode && isKioskKidSession && !!activeKid;
 
   // 2026 design: the active kid's Playful / Balanced / Minimal style (cq2026.css)
   useEffect(() => {
@@ -578,183 +581,8 @@ export default function App() {
     <IdleWarningPrompt seconds={idleWarning} kidName={activeKid?.name} kidColor={activeKid?.color} onStay={() => setIdleWarning(null)} />
   ) : null;
 
-  if (isKioskMode) {
-    if (isKioskKidSession && activeKid) {
-      return (
-        <div
-          className={`min-h-[100dvh] ${themeConfig.bgGradient} flex flex-col font-sans transition-colors duration-300 ${
-            themeConfig.isDark
-              ? 'dark text-slate-100 selection:bg-indigo-500 selection:text-white'
-              : 'text-slate-800 selection:bg-sky-200 selection:text-slate-900'
-          }`}
-        >
-          {idlePrompt}
-          {/* STRICT KIOSK KID SESSION HEADER: ONLY Return to Kiosk button, NO adult links */}
-          {!isCq2026Theme(currentTheme) && <header
-            className={`ios-navbar sticky top-0 z-40 pb-3.5 backdrop-blur-xl border-b flex items-center justify-between gap-3 ${
-              themeConfig.isDark
-                ? 'bg-slate-900/90 border-slate-700 text-white'
-                : 'bg-white/95 border-slate-200 text-slate-900'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                style={{
-                  backgroundColor: `${activeKid.color || '#3b82f6'}30`,
-                  borderColor: activeKid.color || '#3b82f6',
-                }}
-                className="w-12 h-12 rounded-2xl border-2 flex items-center justify-center text-2xl shadow-inner shrink-0 overflow-hidden"
-              >
-                {typeof activeKid.avatar === 'string' &&
-                (activeKid.avatar.startsWith('http') ||
-                  activeKid.avatar.startsWith('data:image') ||
-                  activeKid.avatar.startsWith('/')) ? (
-                  <img src={activeKid.avatar} alt={activeKid.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="leading-none select-none">{typeof activeKid.avatar === 'string' ? activeKid.avatar : '⭐'}</span>
-                )}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg sm:text-xl font-black tracking-tight">{activeKid.name}'s Missions</h1>
-                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-xs">
-                    ⭐ {activeKid.stars ?? 0} Stars
-                  </span>
-                </div>
-                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                  🔥 {activeKid.streakDays ?? 0} Day Streak • Kiosk Mode Active
-                </p>
-              </div>
-            </div>
-
-            {/* Strict Kiosk Routing: The ONLY navigation exit path available */}
-            {isCq2026Theme(currentTheme) ? (
-              <button
-                type="button"
-                onClick={handleReturnToKiosk}
-                className="min-h-[52px] pl-3.5 pr-5 rounded-full bg-[var(--cq-surface)] border border-[var(--cq-line)] text-[var(--cq-label)] text-[17px] font-medium flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
-                title="Return to the family wall"
-              >
-                <ChevronLeftIcon className="w-5 h-5" />
-                Done — back to the wall
-              </button>
-            ) : (
-            <button
-              id="btn-kiosk-kid-exit"
-              onClick={handleReturnToKiosk}
-              className="min-h-[48px] px-5 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-sm sm:text-base shadow-lg border-2 border-amber-300 flex items-center gap-2 cursor-pointer transition-all"
-              title="Return directly back to Family Kiosk display"
-            >
-              <Home className="w-5 h-5 text-slate-950" />
-              <span>Done / Return to Kiosk 🏠</span>
-            </button>
-            )}
-          </header>}
-
-          <main className="flex-1 p-3 sm:p-6 flex flex-col max-w-7xl mx-auto w-full">
-            <ErrorBoundary
-              fallbackTitle={`Could not load ${activeKid.name}'s Missions`}
-              fallbackMessage="A temporary error occurred while loading this kid profile. Tap below to reload or return to the main kiosk."
-              onReturnHome={handleReturnToKiosk}
-              resetLabel="Reload Missions 🔄"
-            >
-              <KidDashboard
-                kid={activeKid}
-                categories={database.categories || []}
-                chores={database.chores || []}
-                logs={database.logs || []}
-                rewards={database.rewards || []}
-                settings={database.settings || ({} as any)}
-                events={database.events || []}
-                database={database}
-                currentTheme={currentTheme}
-                isKioskKidSession={true}
-                onUpdateDatabase={handleUpdateDatabase}
-                onReturnToKiosk={handleReturnToKiosk}
-                onToggleCompleteChore={(chore) => {
-                  handleToggleCompleteChore(chore);
-                  setTimeout(handleReturnToKiosk, 1200);
-                }}
-                onSkipChoreWithReason={(choreId, cat, note) => {
-                  handleSkipChoreWithReason(choreId, cat, note);
-                  setTimeout(handleReturnToKiosk, 1200);
-                }}
-                onUndoChoreStatus={handleUndoChoreStatus}
-                onOpenRewardStore={() => setIsRewardStoreOpen(true)}
-                onOpenCalendar={() => setIsCalendarOpen(true)}
-                onOpenGoalManager={() => setIsGoalModalOpen(true)}
-                onOpenSnackRequest={(k) => {
-                  setSnackRequestKid(k);
-                  setIsSnackRequestOpen(true);
-                }}
-              />
-            </ErrorBoundary>
-          </main>
-
-          <React.Suspense fallback={null}>
-            {isSnackRequestOpen && (
-              <KidSnackRequestModal
-                isOpen={isSnackRequestOpen}
-                onClose={() => {
-                  setIsSnackRequestOpen(false);
-                  setSnackRequestKid(null);
-                  handleReturnToKiosk();
-                }}
-                database={database}
-                onUpdateDatabase={handleUpdateDatabase}
-                initialKid={activeKid}
-                isParentMode={false}
-                onPostActionComplete={handleReturnToKiosk}
-              />
-            )}
-
-            {isRewardStoreOpen && (
-              <RewardStoreModal
-                isOpen={isRewardStoreOpen}
-                activeKid={activeKid}
-                rewards={database.rewards || []}
-                redemptions={database.redemptions || []}
-                settings={database.settings}
-                onRedeemReward={handleRedeemReward}
-                onPostActionComplete={handleReturnToKiosk}
-                isParentMode={false}
-                onUnpauseStore={() => {
-                  handleUpdateDatabase({
-                    ...database,
-                    settings: {
-                      ...database.settings,
-                      pauseRewardStore: false,
-                    },
-                  });
-                }}
-                onClose={() => {
-                  setIsRewardStoreOpen(false);
-                  handleReturnToKiosk();
-                }}
-              />
-            )}
-
-            {isCalendarOpen && (
-              <CalendarView
-                database={database}
-                activeKid={activeKid}
-                onUpdateDatabase={handleUpdateDatabase}
-                onClose={() => setIsCalendarOpen(false)}
-              />
-            )}
-
-            {isGoalModalOpen && (
-              <FamilyGoalModal
-                isOpen={isGoalModalOpen}
-                database={database}
-                onClose={() => setIsGoalModalOpen(false)}
-                onUpdateDatabase={handleUpdateDatabase}
-              />
-            )}
-          </React.Suspense>
-        </div>
-      );
-    }
+  // A kid opened from the wall gets the full kid screen (below) in a kiosk frame.
+  if (isKioskMode && !isWallKid) {
 
     return (
       <div className={`min-h-screen ${themeConfig.kioskBg} font-sans pt-safe px-safe ${isCq2026Theme(currentTheme) && !themeConfig.isDark ? 'dark cq-kiosk-dark' : ''}`}>
@@ -803,6 +631,7 @@ export default function App() {
   }
 
   return (
+    <ParentGateProvider enabled={isWallKid} parentPin={database.settings.parentPin}>
     <div
       className={`min-h-[100dvh] ${themeConfig.bgGradient} flex flex-col font-sans transition-colors duration-300 ${
         themeConfig.isDark
@@ -828,7 +657,8 @@ export default function App() {
           setIsMenuOpen(false);
           setIsGroceryOpen(false);
         }}
-        onSelectKid={(kid) => setActiveKidId(kid ? kid.id : null)}
+        wallSession={isWallKid}
+        onSelectKid={(kid) => (kid ? setActiveKidId(kid.id) : isWallKid ? handleReturnToKiosk() : setActiveKidId(null))}
         onToggleSound={handleToggleSound}
         onOpenPiGuide={() => setIsPiGuideOpen(true)}
         onOpenRewardStore={() => setIsRewardStoreOpen(true)}
@@ -873,7 +703,7 @@ export default function App() {
           <ErrorBoundary
             fallbackTitle={`Could not load ${activeKid.name}'s Missions`}
             fallbackMessage="A temporary error occurred while loading this kid profile. Tap below to reload or return to kid selection."
-            onReturnHome={() => setActiveKidId(null)}
+            onReturnHome={() => (isWallKid ? handleReturnToKiosk() : setActiveKidId(null))}
             resetLabel="Reload Missions 🔄"
           >
             <KidDashboard
@@ -898,6 +728,7 @@ export default function App() {
                 setIsSnackRequestOpen(true);
               }}
               onOpenLeaderClipboard={handleOpenLeaderClipboard}
+              onWall={isWallKid}
             />
           </ErrorBoundary>
         ) : (
@@ -951,7 +782,7 @@ export default function App() {
         />
       )}
 
-      <footer className={`relative z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 sm:p-3 px-3 sm:px-6 border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-[11px] sm:text-xs gap-1 sm:gap-3 ${showTabBar ? 'pb-28 sm:pb-28' : ''}`}>
+      {!isWallKid && <footer className={`relative z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 sm:p-3 px-3 sm:px-6 border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row justify-between items-center text-slate-500 font-bold text-[11px] sm:text-xs gap-1 sm:gap-3 ${showTabBar ? 'pb-28 sm:pb-28' : ''}`}>
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
           <span className="flex items-center gap-1.5 text-slate-700">
             <span
@@ -981,7 +812,7 @@ export default function App() {
           </button>
           <span>&copy; {new Date().getFullYear()} ChoreQuest Home Server</span>
         </div>
-      </footer>
+      </footer>}
 
       {/* Global Application Modals (Mounted after footer with local Suspense so app layout never blanks out) */}
       <React.Suspense fallback={null}>
@@ -1163,5 +994,6 @@ export default function App() {
         )}
       </React.Suspense>
     </div>
+    </ParentGateProvider>
   );
 }

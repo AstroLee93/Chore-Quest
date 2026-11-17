@@ -1,8 +1,7 @@
 # ChoreQuest changelog
 
 Every release bumps the version in `package.json`. The running version is shown
-at the bottom of the kiosk wall, in a kid's "Kid session" box, and at the top of
-Parent admin → Settings. To check it from the Pi:
+at the bottom of the kiosk wall and at the top of Parent admin → Settings. To check it from the Pi:
 
 ```bash
 curl -s http://localhost:3000/api/version
